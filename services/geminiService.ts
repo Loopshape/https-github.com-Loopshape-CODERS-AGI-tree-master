@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI, Modality, Type } from "@google/genai";
 
 // It's assumed that process.env.API_KEY is set in the execution environment.
 const API_KEY = process.env.API_KEY;
@@ -148,5 +148,84 @@ export const analyzeImage = async (imageDataUrl: string): Promise<string> => {
             throw new Error(`Failed to analyze image: ${error.message}`);
         }
         throw new Error("An unknown error occurred while analyzing the image.");
+    }
+};
+
+
+export interface Color {
+    hex: string;
+    name: string;
+}
+
+/**
+ * Generates a color palette from an image or a text description.
+ * @param source An object containing either an `image` data URL or a `text` prompt.
+ * @returns A promise that resolves to an array of Color objects.
+ */
+export const generateColorPalette = async (
+    source: { image?: string; text?: string }
+): Promise<Color[]> => {
+    if (!source.image && !source.text) {
+        throw new Error("Either an image or a text prompt must be provided.");
+    }
+
+    try {
+        const parts: any[] = [];
+        let promptText = "";
+
+        if (source.image) {
+            const { mimeType, base64Data } = dataUrlToParts(source.image);
+            parts.push({
+                inlineData: { data: base64Data, mimeType: mimeType },
+            });
+            promptText = "Extract a 5-color palette from this image. Provide descriptive names for each color.";
+        } else if (source.text) {
+            promptText = `Generate a 5-color palette based on the theme: "${source.text}". Provide creative, descriptive names for each color.`;
+        }
+        parts.push({ text: promptText });
+        
+        const responseSchema = {
+            type: Type.OBJECT,
+            properties: {
+                palette: {
+                    type: Type.ARRAY,
+                    description: "An array of 5 colors that match the theme.",
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            hex: {
+                                type: Type.STRING,
+                                description: 'The hex code of the color, e.g., "#RRGGBB".',
+                            },
+                            name: {
+                                type: Type.STRING,
+                                description: "A descriptive name for the color.",
+                            },
+                        },
+                        required: ["hex", "name"],
+                    },
+                },
+            },
+            required: ["palette"],
+        };
+        
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: { parts },
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: responseSchema,
+            },
+        });
+
+        const jsonResponse = JSON.parse(response.text);
+        return jsonResponse.palette || [];
+
+    } catch (error) {
+        console.error("Error generating color palette with Gemini:", error);
+        if (error instanceof Error) {
+            throw new Error(`Failed to generate palette: ${error.message}`);
+        }
+        throw new Error("An unknown error occurred while generating the palette.");
     }
 };

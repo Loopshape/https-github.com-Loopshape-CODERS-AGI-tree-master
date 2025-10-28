@@ -1,7 +1,5 @@
-
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { editImage, generateImage, analyzeImage } from './services/geminiService';
+import { editImage, generateImage, analyzeImage, generateColorPalette, Color } from './services/geminiService';
 
 // --- UI Components ---
 
@@ -85,7 +83,7 @@ const UndoRedoControl = ({ onUndo, onRedo, canUndo, canRedo }: { onUndo: () => v
 );
 
 
-const handleApiError = (err: unknown, setError: (message: string) => void, action: 'edit' | 'generate' | 'analyze') => {
+const handleApiError = (err: unknown, setError: (message: string) => void, action: string) => {
     const rawMessage = err instanceof Error ? err.message : `An unexpected error occurred during ${action}.`;
     console.error(`${action} failed:`, err);
 
@@ -103,7 +101,7 @@ const handleApiError = (err: unknown, setError: (message: string) => void, actio
     } else if (lowerCaseMessage.includes('quota')) {
         displayMessage = "The service is at capacity (quota exceeded). Please try again later.";
     } else {
-        const cleanedMessage = rawMessage.replace(`Failed to ${action} image:`, "").trim();
+        const cleanedMessage = rawMessage.replace(/Failed to .*?:/, "").trim();
         displayMessage = `An error occurred: ${cleanedMessage || 'Please try again.'}`;
     }
     setError(displayMessage);
@@ -117,6 +115,13 @@ const ImageEditorView = ({ image, onImageUpload, clearError, setError }: any) =>
     const [redoStack, setRedoStack] = useState<string[]>([]);
     const [prompt, setPrompt] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
+
+    const editorExamples = [
+        'Add a dramatic, cinematic filter',
+        'Make the image black and white',
+        'Change the style to a watercolor painting',
+        'Add a unicorn flying in the sky'
+    ];
 
     // Reset state whenever the source image prop changes
     useEffect(() => {
@@ -141,6 +146,8 @@ const ImageEditorView = ({ image, onImageUpload, clearError, setError }: any) =>
             // Add current state to undo stack before updating
             if (editedImage) {
                 setUndoStack(prev => [...prev, editedImage]);
+            } else {
+                setUndoStack(prev => [...prev, image]); // save original on first edit
             }
             setEditedImage(result);
             setRedoStack([]); // A new edit action clears the redo history
@@ -181,8 +188,8 @@ const ImageEditorView = ({ image, onImageUpload, clearError, setError }: any) =>
         <>
             <ControlsColumn>
                 <UploadControl step={1} onImageUpload={onImageUpload} hasImage={!!image} />
-                <PromptControl step={2} prompt={prompt} setPrompt={setPrompt} disabled={!image} placeholder="e.g., 'Add a retro cinematic filter'"/>
-                <UndoRedoControl onUndo={handleUndo} onRedo={handleRedo} canUndo={undoStack.length > 0} canRedo={redoStack.length > 0} />
+                <PromptControl step={2} prompt={prompt} setPrompt={setPrompt} disabled={!image} placeholder="e.g., 'Add a retro cinematic filter'" examples={editorExamples} />
+                <UndoRedoControl onUndo={handleUndo} onRedo={handleRedo} canUndo={undoStack.length > 1 || (undoStack.length > 0 && editedImage !== image)} canRedo={redoStack.length > 0} />
                 <GenerateButton onClick={handleGenerate} disabled={!image || !prompt.trim() || isLoading} text={isLoading ? 'Editing...' : 'Generate Edit'} />
             </ControlsColumn>
             <ResultColumn>
@@ -192,7 +199,7 @@ const ImageEditorView = ({ image, onImageUpload, clearError, setError }: any) =>
                     {image && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
                             <ImageDisplay title="Original" src={image} />
-                            <ImageDisplay title="Edited" src={editedImage} placeholder="Your edited image will appear here" download />
+                            <ImageDisplay title="Edited" src={editedImage ?? image} placeholder="Your edited image will appear here" download />
                         </div>
                     )}
                 </div>
@@ -206,6 +213,13 @@ const ImageGeneratorView = ({ setError, clearError }: any) => {
     const [prompt, setPrompt] = useState<string>('');
     const [aspectRatio, setAspectRatio] = useState<'1:1' | '16:9' | '9:16' | '4:3' | '3:4'>('1:1');
     const [isLoading, setIsLoading] = useState<boolean>(false);
+
+     const generatorExamples = [
+        'A cute robot holding a red balloon, 3D render',
+        'Logo for a tech startup, minimalist, blue/white',
+        'Oil painting of a stormy sea',
+        'Photorealistic cup of coffee on a wooden desk'
+    ];
 
     const handleGenerate = useCallback(async () => {
         if (!prompt.trim()) {
@@ -229,7 +243,7 @@ const ImageGeneratorView = ({ setError, clearError }: any) => {
     return (
         <>
             <ControlsColumn>
-                <PromptControl step={1} prompt={prompt} setPrompt={setPrompt} placeholder="e.g., 'A vibrant oil painting of a cat wearing a wizard hat'"/>
+                <PromptControl step={1} prompt={prompt} setPrompt={setPrompt} placeholder="e.g., 'A vibrant oil painting of a cat wearing a wizard hat'" examples={generatorExamples} />
                 <AspectRatioControl step={2} value={aspectRatio} onChange={setAspectRatio} />
                 <GenerateButton onClick={handleGenerate} disabled={!prompt.trim() || isLoading} text={isLoading ? 'Generating...' : 'Generate Image'} />
             </ControlsColumn>
@@ -259,7 +273,7 @@ const ImageAnalyzerView = ({ image, onImageUpload, setError, clearError }: any) 
         try {
             const result = await analyzeImage(image);
             setAnalysis(result);
-        } catch (err) => {
+        } catch (err) {
             handleApiError(err, setError, 'analyze');
         } finally {
             setIsLoading(false);
@@ -283,6 +297,78 @@ const ImageAnalyzerView = ({ image, onImageUpload, setError, clearError }: any) 
                     {isLoading && <Spinner text="Analyzing your image..." />}
                     {!image && <UploadPlaceholder />}
                     {image && <ImageDisplay src={image} />}
+                </div>
+            </ResultColumn>
+        </>
+    );
+};
+
+const ColorPaletteView = ({ setError, clearError }: any) => {
+    const [paletteMode, setPaletteMode] = useState<'image' | 'theme'>('image');
+    const [image, setImage] = useState<string | null>(null);
+    const [themePrompt, setThemePrompt] = useState('');
+    const [palette, setPalette] = useState<Color[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleGenerate = useCallback(async () => {
+        if (paletteMode === 'image' && !image) {
+            setError("Please upload an image to extract a palette.");
+            return;
+        }
+        if (paletteMode === 'theme' && !themePrompt.trim()) {
+            setError("Please enter a theme to generate a palette.");
+            return;
+        }
+
+        setIsLoading(true);
+        clearError();
+        setPalette([]);
+
+        try {
+            const source = paletteMode === 'image' ? { image } : { text: themePrompt };
+            const result = await generateColorPalette(source as any);
+            setPalette(result);
+        } catch (err) {
+            handleApiError(err, setError, 'palette generation');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [paletteMode, image, themePrompt, setError, clearError]);
+
+    return (
+        <>
+            <ControlsColumn>
+                <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <StepIndicator step={1} />
+                    <h3 className="text-lg font-semibold text-gray-200 mt-3 mb-2">Palette Source</h3>
+                    <div className="flex bg-gray-900 rounded-md p-1">
+                        <button onClick={() => setPaletteMode('image')} className={`w-1/2 py-2 text-sm rounded-md transition-colors ${paletteMode === 'image' ? 'bg-cyan-600 text-white font-bold' : 'hover:bg-gray-700'}`}>From Image</button>
+                        <button onClick={() => setPaletteMode('theme')} className={`w-1/2 py-2 text-sm rounded-md transition-colors ${paletteMode === 'theme' ? 'bg-cyan-600 text-white font-bold' : 'hover:bg-gray-700'}`}>From Theme</button>
+                    </div>
+                </div>
+
+                {paletteMode === 'image' ? (
+                     <UploadControl step={2} onImageUpload={setImage} hasImage={!!image} />
+                ) : (
+                    <PromptControl step={2} prompt={themePrompt} setPrompt={setThemePrompt} placeholder="e.g., 'Cyberpunk city at night' or 'Autumn forest'"/>
+                )}
+
+                <GenerateButton
+                    onClick={handleGenerate}
+                    disabled={isLoading || (paletteMode === 'image' && !image) || (paletteMode === 'theme' && !themePrompt.trim())}
+                    text={isLoading ? 'Generating...' : 'Generate Palette'}
+                />
+            </ControlsColumn>
+            <ResultColumn>
+                <div className="flex-grow relative flex items-center justify-center">
+                    {isLoading && <Spinner text="Crafting your palette..." />}
+                    {!isLoading && palette.length === 0 && (
+                        <div className="text-gray-500 text-center">
+                             {paletteMode === 'image' && image && <ImageDisplay src={image} />}
+                            <p className="mt-4">Your generated color palette will appear here.</p>
+                        </div>
+                    )}
+                    {palette.length > 0 && <PaletteDisplay palette={palette} />}
                 </div>
             </ResultColumn>
         </>
@@ -344,11 +430,32 @@ const UploadControl = ({ step, onImageUpload, hasImage }: { step: number, onImag
     );
 };
 
-const PromptControl = ({ step, prompt, setPrompt, disabled = false, placeholder }: { step: number, prompt: string, setPrompt: (p: string) => void, disabled?: boolean, placeholder?: string }) => (
+const PromptExamples = ({ examples, onSelect }: { examples: string[], onSelect: (prompt: string) => void }) => {
+    if (!examples || examples.length === 0) return null;
+    return (
+        <div className="mt-4">
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Examples</h4>
+            <div className="flex flex-wrap gap-2">
+                {examples.map((example, index) => (
+                    <button
+                        key={index}
+                        onClick={() => onSelect(example)}
+                        className="px-2 py-1 bg-gray-700 text-gray-300 rounded-md text-xs hover:bg-gray-600 hover:text-white transition-colors"
+                    >
+                        {example}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+
+const PromptControl = ({ step, prompt, setPrompt, disabled = false, placeholder, examples = [] }: { step: number, prompt: string, setPrompt: (p: string) => void, disabled?: boolean, placeholder?: string, examples?: string[] }) => (
     <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
         <StepIndicator step={step} />
         <h3 className="text-lg font-semibold text-gray-200 mt-3 mb-2">Describe Your Vision</h3>
-        <p className="text-sm text-gray-400 mb-4">What changes do you want to see? Be descriptive!</p>
+        <p className="text-sm text-gray-400 mb-4">What do you want to create or change? Be descriptive!</p>
         <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -357,6 +464,7 @@ const PromptControl = ({ step, prompt, setPrompt, disabled = false, placeholder 
             className="w-full h-24 p-2 bg-gray-900 border border-gray-600 rounded-md text-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50"
             aria-label="Prompt for image generation or editing"
         />
+        <PromptExamples examples={examples} onSelect={setPrompt} />
     </div>
 );
 
@@ -419,10 +527,51 @@ const ImageDisplay = ({ title, src, placeholder, download = false }: { title?: s
     );
 };
 
+const PaletteDisplay = ({ palette }: { palette: Color[] }) => {
+    const [copiedHex, setCopiedHex] = useState<string | null>(null);
+
+    const handleCopy = (hex: string) => {
+        navigator.clipboard.writeText(hex);
+        setCopiedHex(hex);
+        setTimeout(() => setCopiedHex(null), 2000);
+    };
+
+    // Simple function to determine if a color is light or dark for text contrast
+    const getTextColor = (hex: string) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.5 ? 'text-gray-900' : 'text-white';
+    };
+
+    return (
+        <div className="w-full max-w-4xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {palette.map((color) => (
+                    <div key={color.hex} className="rounded-lg overflow-hidden shadow-lg border border-gray-700">
+                        <div style={{ backgroundColor: color.hex }} className="h-40 w-full"></div>
+                        <div className="p-4 bg-gray-800">
+                            <p className="font-bold text-gray-200 text-sm truncate">{color.name}</p>
+                            <button
+                                onClick={() => handleCopy(color.hex)}
+                                className="font-mono text-cyan-400 text-sm mt-1 hover:text-white transition-colors w-full text-left"
+                                title="Copy hex code"
+                            >
+                                {copiedHex === color.hex ? 'Copied!' : color.hex}
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 // --- Main App Component ---
 
-type AppMode = 'edit' | 'generate' | 'analyze';
+type AppMode = 'edit' | 'generate' | 'analyze' | 'palette';
 
 export default function App() {
     const [mode, setMode] = useState<AppMode>('edit');
@@ -444,6 +593,8 @@ export default function App() {
                 return <ImageGeneratorView setError={setError} clearError={clearError} />;
             case 'analyze':
                  return <ImageAnalyzerView image={image} onImageUpload={handleImageUpload} setError={setError} clearError={clearError} />;
+            case 'palette':
+                return <ColorPaletteView setError={setError} clearError={clearError} />;
             default:
                 return null;
         }
@@ -459,6 +610,7 @@ export default function App() {
                         <ModeButton mode="edit" currentMode={mode} setMode={setMode} text="Image Editor" />
                         <ModeButton mode="generate" currentMode={mode} setMode={setMode} text="Image Generator" />
                         <ModeButton mode="analyze" currentMode={mode} setMode={setMode} text="Image Analyzer" />
+                        <ModeButton mode="palette" currentMode={mode} setMode={setMode} text="Color Palette" />
                     </nav>
                     <div className="mt-auto p-3 bg-gray-800/50 rounded-lg border border-gray-700 text-sm text-gray-400">
                         <p className="font-semibold text-gray-300">Tip:</p>
