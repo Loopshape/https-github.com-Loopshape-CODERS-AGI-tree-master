@@ -78,3 +78,75 @@ export const editImage = async (
         throw new Error("An unknown error occurred while editing the image.");
     }
 };
+
+
+/**
+ * Generates an image using the Gemini API.
+ * @param prompt The text prompt describing the desired image.
+ * @param aspectRatio The desired aspect ratio for the image.
+ * @returns A promise that resolves to the generated image as a data URL.
+ */
+export const generateImage = async (
+    prompt: string,
+    aspectRatio: '1:1' | '16:9' | '9:16' | '4:3' | '3:4',
+): Promise<string> => {
+    try {
+        const response = await ai.models.generateImages({
+            model: 'imagen-4.0-generate-001',
+            prompt: prompt,
+            config: {
+                numberOfImages: 1,
+                outputMimeType: 'image/png', // Using PNG for better quality
+                aspectRatio: aspectRatio,
+            },
+        });
+
+        if (response.generatedImages && response.generatedImages.length > 0) {
+            const base64ImageBytes = response.generatedImages[0].image.imageBytes;
+            return `data:image/png;base64,${base64ImageBytes}`;
+        }
+
+        throw new Error("No image was returned from the image generation API.");
+
+    } catch (error) {
+        console.error("Error generating image with Gemini:", error);
+        if (error instanceof Error) {
+            throw new Error(`Failed to generate image: ${error.message}`);
+        }
+        throw new Error("An unknown error occurred while generating the image.");
+    }
+};
+
+/**
+ * Analyzes an image using the Gemini API and returns a text description.
+ * @param imageDataUrl The image to analyze as a data URL.
+ * @returns A promise that resolves to the text analysis of the image.
+ */
+export const analyzeImage = async (imageDataUrl: string): Promise<string> => {
+    try {
+        const { mimeType, base64Data } = dataUrlToParts(imageDataUrl);
+        const imagePart = {
+            inlineData: {
+                data: base64Data,
+                mimeType: mimeType,
+            },
+        };
+        const textPart = {
+            text: "Describe this image in detail. Be thorough and helpful.",
+        };
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: { parts: [imagePart, textPart] },
+        });
+
+        return response.text;
+
+    } catch (error) {
+        console.error("Error analyzing image with Gemini:", error);
+        if (error instanceof Error) {
+            throw new Error(`Failed to analyze image: ${error.message}`);
+        }
+        throw new Error("An unknown error occurred while analyzing the image.");
+    }
+};
