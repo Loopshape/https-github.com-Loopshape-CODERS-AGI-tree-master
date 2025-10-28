@@ -1,0 +1,2 @@
+#!/bin/bash
+ssh-keygen -p -m PEM -f ~/.ssh/nemodian

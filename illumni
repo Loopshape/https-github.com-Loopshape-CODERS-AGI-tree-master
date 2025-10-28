@@ -1,0 +1,3 @@
+#!/bin/env bash
+echo "1Up re-famed@ :.: 2π" > ~/.fake.hash
+openssl pkeyutl -sign -inkey /home/loop/.ssh/nemodian -in ~/.fake.hash -out ~/.bullshit.sig

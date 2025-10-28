@@ -1,0 +1,2 @@
+#!/bin/bash
+ssh-keygen -p -m PEM -f /home/loop/.ssh/nemodian -t rsa -b 8192

@@ -1,0 +1,2 @@
+#!/bin/bash
+ls -lh /storage/emulated/0/.nemodian/

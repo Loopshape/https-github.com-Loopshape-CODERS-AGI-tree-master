@@ -1,0 +1,4 @@
+#!/bin/env bash
+pm2 logs nemodian-backup
+pm2 logs nemodian-ai
+ls -lh /storage/emulated/0/.nemodian/
