@@ -1,0 +1,80 @@
+
+import { GoogleGenAI, Modality } from "@google/genai";
+
+// It's assumed that process.env.API_KEY is set in the execution environment.
+const API_KEY = process.env.API_KEY;
+
+if (!API_KEY) {
+  // In a real application, you might want to handle this more gracefully,
+  // but for this context, throwing an error is sufficient.
+  throw new Error("API_KEY environment variable is not set");
+}
+
+const ai = new GoogleGenAI({ apiKey: API_KEY });
+
+/**
+ * Helper to extract base64 data and mimeType from a data URL string.
+ * @param dataUrl The data URL (e.g., "data:image/jpeg;base64,...").
+ * @returns An object containing the mimeType and base64Data.
+ */
+const dataUrlToParts = (dataUrl: string): { mimeType: string; base64Data: string } => {
+    const regex = /^data:(.+);base64,(.*)$/;
+    const match = dataUrl.match(regex);
+    if (!match) {
+        throw new Error("Invalid data URL format");
+    }
+    return { mimeType: match[1], base64Data: match[2] };
+};
+
+/**
+ * Sends an image and a text prompt to the Gemini API to get an edited image.
+ * @param originalImageDataUrl The original image as a data URL.
+ * @param prompt The text prompt describing the desired edit.
+ * @returns A promise that resolves to the edited image as a data URL.
+ */
+export const editImage = async (
+    originalImageDataUrl: string,
+    prompt: string
+): Promise<string> => {
+    try {
+        const { mimeType, base64Data } = dataUrlToParts(originalImageDataUrl);
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: {
+                parts: [
+                    {
+                        inlineData: {
+                            data: base64Data,
+                            mimeType: mimeType,
+                        },
+                    },
+                    {
+                        text: prompt,
+                    },
+                ],
+            },
+            config: {
+                responseModalities: [Modality.IMAGE],
+            },
+        });
+
+        // Find the image part in the response
+        for (const part of response.candidates?.[0]?.content?.parts || []) {
+            if (part.inlineData) {
+                const editedBase64 = part.inlineData.data;
+                const editedMimeType = part.inlineData.mimeType;
+                return `data:${editedMimeType};base64,${editedBase64}`;
+            }
+        }
+
+        throw new Error("No image was returned in the Gemini API response.");
+
+    } catch (error) {
+        console.error("Error editing image with Gemini:", error);
+        if (error instanceof Error) {
+            throw new Error(`Failed to edit image: ${error.message}`);
+        }
+        throw new Error("An unknown error occurred while editing the image.");
+    }
+};

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+
+<html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>Nemodian 2244-1 :: AI Code Editor Final</title>  <!-- Prism & js-beautify via CDN -->  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify.js"></script>  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify-css.js"></script>  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify-html.js"></script>  <!-- jQuery + GSAP -->  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>  <style>  
+:root{  
+  --baseline: 1.5em;  
+  --header-h: calc(var(--baseline) * 1.6);  
+  --status-h: var(--baseline);  
+  --footer-h: calc(var(--baseline) * 2);  
+  --font-size: 13px;  
+  --ln-width: 50px;  
+  --theme-bg: #3a3c31;  
+  --panel: #313328;  
+  --header-bg: #2e3026;  
+  --status-bg: #22241e;  
+  --accent: #4ac94a;  
+  --muted: #999966;  
+  --err: #a03333;  
+  --warn: #f0ad4e;  
+  --hover-blue: #3366a0;  
+  --info: #5bc0de;  
+}  
+  
+/* Base */  
+html, body {height:100%; margin:0; padding:0; font-family:'Fira Code', monospace; font-size:var(--font-size); line-height:var(--baseline); background:var(--theme-bg); color:#f0f0e0;}  
+body {display:grid; grid-template-rows: var(--header-h) var(--status-h) 1fr var(--footer-h); overflow:hidden;}  
+  
+/* Header */  
+header{grid-row:1; grid-column:1/-1; background:var(--header-bg); border-bottom:1px solid #22241e; display:flex; align-items:center; justify-content:space-between; padding:6px 12px;}  
+header .left {display:flex; gap:12px; align-items:center;}  
+header .right {display:flex; gap:8px; align-items:center;}  
+button{background:var(--err); border:1px solid var(--err); color:#f0f0e0; padding:6px 8px; cursor:pointer; font-size:12px; transition:all .2s; border-radius:3px;}  
+button:hover{background:var(--hover-blue); border-color:var(--hover-blue);}  
+button.success{background:var(--accent); border-color:var(--accent);}  
+button.info{background:var(--info); border-color:var(--info);}  
+  
+/* Status */  
+#status-bar{grid-row:2; grid-column:1/-1; background:var(--status-bg); display:flex; justify-content:space-between; align-items:center; padding:4px 12px; font-size:12px;}  
+#status-bar.error{background:var(--err); color:#f0f0e0;}  
+#status-bar.warn{background:var(--warn); color:#3a3c31;}  
+#status-bar.success{background:var(--accent); color:#3a3c31;}  
+#status-bar.info{background:var(--info); color:#3a3c31;}  
+  
+/* Editor stage */  
+#editor-stage{grid-row:3; grid-column:1/-1; display:grid; grid-template-columns:240px 1fr; background:var(--theme-bg); overflow:hidden;}  
+#left-panel{width:240px; background:var(--panel); border-right:1px solid #22241e; padding:10px; box-sizing:border-box; display:flex; flex-direction:column; gap:8px; transform:translateX(0);}  
+#left-panel.open{transform:translateX(0);}  
+#editor-outer{position:relative; overflow:hidden; background:transparent;}  
+#line-gutter{position:absolute; left:0; top:0; bottom:0; width:var(--ln-width); background:var(--panel); color:var(--muted); padding:10px 8px; box-sizing:border-box; overflow:auto; font-variant-numeric:tabular-nums;}  
+.highlighting{position:absolute; left:0; right:0; top:0; bottom:0; pointer-events:none; overflow:auto; padding:10px; box-sizing:border-box; white-space:pre-wrap; word-break:break-word; line-height:var(--baseline); padding-left: calc(var(--ln-width)+12px);}  
+.highlighting pre{margin:0;}  
+#editor{position:absolute; left:var(--ln-width); right:12px; top:0; bottom:0; padding:10px; margin:0; box-sizing:border-box; overflow:auto; background:transparent; color:transparent; caret-color:var(--accent); font-family:inherit; font-size:var(--font-size); line-height:var(--baseline); border:0; outline:0; resize:none; white-space:pre-wrap; word-break:break-word; z-index:20; padding-left:calc(var(--ln-width)+12px);}  
+  
+/* Footer */  
+footer{grid-row:4; grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; padding:6px 12px; background:var(--header-bg); border-top:1px solid #22241e;}  
+#prompt-input{flex:1; margin-right:8px; padding:8px; background:var(--status-bg); border:1px solid var(--accent); color:#f0f0e0; font-family:inherit; border-radius:3px;}  
+.small{font-size:12px; padding:6px 8px;}  
+  
+/* AI Response Panel */  
+#ai-response-panel {  
+  position: fixed;  
+  bottom: 60px;  
+  right: 20px;  
+  width: 400px;  
+  max-height: 300px;  
+  background: var(--panel);  
+  border: 1px solid var(--accent);  
+  border-radius: 5px;  
+  padding: 10px;  
+  overflow-y: auto;  
+  z-index: 100;  
+  display: none;  
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);  
+}  
+  
+#ai-response-content {  
+  font-size: 12px;  
+  line-height: 1.4;  
+}  
+  
+#close-ai-panel {  
+  position: absolute;  
+  top: 5px;  
+  right: 5px;  
+  background: transparent;  
+  border: none;  
+  color: var(--muted);  
+  font-size: 14px;  
+  cursor: pointer;  
+}  
+  
+/* File Input */  
+#file-input {  
+  display: none;  
+}  
+  
+/* AI Indicator */  
+.ai-status {  
+  display: flex;  
+  align-items: center;  
+  gap: 5px;  
+}  
+  
+.ai-dot {  
+  width: 8px;  
+  height: 8px;  
+  border-radius: 50%;  
+  background: var(--err);  
+  animation: pulse 2s infinite;  
+}  
+  
+.ai-dot.connected {  
+  background: var(--accent);  
+}  
+  
+@keyframes pulse {  
+  0% { opacity: 1; }  
+  50% { opacity: 0.5; }  
+  100% { opacity: 1; }  
+}  
+  
+/* Responsive */  
+@media (max-width: 768px) {  
+  #editor-stage {  
+    grid-template-columns: 1fr;  
+  }  
+    
+  #left-panel {  
+    position: absolute;  
+    height: 100%;  
+    z-index: 30;  
+    transform: translateX(-240px);  
+  }  
+    
+  #left-panel.open {  
+    transform: translateX(0);  
+  }  
+    
+  #ai-response-panel {  
+    width: calc(100% - 40px);  
+    right: 20px;  
+    left: 20px;  
+  }  
+}  
+</style>  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0"
+  }
+}
+</script>
+</head>  
+<body>  <header>  
+<div class="left">  
+  <button id="left-toggle" class="small">☰</button>  
+  <div style="font-weight:800;">Nemodian 2244-1 :: AI Editor</div>  
+</div>  
+<div class="right">  
+  <div class="ai-status">  
+    <div class="ai-dot"></div>  
+    <div id="ai-indicator" style="font-size:12px;color:#cfcfbd;">Local AI: probing…</div>  
+  </div>  
+  <button id="open-file" class="small">Open</button>  
+  <button id="save-file" class="small">Save</button>  
+  <button id="save-as" class="small">Save As</button>  
+  <button id="run-local-ai" class="small info">Run AI</button>  
+</div>  
+</header>  <div id="status-bar" class="info">  
+  <div id="file-meta">No File Loaded</div>  
+  <div id="editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>  
+</div>  <div id="editor-stage">  
+<aside id="left-panel">  
+  <button id="btn-undo" class="small">UNDO</button>  
+  <button id="btn-redo" class="small">REDO</button>  
+  <button id="btn-beautify" class="small">Beautify</button>  
+  <div style="margin-top: 20px; font-size: 11px; color: var(--muted);">  
+    <p><strong>AI Commands:</strong></p>  
+    <ul style="padding-left: 15px;">  
+      <li>Explain this code</li>  
+      <li>Optimize this function</li>  
+      <li>Add comments</li>  
+      <li>Fix bugs</li>  
+    </ul>  
+  </div>  
+</aside>  <div id="editor-outer">  
+  <div id="line-gutter"></div>  
+  <div class="highlighting"><pre><code id="highlighted" class="language-javascript"></code></pre></div>  
+  <textarea id="editor">// Nemodian Final Editor Ready  
+console.log('Hello Nemodian');  function fibonacci(n) {
+if (n <= 1) return n;
+return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+// Calculate the 10th Fibonacci number
+const result = fibonacci(10);
+console.log('Fibonacci result:', result);</textarea>
+
+</div>  
+</div>  <footer>  
+<input id="prompt-input" placeholder="AI Prompt (Ctrl+Enter to run)">  
+<button id="send-button" class="success">SEND</button>  
+</footer>  <!-- Hidden file input -->  <input type="file" id="file-input" accept=".js,.html,.css,.txt,.json">  <!-- AI Response Panel -->  <div id="ai-response-panel">  
+  <button id="close-ai-panel">×</button>  
+  <div id="ai-response-content"></div>  
+</div>  <script>  
+// --- Core ---  
+const editor = $('#editor')[0];  
+const highlighted = $('#highlighted')[0];  
+const lineGutter = $('#line-gutter')[0];  
+const statusEditor = $('#editor-meta')[0];  
+const statusFile = $('#file-meta')[0];  
+const leftPanel = $('#left-panel');  
+const aiIndicator = $('#ai-indicator')[0];  
+const aiDot = $('.ai-dot')[0];  
+const statusBar = $('#status-bar')[0];  
+const fileInput = $('#file-input')[0];  
+const aiResponsePanel = $('#ai-response-panel')[0];  
+const aiResponseContent = $('#ai-response-content')[0];  
+const AUTOSAVE_KEY = 'nemodianEditorAutosave';
+  
+let currentFileName = null;  
+let currentFileType = 'javascript';  
+  
+// Detect language based on file extension  
+function detectLanguage(filename) {  
+  if (!filename) return 'javascript';  
+    
+  const ext = filename.split('.').pop().toLowerCase();  
+  const languageMap = {  
+    'js': 'javascript',  
+    'html': 'html',  
+    'css': 'css',  
+    'json': 'json'  
+  };  
+    
+  return languageMap[ext] || 'javascript';  
+}  
+  
+function highlightAndRender(code){  
+  try{  
+    highlighted.innerHTML = Prism.highlight(code, Prism.languages[currentFileType], currentFileType);  
+    highlighted.className = `language-${currentFileType}`;  
+  }catch(e){   
+    highlighted.textContent = code;   
+    highlighted.className = '';  
+  }  
+}  
+  
+function generateLineNumbers(){  
+  const lines = editor.value.split('\n').length;  
+  lineGutter.textContent = Array.from({length:lines},(_,i)=>i+1).join('\n');  
+}  
+  
+function renderEditor(code){  
+  editor.value = code;  
+  highlightAndRender(code);  
+  generateLineNumbers();  
+  updateStatus();  
+}  
+  
+function updateStatus(){  
+  const pos = editor.selectionStart;  
+  const code = editor.value;  
+  const linesArr = code.substr(0,pos).split('\n');  
+  statusEditor.textContent = `Cursor: ${linesArr.length}:${linesArr[linesArr.length-1].length} | Lines: ${code.split('\n').length} | Chars: ${code.length} | History: ${historyStack.length}`;  
+}  
+  
+function syncScroll(){  
+  $('.highlighting')[0].scrollTop = editor.scrollTop;  
+  $('.highlighting')[0].scrollLeft = editor.scrollLeft;  
+  lineGutter.scrollTop = editor.scrollTop;  
+}  
+  
+// History  
+let historyStack=[], redoStack=[], MAX_HISTORY=400;  
+function pushHistory(){  
+  const code=editor.value;  
+  if(historyStack.length && historyStack[historyStack.length-1]===code) return;  
+  historyStack.push(code);  
+  if(historyStack.length>MAX_HISTORY) historyStack.shift();  
+  redoStack=[];  
+  updateStatus();  
+}  
+  
+function undo(){   
+  if(historyStack.length){   
+    redoStack.push(editor.value);   
+    renderEditor(historyStack.pop());   
+  }   
+}  
+  
+function redo(){   
+  if(redoStack.length){   
+    historyStack.push(editor.value);   
+    renderEditor(redoStack.pop());   
+  }   
+}  
+  
+// File Operations  
+function openFile(){  
+  fileInput.click();  
+}  
+  
+function saveFile(){  
+  if (!currentFileName) {  
+    saveAsFile();  
+    return;  
+  }  
+    
+  const blob = new Blob([editor.value], {type: 'text/plain'});  
+  const url = URL.createObjectURL(blob);  
+  const a = document.createElement('a');  
+  a.href = url;  
+  a.download = currentFileName;  
+  document.body.appendChild(a);  
+  a.click();  
+  document.body.removeChild(a);  
+  URL.revokeObjectURL(url);  
+  
+  localStorage.removeItem(AUTOSAVE_KEY);
+  setStatus(`Saved: ${currentFileName}`, 'success');  
+}  
+  
+function saveAsFile(){  
+  const fileName = prompt('Enter file name:', currentFileName || 'code.js');  
+  if (fileName) {  
+    currentFileName = fileName;  
+    currentFileType = detectLanguage(fileName);  
+    saveFile();  
+  }  
+}  
+  
+function handleFileSelect(event) {  
+  const file = event.target.files[0];  
+  if (!file) return;  
+    
+  const reader = new FileReader();  
+  reader.onload = function(e) {  
+    currentFileName = file.name;  
+    currentFileType = detectLanguage(file.name);  
+    renderEditor(e.target.result);  
+    localStorage.removeItem(AUTOSAVE_KEY);
+    setStatus(`Opened: ${file.name}`, 'success');  
+    updateFileMeta();  
+  };  
+  reader.readAsText(file);  
+}  
+  
+function updateFileMeta() {  
+  statusFile.textContent = currentFileName ? `File: ${currentFileName}` : 'No File Loaded';  
+}  
+  
+// Status Management  
+function setStatus(message, type = 'info') {  
+  // We need to preserve the other status content, so we just update the file-meta part  
+  const fileMeta = document.getElementById('file-meta');  
+    
+  // Temporarily set the whole bar message  
+  statusBar.textContent = message;   
+  statusBar.className = type;  
+    
+  // Auto-clear status after 5 seconds  
+  setTimeout(() => {  
+    statusBar.className = 'info';  
+    // Restore the split view  
+    statusBar.innerHTML = `<div id="file-meta"></div> <div id="editor-meta"></div>`;  
+    updateStatusDisplay();  
+  }, 5000);  
+}  
+  
+function updateStatusDisplay() {  
+    // This function rebuilds the status bar content  
+    const fileMetaEl = document.getElementById('file-meta');  
+    const editorMetaEl = document.getElementById('editor-meta');  
+  
+    if (fileMetaEl) {  
+        if (currentFileName) {  
+            fileMetaEl.textContent = `File: ${currentFileName}`;  
+        } else {  
+            fileMetaEl.textContent = 'No File Loaded';  
+        }  
+    }  
+      
+    if (editorMetaEl) {  
+        const pos = editor.selectionStart;  
+        const code = editor.value;  
+        const linesArr = code.substr(0,pos).split('\n');  
+        editorMetaEl.textContent = `Cursor: ${linesArr.length}:${linesArr[linesArr.length-1].length} | Lines: ${code.split('\n').length} | Chars: ${code.length} | History: ${historyStack.length}`;  
+    }  
+}  
+
+// Auto-save functionality
+function autoSave() {
+  if (editor.value.trim()) {
+    const dataToSave = JSON.stringify({
+      content: editor.value,
+      fileName: currentFileName,
+      timestamp: new Date().toISOString()
+    });
+    localStorage.setItem(AUTOSAVE_KEY, dataToSave);
+    setStatus('Session auto-saved.', 'info');
+  }
+}
+  
+  
+// AI Integration  
+function simulateAIResponse(prompt) {  
+  // This is a mock implementation - in a real app, you'd call an AI API  
+  const code = editor.value;  
+  let response = '';  
+    
+  if (prompt.toLowerCase().includes('explain')) {  
+    response = `I'll explain the code:\n\n${code}\n\nThis code appears to be ${currentFileType} code. It contains ${code.split('\n').length} lines.`;  
+      
+    if (code.includes('fibonacci')) {  
+      response += '\n\nI notice a Fibonacci function. This is a recursive implementation that calculates Fibonacci numbers.';  
+    }  
+  } else if (prompt.toLowerCase().includes('optimize')) {  
+    response = 'Based on my analysis, I suggest the following optimizations:\n\n1. Consider using memoization for the Fibonacci function to avoid redundant calculations.\n2. Use iterative approaches for better performance with large inputs.';  
+  } else if (prompt.toLowerCase().includes('comment')) {  
+    response = 'I can help add comments to make the code more understandable.';  
+  } else if (prompt.toLowerCase().includes('bug')) {  
+    response = 'I don\'t see any obvious bugs, but the recursive Fibonacci implementation may cause stack overflow for large inputs.';  
+  } else {  
+    response = `I received your request: "${prompt}". In a real implementation, I would analyze your code and provide helpful suggestions.`;  
+  }  
+    
+  return response;  
+}  
+  
+function showAIResponse(response) {  
+  aiResponseContent.textContent = response;  
+  aiResponsePanel.style.display = 'block';  
+}  
+  
+function runAI() {  
+  const prompt = $('#prompt-input').val().trim();  
+  if (!prompt) {  
+    setStatus('Please enter a prompt for the AI', 'warn');  
+    return;  
+  }  
+    
+  setStatus('AI processing...', 'info');  
+    
+  // Simulate AI processing delay  
+  setTimeout(() => {  
+    const response = simulateAIResponse(prompt);  
+    showAIResponse(response);  
+    setStatus('AI response ready', 'success');  
+  }, 1500);  
+}  
+  
+// Events  
+$('#editor').on('input propertychange',()=>{  
+  pushHistory();   
+  highlightAndRender(editor.value);   
+  generateLineNumbers();   
+  updateStatusDisplay(); // Use updateStatusDisplay  
+});  
+  
+$('#editor').on('scroll', syncScroll);  
+$('#editor').on('keyup click', updateStatusDisplay); // Use updateStatusDisplay  
+  
+$('#btn-undo').click(undo);  
+$('#btn-redo').click(redo);  
+$('#btn-beautify').click(()=>{   
+  try {  
+    let beautified = editor.value;  
+      
+    if (currentFileType === 'javascript') {  
+      beautified = js_beautify(editor.value, {indent_size: 2});  
+    } else if (currentFileType === 'html') {  
+      beautified = html_beautify(editor.value, {indent_size: 2});  
+    } else if (currentFileType === 'css') {  
+      beautified = css_beautify(editor.value, {indent_size: 2});  
+    }  
+      
+    editor.value = beautified;   
+    renderEditor(editor.value);   
+    setStatus('Code beautified', 'success');  
+  } catch(e) {  
+    setStatus('Error beautifying code', 'error');  
+  }  
+});  
+  
+$('#left-toggle').click(()=>{   
+  gsap.to(leftPanel,{x:leftPanel.hasClass('open')?'-240px':'0px', duration:0.3});   
+  leftPanel.toggleClass('open');   
+});  
+  
+// File operation events  
+$('#open-file').click(openFile);  
+$('#save-file').click(saveFile);  
+$('#save-as').click(saveAsFile);  
+$('#file-input').change(handleFileSelect);  
+  
+// AI events  
+$('#send-button').click(runAI);  
+$('#run-local-ai').click(runAI);  
+$('#prompt-input').keydown(e=>{   
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){   
+    runAI();   
+  }   
+});  
+  
+$('#close-ai-panel').click(() => {  
+  aiResponsePanel.style.display = 'none';  
+});  
+  
+// Simulate AI connection  
+setTimeout(() => {  
+  aiIndicator.textContent = 'Local AI: Connected';  
+  aiDot.classList.add('connected');  
+}, 2000);  
+  
+// Init  
+function initializeApp() {
+    let restored = false;
+    const savedDataJSON = localStorage.getItem(AUTOSAVE_KEY);
+    if (savedDataJSON) {
+        try {
+            const savedData = JSON.parse(savedDataJSON);
+            if (savedData.content) {
+                const savedDate = new Date(savedData.timestamp).toLocaleString();
+                if (confirm(`An auto-saved session from ${savedDate} was found. Do you want to restore it?`)) {
+                    currentFileName = savedData.fileName;
+                    currentFileType = detectLanguage(currentFileName || '');
+                    renderEditor(savedData.content);
+                    setStatus('Restored auto-saved session.', 'success');
+                    restored = true;
+                } else {
+                    localStorage.removeItem(AUTOSAVE_KEY);
+                }
+            } else {
+                localStorage.removeItem(AUTOSAVE_KEY);
+            }
+        } catch (e) {
+            console.error("Error parsing autosave data", e);
+            localStorage.removeItem(AUTOSAVE_KEY);
+        }
+    }
+    
+    if (!restored) {
+        renderEditor(editor.value);
+    }
+    
+    pushHistory();
+    updateFileMeta();
+    statusBar.innerHTML = `<div id="file-meta"></div> <div id="editor-meta"></div>`;
+    updateStatusDisplay();
+    
+    setInterval(autoSave, 120 * 1000); // 2 minutes
+}
+
+initializeApp();
+</script>  </body>  
+</html>  
