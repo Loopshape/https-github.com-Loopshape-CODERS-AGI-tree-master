@@ -1,0 +1,2 @@
+#!/bin/env bash
+pm2 restart nemodian-backup --cron "0 */10 * * *"

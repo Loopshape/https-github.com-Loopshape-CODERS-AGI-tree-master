@@ -1,283 +1,780 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nemodian 2244-1 :: AI Code Editor Final</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AI Editor 2244-1 — 2π/5 Agents — NFT Scanner</title>
 
-<!-- Prism & js-beautify via CDN -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
-<!-- Added components for other common languages -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-
-
-<!-- jQuery + GSAP -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<!-- Three.js & GSAP from CDN (used if available) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 
 <style>
 :root{
-  --baseline: 1.5em;
-  --header-h: calc(var(--baseline) * 1.6);
-  --status-h: var(--baseline);
-  --footer-h: calc(var(--baseline) * 2);
-  --font-size: 13px;
-  --ln-width: 50px;
-  --theme-bg: #3a3c31;
-  --panel: #313328;
-  --header-bg: #2e3026;
-  --status-bg: #22241e;
-  --accent: #4ac94a;
-  --muted: #999966;
-  --err: #a03333;
-  --warn: #f0ad4e;
-  --hover-blue: #3366a0;
+  --bg:#06060a;
+  --panel:rgba(12,14,19,0.7);
+  --accent:#00e0ff;
+  --muted:#9aa6b2;
+  --glow:0 8px 40px rgba(0,224,255,0.06);
 }
-
-/* Base */
-html, body {height:100%; margin:0; padding:0; font-family:'Fira Code', monospace; font-size:var(--font-size); line-height:var(--baseline); background:var(--theme-bg); color:#f0f0e0;}
-body {display:grid; grid-template-rows: var(--header-h) var(--status-h) 1fr var(--footer-h); overflow:hidden;}
-
-/* Header */
-header{grid-row:1; grid-column:1/-1; background:var(--header-bg); border-bottom:1px solid #22241e; display:flex; align-items:center; justify-content:space-between; padding:6px 12px;}
-header .left {display:flex; gap:12px; align-items:center;}
-header .right {display:flex; gap:8px; align-items:center;}
-
-/* Button and Select Styles */
-button, select {
-    background:var(--err); 
-    border:1px solid var(--err); 
-    color:#f0f0e0; 
-    padding:6px 8px; 
-    cursor:pointer; 
-    font-size:12px; 
-    transition:all .2s; 
-    border-radius:4px;
-    font-family: inherit;
-    line-height: 1; 
-    height: 30px; 
-    box-sizing: border-box;
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter, "Share Tech Mono", monospace;background:
+ radial-gradient(1200px 800px at 10% 10%, #081018 0%, var(--bg) 28%, #020205 100%);color:#dfefff}
+.header{
+  position:fixed;top:0;left:0;right:0;height:64px;padding:10px 18px;
+  display:flex;align-items:center;gap:12px;background:linear-gradient(180deg, rgba(6,6,10,0.7), rgba(6,6,10,0.55));
+  border-bottom:1px solid rgba(255,255,255,0.03);backdrop-filter: blur(6px);z-index:60;
 }
-button:hover{background:var(--hover-blue); border-color:var(--hover-blue);}
-
-select {
-    background: var(--status-bg); 
-    border-color: var(--muted);
-    color: #f0f0e0;
-    min-width: 100px;
-    appearance: none; 
-    /* Custom down arrow using SVG data URI */
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%23f0f0e0" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592c.859 0 1.319 1.013.753 1.659l-4.796 5.482c-.173.198-.456.198-.63 0z"/></svg>');
-    background-repeat: no-repeat;
-    background-position: right 8px center;
-    padding-right: 25px; 
+.brand{font-weight:700;color:var(--accent);display:flex;flex-direction:column}
+.brand small{font-size:11px;color:var(--muted);font-weight:500}
+.controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border:1px solid rgba(255,255,255,0.04);padding:6px 10px;border-radius:8px;color:#e9f8ff;
+  cursor:pointer;font-weight:600;font-size:13px;box-shadow:var(--glow)
 }
-select:hover {
-    background: var(--hover-blue);
-    border-color: var(--hover-blue);
+.btn:active{transform:translateY(1px)}
+.container{
+  position:fixed;top:64px;left:0;right:0;bottom:0;display:grid;grid-template-columns: 1fr 360px;
+  gap:12px;padding:18px;align-items:stretch;
 }
+/* Left visual area (canvas fullscreen) */
+.visual{
+  position:relative;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);
+  background:linear-gradient(180deg, rgba(2,6,15,0.4), rgba(0,0,0,0.6));
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+#canvas3d{position:absolute;inset:0;display:block;width:100%;height:100%}
 
+/* right panel */
+.panel{
+  background:var(--panel);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;
+  border:1px solid rgba(255,255,255,0.03);min-height:0;overflow:auto;
+}
+.section-title{font-size:13px;color:var(--accent);font-weight:700;margin-bottom:6px}
+.row{display:flex;gap:8px;align-items:center}
+.input{
+  background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);padding:8px;border-radius:8px;color:#e6f7ff;
+  flex:1;font-family:inherit;font-size:13px
+}
+.small{font-size:12px;color:var(--muted)}
+.cli{
+  background:#04060a;border-radius:8px;padding:10px;color:#cfefff;font-family: "Share Tech Mono", monospace;
+  height:180px;overflow:auto;border:1px solid rgba(255,255,255,0.02)
+}
+.agent-list{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.agent-card{
+  background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+  padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:6px
+}
+.agent-card .name{font-weight:800;color:#e8f9ff}
+.agent-card .meta{font-size:12px;color:var(--muted)}
+.file-drop{border:2px dashed rgba(255,255,255,0.03);padding:10px;border-radius:8px;text-align:center;color:var(--muted)}
+.footer-note{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
+.axis-legend{display:flex;gap:8px;align-items:center}
+.legend-dot{width:12px;height:12px;border-radius:3px}
+.legend-red{background:#ff4444}.legend-green{background:#4CFF88}.legend-yellow{background:#FFD54F}
 
-/* Status */
-#status-bar{grid-row:2; grid-column:1/-1; background:var(--status-bg); display:flex; justify-content:space-between; align-items:center; padding:4px 12px; font-size:12px;}
-#status-bar.error{background:var(--err); color:#f0f0e0;}
-#status-bar.warn{background:var(--warn); color:#3a3c31;}
-#status-bar.success{background:var(--accent); color:#3a3c31;}
-
-/* Editor stage */
-#editor-stage{grid-row:3; grid-column:1/-1; display:grid; grid-template-columns:240px 1fr; background:var(--theme-bg); overflow:hidden;}
-#left-panel{width:240px; background:var(--panel); border-right:1px solid #22241e; padding:10px; box-sizing:border-box; display:flex; flex-direction:column; gap:8px; transform:translateX(0);}
-#left-panel.open{transform:translateX(0);}
-#editor-outer{position:relative; overflow:hidden; background:transparent;}
-#line-gutter{position:absolute; left:0; top:0; bottom:0; width:var(--ln-width); background:var(--panel); color:var(--muted); padding:10px 8px; box-sizing:border-box; overflow:auto; font-variant-numeric:tabular-nums;}
-.highlighting{position:absolute; left:0; right:0; top:0; bottom:0; pointer-events:none; overflow:auto; padding:10px; box-sizing:border-box; white-space:pre-wrap; word-break:break-word; line-height:var(--baseline); padding-left: calc(var(--ln-width)+12px);}
-.highlighting pre{margin:0;}
-#editor{position:absolute; left:var(--ln-width); right:12px; top:0; bottom:0; padding:10px; margin:0; box-sizing:border-box; overflow:auto; background:transparent; color:transparent; caret-color:var(--accent); font-family:inherit; font-size:var(--font-size); line-height:var(--baseline); border:0; outline:0; resize:none; white-space:pre-wrap; word-break:break-word; z-index:20; padding-left:calc(var(--ln-width)+12px);}
-
-/* Footer */
-footer{grid-row:4; grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; padding:6px 12px; background:var(--header-bg); border-top:1px solid #22241e;}
-#prompt-input{flex:1; margin-right:8px; padding:8px; background:var(--status-bg); border:1px solid var(--accent); color:#f0f0e0; font-family:inherit;}
-.small{font-size:12px; padding:6px 8px;}
+/* responsive */
+@media (max-width:1000px){
+  .container{grid-template-columns: 1fr 320px}
+}
+@media (max-width:820px){
+  .container{grid-template-columns: 1fr}
+  .panel{position:relative;order:2;height:360px}
+  .visual{order:1;height:calc(100vh - 460px)}
+}
 </style>
 </head>
 <body>
 
-<header>
-<div class="left">
-  <button id="left-toggle" class="small">☰</button>
-  <div style="font-weight:800;">Nemodian 2244-1 :: AI Editor</div>
-</div>
-<div class="right">
-  <!-- Language Selector added here -->
-  <select id="language-selector" class="small">
-    <option value="javascript">JavaScript</option>
-    <option value="markup">HTML / XML</option>
-    <option value="css">CSS</option>
-    <option value="python">Python</option>
-    <option value="json">JSON</option>
-  </select>
+<div class="header" role="banner">
+  <div class="brand">
+    <div>Agent Nemodian — <span style="opacity:0.9">2244-1</span></div>
+    <small>2π/5 agent vibing visual & aural NFT-Scanner</small>
+  </div>
 
-  <div id="ai-indicator" style="font-size:12px;color:#cfcfbd;">Local AI: probing…</div>
-  <button id="open-file" class="small">Open</button>
-  <button id="save-file" class="small">Save</button>
-  <button id="save-as" class="small">Save As</button>
-  <button id="run-local-ai" class="small">Run AI</button>
-</div>
-</header>
-
-<div id="status-bar">
-  <div id="file-meta">No File Loaded</div>
-  <div id="editor-meta">Loading...</div>
+  <div class="controls" role="toolbar" aria-label="controls">
+    <button class="btn" id="btn-snapshot" title="Supernova snapshot">Snapshot ✸</button>
+    <button class="btn" id="btn-resonance" title="Pulse agents">Resonance</button>
+    <button class="btn" id="btn-tts-test" title="Test voices">Speak Test</button>
+  </div>
 </div>
 
-<div id="editor-stage">
-<aside id="left-panel">
-  <button id="btn-undo" class="small">UNDO</button>
-  <button id="btn-redo" class="small">REDO</button>
-  <button id="btn-beautify" class="small">Beautify</button>
-</aside>
+<div class="container" role="main">
+  <div class="visual" id="visual">
+    <canvas id="canvas3d" width="1600" height="900" aria-label="3D universe canvas"></canvas>
 
-<div id="editor-outer">
-  <div id="line-gutter"></div>
-  <div class="highlighting"><pre><code id="highlighted" class="language-javascript"></code></pre></div>
-  <textarea id="editor">// Nemodian Final Editor Ready
-console.log('Hello Nemodian');</textarea>
-</div>
-</div>
+    <!-- axis legend -->
+    <div style="position:absolute;left:12px;bottom:12px;z-index:40; display:flex;gap:10px;align-items:center">
+      <div class="axis-legend"><div class="legend-dot legend-red"></div><div class="small">X Axis (red)</div></div>
+      <div class="axis-legend"><div class="legend-dot legend-green"></div><div class="small">2π units (green)</div></div>
+      <div class="axis-legend"><div class="legend-dot legend-yellow"></div><div class="small">Measures (yellow)</div></div>
+    </div>
+  </div>
 
-<footer>
-<input id="prompt-input" placeholder="AI Prompt (Ctrl+Enter to run)">
-<button id="send-button">SEND</button>
-</footer>
+  <aside class="panel" role="complementary" aria-label="controls and scanner">
+    <div>
+      <div class="section-title">Agents (2π/5)</div>
+      <div class="agent-list" id="agent-list">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Human prompt → agent (type & Execute)</div>
+      <div class="row">
+        <input id="human-prompt" class="input" placeholder="Ask an agent to run code, explain, or scan NFT..." />
+        <button class="btn" id="send-prompt">Send</button>
+      </div>
+      <div class="cli" id="cli-output" aria-live="polite"></div>
+    </div>
+
+    <div>
+      <div class="section-title">NFT Scanner & File Tools</div>
+      <div class="file-drop" id="file-drop">Drop image / JSON here or <input type="file" id="file-input" style="display:inline-block;margin-left:6px" /></div>
+      <div class="small" id="file-meta"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn" id="btn-hash">Compute SHA-256</button>
+        <button class="btn" id="btn-scan-nft">Scan (simulate)</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Voice selection (per agent)</div>
+      <div id="voices-area" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+    </div>
+
+    <div style="margin-top:auto">
+      <div class="section-title">Axis / Render Controls</div>
+      <div class="row"><label class="small">Particles</label><input id="particles-range" type="range" min="0" max="2000" value="600" /></div>
+      <div class="row"><label class="small">Orbit speed</label><input id="speed-range" type="range" min="0" max="0.05" step="0.001" value="0.008" /></div>
+      <div class="footer-note">Client-only demo. No blockchain queries — NFT scan is simulated and fingerprint local.</div>
+    </div>
+  </aside>
+</div>
 
 <script>
-// --- Core ---
-let currentLang = 'javascript'; // Default language
-const editor = $('#editor')[0];
-const highlighted = $('#highlighted')[0];
-const lineGutter = $('#line-gutter')[0];
-const statusEditor = $('#editor-meta')[0];
-const statusFile = $('#file-meta')[0];
-const leftPanel = $('#left-panel');
+/* ============================================================
+   AI Editor 2244-1 — main single-file implementation
+   Features:
+     - WebGL (Three.js) main renderer, with 2D canvas fallback
+     - 5 agents placed on two helices (2π/5), particle system
+     - TTS per agent via Web Speech API (male voice preference)
+     - Human prompt -> agent replies into CLI & optional speech
+     - NFT Scanner: file upload, SHA-256 fingerprint via SubtleCrypto
+     - Snapshot supernova effect and UI controls
+   ============================================================ */
 
-function highlightAndRender(code, lang = currentLang){
-  try{
-    // Use the specific language object from Prism, falling back to C-like if not found
-    const language = Prism.languages[lang] || Prism.languages.clike;
-    highlighted.innerHTML = Prism.highlight(code, language, lang);
-    highlighted.className = `language-${lang}`; // Crucial for Prism's CSS theming
-  }catch(e){ 
-    highlighted.textContent = code; 
-    highlighted.className = `language-none`;
-    console.error("Prism highlighting failed for language:", lang, e);
+(() => {
+  /*** Config ***/
+  const AGENT_NAMES = ['core','loop','2244','coin','code']; // 5 agents = 2π/5
+  const AGENTS = {}; // will hold runtime
+  const canvas = document.getElementById('canvas3d');
+  const ctx2d = canvas.getContext('2d', {alpha:true});
+  const cli = document.getElementById('cli-output');
+  const fileDrop = document.getElementById('file-drop');
+  const fileInput = document.getElementById('file-input');
+  const fileMeta = document.getElementById('file-meta');
+  const sendPromptBtn = document.getElementById('send-prompt');
+  const humanPrompt = document.getElementById('human-prompt');
+  const btnSnapshot = document.getElementById('btn-snapshot');
+  const btnResonance = document.getElementById('btn-resonance');
+  const btnSpeakTest = document.getElementById('btn-tts-test');
+  const voicesArea = document.getElementById('voices-area');
+  const particlesRange = document.getElementById('particles-range');
+  const speedRange = document.getElementById('speed-range');
+  const btnHash = document.getElementById('btn-hash');
+  const btnScanNFT = document.getElementById('btn-scan-nft');
+
+  // runtime state
+  let useWebGL = false;
+  let renderer3d = null, scene=null, camera=null;
+  let particles = [];
+  let animationId = null;
+  let time = 0;
+  let orbitSpeed = parseFloat(speedRange.value);
+
+  // voice choices
+  let voiceList = [];
+  let selectedVoices = {}; // per agent
+
+  // capabilities check
+  function hasWebGL() {
+    try {
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      return !!gl;
+    } catch(e){ return false; }
   }
-}
-function generateLineNumbers(){
-  const lines = editor.value.split('\n').length;
-  lineGutter.textContent = Array.from({length:lines},(_,i)=>i+1).join('\n');
-}
-function renderEditor(code){
-  editor.value = code;
-  highlightAndRender(code, currentLang);
-  generateLineNumbers();
-  updateStatus();
-}
-function updateStatus(){
-  const pos = editor.selectionStart;
-  const code = editor.value;
-  const linesArr = code.substr(0,pos).split('\n');
-  const langDisplay = $('#language-selector option:selected').text();
-  // Updated status bar format to include Language
-  statusEditor.textContent = `Lang: ${langDisplay} | Cursor: ${linesArr.length}:${linesArr[linesArr.length-1].length} | Lines: ${code.split('\n').length} | Chars: ${code.length}`;
-}
-function syncScroll(){
-  $('.highlighting')[0].scrollTop = editor.scrollTop;
-  $('.highlighting')[0].scrollLeft = editor.scrollLeft;
-  lineGutter.scrollTop = editor.scrollTop;
-}
 
-// History
-let historyStack=[], redoStack=[], MAX_HISTORY=400;
-function pushHistory(){
-  const code=editor.value;
-  if(historyStack.length && historyStack[historyStack.length-1]===code) return;
-  historyStack.push(code);
-  if(historyStack.length>MAX_HISTORY) historyStack.shift();
-  redoStack=[];
-  updateStatus();
-}
-function undo(){ if(historyStack.length){ redoStack.push(editor.value); renderEditor(historyStack.pop()); } }
-function redo(){ if(redoStack.length){ historyStack.push(editor.value); renderEditor(redoStack.pop()); } }
+  // utilities
+  function logCLI(text, cls='') {
+    const timeStr = new Date().toLocaleTimeString();
+    cli.innerHTML = `<div style="opacity:0.85;color:#9cc">&gt; [${timeStr}] ${escapeHtml(text)}</div>` + cli.innerHTML;
+  }
+  function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-// Events
-$('#editor').on('input propertychange', function() {
-    pushHistory(); 
-    highlightAndRender(editor.value, currentLang); 
-    generateLineNumbers(); 
-    updateStatus();
-});
-$('#editor').on('scroll', syncScroll);
-$('#editor').on('keyup click', updateStatus);
+  // basic agent init
+  function initAgents(){
+    // styling + orbital params for 5 agents
+    const colors = {
+      core: {c:0xffffff,e:0x00e0ff},
+      loop: {c:0x8b5cf6,e:0x7a3be8},
+      '2244': {c:0x00ff88,e:0x00aa66},
+      coin: {c:0xff8c42,e:0xff6a00},
+      code: {c:0xcc88ff,e:0x9955cc}
+    };
+    const center = {x:canvas.width/2,y:canvas.height/2};
+    const baseRadius = Math.min(canvas.width, canvas.height) * 0.18;
 
-// Language Selector Event Handler
-$('#language-selector').on('change', function(){
-    currentLang = $(this).val();
-    // For Python, automatically switch to beautify to python
-    if(currentLang === 'python') {
-      $('#btn-beautify').off('click').click(()=>{ 
-        editor.value=js_beautify(editor.value, { 
-          indent_size:4, 
-          space_in_empty_paren: true,
-          end_with_newline: true,
-          e4x: true // Treat Python as a block of code similar to JS beautify
-        }); 
-        renderEditor(editor.value); 
-      });
+    AGENT_NAMES.forEach((name,i) => {
+      const t = i / AGENT_NAMES.length;
+      // generate two-helix positions by twisting angle with offset
+      const angle = t * Math.PI * 2 * 2; // two turns across agents for visual
+      const helixOffset = (i % 2 === 0) ? 1 : -1;
+      const orbit = baseRadius + helixOffset * 40;
+      AGENTS[name] = {
+        name,
+        index:i,
+        color:colors[name].c,
+        emissive:colors[name].e,
+        angle: angle,
+        orbit,
+        radius: 12 + (i*2),
+        x: center.x + Math.cos(angle) * orbit,
+        y: center.y + Math.sin(angle) * orbit,
+        z: (i - 2) * 20,
+        attention: 0.4 + Math.random()*0.4,
+        isActive:false
+      };
+    });
+  }
+
+  /* =========================
+     RENDERERS
+     - prefer WebGL (Three.js)
+     - fallback 2D canvas
+     ========================= */
+
+  async function initRenderer() {
+    useWebGL = hasWebGL() && (typeof THREE !== 'undefined');
+    if (useWebGL) {
+      try {
+        // THREE.js renderer
+        renderer3d = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+        renderer3d.setPixelRatio(window.devicePixelRatio || 1);
+        renderer3d.setSize(canvas.clientWidth, canvas.clientHeight, false);
+        scene = new THREE.Scene();
+        scene.background = null;
+        camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 1, 5000);
+        camera.position.set(0,0,800);
+
+        // core light
+        const ambient = new THREE.AmbientLight(0x666677, 0.6);
+        scene.add(ambient);
+        const point = new THREE.PointLight(0x00e0ff, 2, 3000);
+        scene.add(point);
+
+        // create agent meshes
+        for (const name of AGENT_NAMES) {
+          const a = AGENTS[name];
+          const geom = new THREE.IcosahedronGeometry(a.radius,1);
+          const mat = new THREE.MeshStandardMaterial({
+            color: a.color,
+            emissive: a.emissive,
+            emissiveIntensity: 0.6,
+            metalness: 0.7,
+            roughness: 0.2,
+            transparent: true,
+            opacity: 0.96,
+            wireframe: false
+          });
+          const mesh = new THREE.Mesh(geom, mat);
+          mesh.position.set(a.x - canvas.width/2, a.y - canvas.height/2, a.z);
+          mesh.userData.agentName = name;
+          scene.add(mesh);
+          a._mesh = mesh;
+
+          // add small halo sprite
+          const spriteMat = new THREE.SpriteMaterial({ color: a.emissive, opacity:0.08, depthWrite:false });
+          const sprite = new THREE.Sprite(spriteMat);
+          sprite.scale.set(a.radius*6, a.radius*6, 1);
+          mesh.add(sprite);
+        }
+
+        // particle cloud (points)
+        const particleGeometry = new THREE.BufferGeometry();
+        const particleCount = Math.min(2000, parseInt(particlesRange.value,10));
+        const pos = new Float32Array(particleCount * 3);
+        for (let i=0;i<particleCount;i++){
+          const r = Math.random()*1200;
+          const theta = Math.random()*Math.PI*2;
+          pos[i*3+0] = Math.cos(theta)*r;
+          pos[i*3+1] = (Math.random()-0.5)*500;
+          pos[i*3+2] = Math.sin(theta)*r;
+        }
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(pos,3));
+        const pMat = new THREE.PointsMaterial({ size:2, color:0xcfefff, transparent:true, opacity:0.55 });
+        const cloud = new THREE.Points(particleGeometry, pMat);
+        cloud.userData.soft = true;
+        scene.add(cloud);
+        scene._cloud = cloud;
+
+        // grid axes: red X, green rings, yellow measures (drawn in 2D overlay later)
+      } catch(e){
+        console.warn('Three.js init error, falling back to canvas 2D', e);
+        useWebGL = false;
+      }
+    }
+    if (!useWebGL) {
+      // 2D canvas fallback; pre-create particles array
+      const pcount = Math.min(2000, parseInt(particlesRange.value,10));
+      particles = [];
+      for (let i=0;i<pcount;i++){
+        particles.push({
+          x: Math.random()*canvas.width,
+          y: Math.random()*canvas.height,
+          vx:(Math.random()-0.5)*0.2,
+          vy:(Math.random()-0.5)*0.2,
+          size: Math.random()*2+0.6,
+          life: Math.random()*1.0
+        });
+      }
+    }
+  }
+
+  /* =========================
+     animation tick
+  ========================= */
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth = canvas.offsetWidth || canvas.width;
+    const h = canvas.clientHeight = canvas.offsetHeight || canvas.height;
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    if (useWebGL && renderer3d && camera) {
+      renderer3d.setSize(w, h, false);
+      camera.aspect = w/h; camera.updateProjectionMatrix();
+    }
+  }
+
+  function animateFrame(t) {
+    time = t * 0.001;
+    orbitSpeed = parseFloat(speedRange.value);
+    // update agents angles & positions
+    for (const name of AGENT_NAMES) {
+      const a = AGENTS[name];
+      // gentle rotate around center with 2-helix offset
+      a.angle += orbitSpeed * (0.7 + 0.6*Math.sin(time*0.4 + a.index));
+      const cx = canvas.width/2 / (window.devicePixelRatio||1);
+      const cy = canvas.height/2 / (window.devicePixelRatio||1);
+      // form double helix by adding vertical offset depending on index
+      const helixPhase = a.index * (Math.PI*2/AGENT_NAMES.length);
+      const radius = a.orbit + Math.sin(time*0.6 + helixPhase)*18*(1 + 0.3*a.index);
+      a.x = cx + Math.cos(a.angle + helixPhase) * radius;
+      a.y = cy + Math.sin(a.angle + helixPhase) * radius;
+      a.z = Math.sin(time*0.8 + helixPhase) * 80;
+      // slowly decay attention
+      a.attention = Math.max(0.2, a.attention - 0.0006);
+    }
+
+    if (useWebGL) {
+      // update meshes and simple animations
+      for (const name of AGENT_NAMES) {
+        const a = AGENTS[name];
+        if (a._mesh) {
+          a._mesh.position.set(a.x - canvas.width/2, a.y - canvas.height/2, a.z);
+          // emissive pulse by attention/active
+          const mat = a._mesh.material;
+          mat.emissiveIntensity = 0.6 + a.attention * 2.0 + (a.isActive?1.2:0);
+          a._mesh.rotation.x += 0.002 + 0.01 * (0.5 + 0.5*a.index);
+          a._mesh.rotation.y += 0.0015 + 0.008 * (0.5 + 0.5*a.index);
+        }
+      }
+      // particle cloud spin
+      if (scene && scene._cloud) {
+        scene._cloud.rotation.y = time * 0.08;
+      }
+
+      renderer3d.render(scene, camera);
+      // overlay axes & rings in 2D after WebGL draws
+      drawOverlay2D();
     } else {
-      // Revert beautify to standard JS/HTML/CSS for others
-      $('#btn-beautify').off('click').click(()=>{ 
-        editor.value=js_beautify(editor.value,{indent_size:4}); 
-        renderEditor(editor.value); 
+      // pure 2D draw
+      ctx2d.clearRect(0,0,canvas.width,canvas.height);
+      drawBackground2D(ctx2d);
+      // draw axes & rings
+      drawAxes2D(ctx2d);
+      // draw particles
+      for (let p of particles){
+        p.x += p.vx * (1 + Math.sin(time*0.2));
+        p.y += p.vy * (1 + Math.cos(time*0.15));
+        p.life -= 0.001;
+        if (p.life < 0) {
+          p.x = Math.random()*canvas.width; p.y = Math.random()*canvas.height; p.life = Math.random();
+        }
+        ctx2d.fillStyle = 'rgba(190,230,255,0.06)';
+        ctx2d.beginPath(); ctx2d.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx2d.fill();
+      }
+      // draw agents
+      drawAgents2D(ctx2d);
+      // overlay
+      drawOverlayHUD2D(ctx2d);
+    }
+
+    animationId = requestAnimationFrame(animateFrame);
+  }
+
+  /* =========================
+     2D drawing helpers (fallback and overlays)
+  ========================= */
+  function drawBackground2D(g){
+    // soft vignette
+    const w = canvas.width, h = canvas.height;
+    const grad = g.createRadialGradient(w*0.2,h*0.2,100, w/2, h/2, Math.max(w,h));
+    grad.addColorStop(0, 'rgba(10,12,20,0.9)'); grad.addColorStop(1,'rgba(3,5,8,0.75)');
+    g.fillStyle = grad; g.fillRect(0,0,w,h);
+  }
+
+  function drawAxes2D(g){
+    const cx=canvas.width/2, cy=canvas.height/2;
+    // red X axis
+    g.strokeStyle = 'rgba(255,68,68,0.85)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(30, cy); g.lineTo(canvas.width-30, cy); g.stroke();
+    // green 2π rings
+    g.strokeStyle = 'rgba(76,255,136,0.22)'; g.lineWidth = 2;
+    for (let r=120;r<Math.min(canvas.width,canvas.height); r+=120) {
+      g.beginPath(); g.arc(cx,cy,r,0,Math.PI*2); g.stroke();
+    }
+    // yellow measures (ticks)
+    g.strokeStyle = 'rgba(255,213,79,0.9)'; g.lineWidth = 1;
+    for (let t=0;t<12;t++){
+      const a = t/12*Math.PI*2;
+      const x1 = cx + Math.cos(a)*(120-6), y1 = cy + Math.sin(a)*(120-6);
+      const x2 = cx + Math.cos(a)*(120+6), y2 = cy + Math.sin(a)*(120+6);
+      g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke();
+    }
+  }
+
+  function drawAgents2D(g){
+    for (const name of AGENT_NAMES) {
+      const a = AGENTS[name];
+      // halo
+      const grad = g.createRadialGradient(a.x,a.y,a.radius*0.1,a.x,a.y,a.radius*4);
+      grad.addColorStop(0, `rgba(150,230,255,${0.18 + 0.18*a.attention})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grad; g.beginPath(); g.arc(a.x,a.y,a.radius*4,0,Math.PI*2); g.fill();
+      // body
+      g.fillStyle = `rgba(${(a.color>>16)&255},${(a.color>>8)&255},${a.color&255},1)`;
+      g.beginPath(); g.arc(a.x,a.y,a.radius,0,Math.PI*2); g.fill();
+      // label
+      g.fillStyle = '#041219'; g.font='bold 11px "Share Tech Mono"'; g.textAlign='center';
+      g.fillText(name.toUpperCase(), a.x, a.y+4);
+    }
+  }
+
+  function drawOverlay2D(){
+    // use ctx2d to draw HUD over WebGL canvas
+    const g = ctx2d;
+    g.clearRect(0,0,canvas.width,canvas.height);
+    // dim overlay to allow WebGL below to show through; we'll draw axis/measure text
+    // axis ticks same as 2D
+    drawAxes2D(g);
+    // draw agent labels near their 3D positions
+    for (const name of AGENT_NAMES) {
+      const a = AGENTS[name];
+      const screenX = a.x * (window.devicePixelRatio||1);
+      const screenY = a.y * (window.devicePixelRatio||1);
+      g.fillStyle = 'rgba(20,24,30,0.8)';
+      g.fillRect(screenX-42, screenY-28, 84,18);
+      g.fillStyle = '#e8f9ff'; g.font='11px "Share Tech Mono"'; g.textAlign='center';
+      g.fillText(name.toUpperCase(), screenX, screenY-15);
+    }
+    // small HUD text
+    g.fillStyle='rgba(180,230,255,0.9)'; g.font='12px "Share Tech Mono"'; g.textAlign='left';
+    g.fillText(`t: ${time.toFixed(2)}s`, 12, 18);
+  }
+
+  function drawOverlayHUD2D(g){
+    // show title and time if pure 2D
+    g.fillStyle='rgba(180,230,255,0.9)'; g.font='12px "Share Tech Mono"'; g.textAlign='left';
+    g.fillText(`AI Editor 2244-1 — 2π/5 — t:${time.toFixed(2)}s`, 12, 24);
+  }
+
+  /* =========================
+     UI: voices & TTS
+  ========================= */
+  function populateVoices() {
+    voiceList = speechSynthesis.getVoices().filter(v => v.lang.startsWith('en') || v.lang.startsWith('de') || v.lang.startsWith('')); // broad
+    voicesArea.innerHTML = '';
+    AGENT_NAMES.forEach(name => {
+      const div = document.createElement('div'); div.className='agent-card';
+      div.innerHTML = `<div class="name">${name.toUpperCase()}</div><div class="meta">voice: <select data-agent="${name}" class="voice-select" style="width:100%"></select></div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn speak-agent" data-agent="${name}">Speak</button><button class="btn" data-agent="${name}" style="background:rgba(255,255,255,0.03)">Activate</button></div>`;
+      voicesArea.appendChild(div);
+      const sel = div.querySelector('.voice-select');
+      const maleCandidates = voiceList.filter(v => /male|man|Allan|Alex|Daniel|David|Google UK|Google US|en-US/i.test(v.name)||/male/i.test(v.voiceURI));
+      const preferList = maleCandidates.concat(voiceList.filter(v => !maleCandidates.includes(v)));
+      preferList.forEach(v => {
+        const o = document.createElement('option'); o.value = v.name; o.textContent = `${v.name} — ${v.lang}`; sel.appendChild(o);
+      });
+      // default pick first male-ish
+      selectedVoices[name] = sel.value = (preferList[0] && preferList[0].name) || (voiceList[0] && voiceList[0].name) || '';
+      sel.addEventListener('change', (e)=> selectedVoices[name] = e.target.value);
+    });
+    // speak buttons
+    document.querySelectorAll('.speak-agent').forEach(b => {
+      b.addEventListener('click', ()=> {
+        const an = b.dataset.agent;
+        agentSpeak(an, `${an} reporting. Attention ${AGENTS[an].attention.toFixed(2)}.`);
+      });
+    });
+    // activate buttons
+    document.querySelectorAll('.agent-card .btn[style]').forEach(b => {
+      b.addEventListener('click', ()=> {
+        const an = b.dataset.agent;
+        AGENTS[an].isActive = true; AGENTS[an].attention = 1.0;
+        logCLI(`${an} ACTIVATED (visual)`);
+        setTimeout(()=>{ AGENTS[an].isActive = false; }, 2200);
+      });
+    });
+  }
+
+  function pickVoiceByName(name) {
+    return voiceList.find(v=>v.name===name) || voiceList.find(v=>v.lang.startsWith('en')) || voiceList[0] || null;
+  }
+
+  function agentSpeak(agentName, text) {
+    if (!('speechSynthesis' in window)) {
+      logCLI('TTS not supported in this browser');
+      return;
+    }
+    const vName = selectedVoices[agentName] || null;
+    const v = pickVoiceByName(vName);
+    const ut = new SpeechSynthesisUtterance(text);
+    if (v) ut.voice = v;
+    ut.rate = 1.0; ut.pitch = 1.0;
+    speechSynthesis.speak(ut);
+    logCLI(`${agentName} => "${text}"`);
+  }
+
+  /* =========================
+     Human prompt handling
+  ========================= */
+  sendPromptBtn.addEventListener('click', ()=> {
+    const text = humanPrompt.value.trim();
+    if (!text) return;
+    humanPrompt.value = '';
+    // simple router: if user starts with "@agent", send to that agent
+    let agentTarget = 'core';
+    const m = text.match(/^@(\w+)\s+(.*)$/);
+    let payload = text;
+    if (m) { agentTarget = m[1]; payload = m[2]; }
+    if (!AGENTS[agentTarget]) agentTarget = 'core';
+    // simulate fast CLI / codewriter response
+    logCLI(`Prompt sent to ${agentTarget}: ${payload}`);
+    AGENTS[agentTarget].isActive = true; AGENTS[agentTarget].attention = 1.0;
+    simulateAgentResponse(agentTarget, payload);
+  });
+
+  function simulateAgentResponse(agentName, payload){
+    // fast CLI style: Build a "codeblock" reply
+    const timeStamp = new Date().toISOString();
+    const header = `[${agentName.toUpperCase()} @ ${timeStamp}]`;
+    const reply = `${header}\n> received: ${payload}\n> analyzing...`;
+    logCLI(reply);
+    // quick "code-writer" simulation: if prompt includes "bash" or "script", output a stub
+    setTimeout(()=> {
+      let out = '';
+      if (/script|bash|sh|py|python|js|node|batch/i.test(payload)) {
+        out = `# ${agentName} fast code draft\n` +
+              (payload.match(/python|py/i) ? "print('hello from 2244-1')\n" :
+               payload.match(/bash|sh|batch/i) ? "echo 'hello from 2244-1'\n" :
+               "console.log('hello from 2244-1');\n");
+      } else if (/scan nft|nft/i.test(payload)) {
+        out = `NFT Scanner quick-check:\n - use local file drop to compute fingerprint\n - no blockchain access (simulated)\n`;
+      } else {
+        out = `Textual analysis:\n - tokens: ${payload.split(/\s+/).length}\n - suggestion: "Refactor into micro-tasked steps."\n`;
+      }
+      logCLI(out);
+      // speak summary in short CLI voice
+      agentSpeak(agentName, `${agentName} completed task. Summary: ${out.split('\n')[0]}`);
+      AGENTS[agentName].isActive = false;
+      AGENTS[agentName].attention = Math.max(0.3, AGENTS[agentName].attention - 0.2);
+    }, 300 + Math.random()*900);
+  }
+
+  /* =========================
+     Snapshot (supernova) effect
+  ========================= */
+  btnSnapshot.addEventListener('click', ()=> {
+    // animate color ramp across agents: yellow -> darkred -> blue -> restore
+    logCLI('Snapshot: supernova pulse');
+    const steps = [
+      {r:1,g:0.8,b:0, t:0.15}, // yellow
+      {r:0.45,g:0.05,b:0.05, t:0.4}, // darkred
+      {r:0.05,g:0.15,b:0.55, t:0.7}, // blue
+      null // restore
+    ];
+    // if WebGL, animate material emissives
+    if (useWebGL) {
+      const mats = AGENT_NAMES.map(n=>AGENTS[n]._mesh.material);
+      gsap.to({}, {duration:0.2, onComplete: ()=>{}});
+      // chain animations
+      let delay=0;
+      for (let i=0;i<steps.length;i++){
+        const s = steps[i];
+        gsap.to(mats, {duration:0.9, delay, onStart:()=>{}, onUpdate(){}, onComplete(){}, ease:"power2.inOut",
+          // use onUpdate to apply color if needed
+          onStartParams:[]});
+        // we will simply animate emissive color globally
+        mats.forEach(m=>{
+          if (s) {
+            gsap.to(m.emissive, { r: s.r, g: s.g, b: s.b, duration: 0.9, delay });
+            gsap.to(m, { opacity: (i===2?0.95:1.0), duration:0.9, delay });
+          } else {
+            // restore to base emissive
+            gsap.to(m.emissive, { r: 0.0, g: 0.8, b: 1.0, duration: 0.9, delay });
+            gsap.to(m, { opacity: 0.96, duration: 0.9, delay });
+          }
+        });
+        delay += 0.9;
+      }
+    } else {
+      // 2D flash overlay animation
+      const overlayAnim = {a:0};
+      gsap.to(overlayAnim, {
+        a:1, duration:0.12, yoyo:true, repeat:5, onUpdate:()=>{
+          const g = ctx2d;
+          g.fillStyle = `rgba(255,230,130,${0.25*overlayAnim.a})`;
+          g.fillRect(0,0,canvas.width,canvas.height);
+        }, onComplete: ()=>{
+          // restore draw cycle will clear overlay
+        }
       });
     }
-    highlightAndRender(editor.value, currentLang);
-    updateStatus();
-});
+  });
 
+  btnResonance.addEventListener('click', ()=>{
+    logCLI('Trigger: system resonance pulse');
+    // briefly boost attention for all agents and scale particles
+    AGENT_NAMES.forEach(n=>{ AGENTS[n].attention = Math.min(1.0, AGENTS[n].attention + 0.5); AGENTS[n].isActive = true; });
+    setTimeout(()=>{ AGENT_NAMES.forEach(n=>AGENTS[n].isActive=false); }, 2200);
+  });
 
-$('#btn-undo').click(undo);
-$('#btn-redo').click(redo);
+  btnSpeakTest.addEventListener('click', ()=>{
+    logCLI('TTS test: speaking sample lines from each agent');
+    AGENT_NAMES.forEach(n => agentSpeak(n, `${n} live check. This is a short test of voice output.`));
+  });
 
-// Initial Beautify Handler (will be overwritten if language changes)
-$('#btn-beautify').click(()=>{ 
-  editor.value=js_beautify(editor.value,{indent_size:4}); 
-  renderEditor(editor.value); 
-});
+  /* =========================
+     File / NFT scanner
+  ========================= */
 
-$('#left-toggle').click(()=>{ gsap.to(leftPanel,{x:leftPanel.hasClass('open')?'-240px':'0px', duration:0.3}); leftPanel.toggleClass('open'); });
+  fileDrop.addEventListener('dragover', (e)=>{ e.preventDefault(); fileDrop.style.background='rgba(255,255,255,0.01)'; });
+  fileDrop.addEventListener('dragleave', ()=>{ fileDrop.style.background=''; });
+  fileDrop.addEventListener('drop', (e)=>{ e.preventDefault(); fileDrop.style.background=''; const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) handleFile(f); });
+  fileInput.addEventListener('change', ()=> { const f = fileInput.files && fileInput.files[0]; if (f) handleFile(f); });
 
-// Footer AI
-$('#send-button').click(()=>{ 
-    // Do not use alert(), use a modal or message box instead!
-    console.log('AI Execution Stub: '+$('#prompt-input').val()); 
-    // You'd replace the console.log with a custom notification here.
-});
-$('#prompt-input').keydown(e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ $('#send-button').click(); } });
+  let lastFile = null;
+  function handleFile(file) {
+    lastFile = file;
+    fileMeta.textContent = `Loaded: ${file.name} (${Math.round(file.size/1024)} KB) — type: ${file.type || 'unknown'}`;
+    logCLI(`File loaded: ${file.name}`);
+  }
 
-// Init
-// Set initial language in the selector and trigger render
-$('#language-selector').val(currentLang);
-renderEditor(editor.value);
-pushHistory();
+  async function computeSHA256FromFile(file){
+    const buf = await file.arrayBuffer();
+    const hash = await crypto.subtle.digest('SHA-256', buf);
+    const hex = Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    return hex;
+  }
+
+  btnHash.addEventListener('click', async ()=>{
+    if (!lastFile){ logCLI('No file loaded'); return; }
+    logCLI('Computing SHA-256 fingerprint (local)...');
+    try {
+      const h = await computeSHA256FromFile(lastFile);
+      fileMeta.innerHTML += `<br>SHA-256: <span style="opacity:0.9">${h}</span>`;
+      logCLI(`Fingerprint: ${h}`);
+    } catch(e){ logCLI('Hash error: ' + e.message); }
+  });
+
+  btnScanNFT.addEventListener('click', async ()=>{
+    if (!lastFile){ logCLI('No file loaded to scan'); return; }
+    logCLI('Simulated NFT scan: extracting local metadata & fingerprint...');
+    try {
+      const h = await computeSHA256FromFile(lastFile);
+      // Basic heuristics: filename contains token id? JSON file? image
+      const isJson = lastFile.type === 'application/json' || lastFile.name.endsWith('.json');
+      let meta = { name: lastFile.name, size:lastFile.size, hash:h, simulatedOwner: '0xDEADBEEF...' };
+      if (isJson){
+        const text = await lastFile.text();
+        try { meta = {...meta, parsed: JSON.parse(text)}; } catch(e){ meta.parsed='invalid json'; }
+      } else {
+        // image file - attempt basic image dimension read
+        if (lastFile.type.startsWith('image/')) {
+          const img = new Image();
+          img.src = URL.createObjectURL(lastFile);
+          await new Promise(r=>img.onload=r);
+          meta.width = img.width; meta.height = img.height;
+          URL.revokeObjectURL(img.src);
+        }
+      }
+      fileMeta.innerHTML += `<pre style="white-space:pre-wrap;margin-top:6px">${escapeHtml(JSON.stringify(meta,null,2))}</pre>`;
+      logCLI('NFT-scan: local checks complete (simulated).');
+    } catch(e){
+      logCLI('Scan error: ' + e.message);
+    }
+  });
+
+  /* =========================
+     voice list init and resize
+  ========================= */
+  function init() {
+    resizeCanvas();
+    initAgents();
+    initRenderer().then(()=> {
+      populateAgentUI();
+      // if Web Speech exists, populate voices on change
+      if ('speechSynthesis' in window) {
+        populateVoices();
+        speechSynthesis.onvoiceschanged = populateVoices;
+      }
+      // start animation
+      animationId = requestAnimationFrame(animateFrame);
+    });
+  }
+
+  function populateAgentUI() {
+    const listEl = document.getElementById('agent-list');
+    listEl.innerHTML = '';
+    AGENT_NAMES.forEach(n => {
+      const a = AGENTS[n];
+      const el = document.createElement('div'); el.className='agent-card';
+      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><div class="name">${n.toUpperCase()}</div><div class="meta small">radius ${a.radius}px • orbit ${Math.round(a.orbit)}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><button class="btn" data-agent="${n}">Speak</button><button class="btn" data-agent-activate="${n}" style="background:rgba(255,255,255,0.03)">Activate</button></div></div>`;
+      listEl.appendChild(el);
+    });
+    // hooks
+    listEl.querySelectorAll('[data-agent]').forEach(b => {
+      b.addEventListener('click', ()=> agentSpeak(b.dataset.agent, `${b.dataset.agent} at attention ${AGENTS[b.dataset.agent].attention.toFixed(2)}.`));
+    });
+    listEl.querySelectorAll('[data-agent-activate]').forEach(b => {
+      b.addEventListener('click', ()=> { const n=b.dataset.agentActivate; AGENTS[n].attention=1.0; AGENTS[n].isActive=true; logCLI(`${n} manual activate`); setTimeout(()=>AGENTS[n].isActive=false,2000);});
+    });
+  }
+
+  // handle window resize
+  window.addEventListener('resize', ()=>{ resizeCanvas(); if (useWebGL && renderer3d) renderer3d.setSize(canvas.clientWidth, canvas.clientHeight,false); });
+
+  // start
+  init();
+
+  // expose a small API to window for debugging
+  window.__AI_EDITOR_2244 = { AGENTS, agentSpeak, simulateAgentResponse, computeSHA256FromFile };
+
+})();
 </script>
+
 </body>
 </html>
-
-
-

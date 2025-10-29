@@ -1,0 +1,162 @@
+#!/bin/bash
+
+# ======== Hash-chain (neuroledger) helpers ========
+
+# path to public key for verification
+PUBLIC_KEY="${HOME}/.ssh/nemodian.pub"
+
+# find the latest hash file in NEURO_BASE
+get_latest_hash_file() {
+    ls -1t "$NEURO_BASE"/dialog_memory_*.hash 2>/dev/null | head -n1 || true
+}
+
+# read hash contents safely, return empty if not found
+read_hash_file() {
+    local f="$1"
+    [[ -f "$f" ]] && cat "$f" || echo ""
+}
+
+# create a chain entry: link previous hash -> current hash, sign the chain digest
+create_chain_entry() {
+    local dump_file="$1"
+    local hash_file="$2"       # sha512 of dump_file (text)
+    local sig_file="$3"        # signature of hash_file produced earlier (may exist)
+    local timestamp
+    timestamp=$(date +%Y%m%d_%H%M%S)
+
+    # previous hash (hex string)
+    local prev_hash_file
+    prev_hash_file=$(get_latest_hash_file)
+    local prev_hash=""
+    if [[ -n "$prev_hash_file" && "$prev_hash_file" != "$hash_file" ]]; then
+        prev_hash=$(read_hash_file "$prev_hash_file")
+    fi
+
+    # current hash
+    local curr_hash
+    curr_hash=$(cat "$hash_file")
+
+    # chain digest = sha512(prev_hash || curr_hash)
+    local chain_input_file="$NEURO_BASE/chain_input_$timestamp.bin"
+    local chain_digest_file="$NEURO_BASE/chain_digest_$timestamp.sha512"
+    printf "%s%s" "$prev_hash" "$curr_hash" > "$chain_input_file"
+    sha512sum "$chain_input_file" | awk '{print $1}' > "$chain_digest_file"
+    local chain_digest
+    chain_digest=$(cat "$chain_digest_file")
+
+    # ensure private key is usable (convert if needed)
+    prepare_private_key "$PRIVATE_KEY" || { echo "⚠️ Private key unusable; writing chain entry unsigned"; }
+
+    # sign the chain digest (binary signing of the digest file)
+    local chain_sig_file="$NEURO_BASE/dialog_chain_$timestamp.sig"
+    if openssl pkeyutl -sign -inkey "$PRIVATE_KEY" -in "$chain_digest_file" -out "$chain_sig_file" 2>/dev/null; then
+        echo "🔐 Chain signed -> $chain_sig_file"
+    else
+        echo "⚠️ Chain signing failed; continuing with unsigned chain entry"
+        chain_sig_file=""  # keep empty to indicate unsigned
+    fi
+
+    # write chain metadata (JSON) including references
+    local chain_json="$NEURO_BASE/dialog_chain_$timestamp.json"
+    cat > "$chain_json" <<JSON
+{
+  "timestamp": "$timestamp",
+  "dump_file": "$(basename "$dump_file")",
+  "hash_file": "$(basename "$hash_file")",
+  "hash": "$curr_hash",
+  "prev_hash_file": "$(basename "$prev_hash_file")",
+  "prev_hash": "$prev_hash",
+  "chain_digest_file": "$(basename "$chain_digest_file")",
+  "chain_digest": "$chain_digest",
+  "chain_sig_file": "$(basename "$chain_sig_file")"
+}
+JSON
+
+    echo "🧾 Chain entry written: $chain_json"
+    # cleanup chain_input_file if desired (keep digest and JSON + signature)
+    rm -f "$chain_input_file"
+}
+
+# verify single chain entry given JSON file (returns 0 on success)
+verify_chain_entry() {
+    local chain_json="$1"
+    if [[ ! -f "$chain_json" ]]; then
+        echo "Chain entry not found: $chain_json"
+        return 2
+    fi
+
+    # parse fields
+    local chain_digest_file chain_sig_file pubkey
+    chain_digest_file="$NEURO_BASE/$(jq -r '.chain_digest_file' < "$chain_json")"
+    chain_sig_file="$NEURO_BASE/$(jq -r '.chain_sig_file' < "$chain_json")"
+    pubkey="$PUBLIC_KEY"
+
+    if [[ ! -f "$chain_sig_file" || ! -f "$chain_digest_file" ]]; then
+        echo "⚠️ Missing digest or signature for $chain_json — unsigned or incomplete"
+        return 3
+    fi
+
+    # verify signature
+    if openssl pkeyutl -verify -pubin -inkey "$pubkey" -in "$chain_digest_file" -sigfile "$chain_sig_file" 2>/dev/null; then
+        echo "✔ Verified: $chain_json"
+        return 0
+    else
+        echo "✖ Verification FAILED: $chain_json"
+        return 1
+    fi
+}
+
+# verify whole chain: iterates chain JSON files in chronological order
+verify_chain() {
+    echo "🔎 Verifying entire neuroledger in $NEURO_BASE..."
+    # requires jq for parsing (install pkg install jq)
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "⚠️ jq not found — please install jq (pkg install jq) to run verify_chain"
+        return 1
+    fi
+
+    local entries
+    entries=($(ls -1t "$NEURO_BASE"/dialog_chain_*.json 2>/dev/null | tac))
+    if [[ ${#entries[@]} -eq 0 ]]; then
+        echo "No chain entries found."
+        return 0
+    fi
+
+    local prev_hash=""
+    local ok=0 bad=0
+    for entry in "${entries[@]}"; do
+        echo "-- checking $entry"
+        # parse fields
+        local j_prev j_hash j_digest_file j_sig_file
+        j_prev=$(jq -r '.prev_hash' < "$entry")
+        j_hash=$(jq -r '.hash' < "$entry")
+        j_digest_file="$NEURO_BASE/$(jq -r '.chain_digest_file' < "$entry")"
+        j_sig_file="$NEURO_BASE/$(jq -r '.chain_sig_file' < "$entry")"
+
+        # check prev_hash matches expected prev_hash
+        if [[ -n "$prev_hash" && "$j_prev" != "$prev_hash" ]]; then
+            echo "✖ Chain continuity broken at $entry (prev hash mismatch)"
+            ((bad++))
+            continue
+        fi
+
+        # verify signature if present
+        if [[ -f "$j_sig_file" && -f "$j_digest_file" ]]; then
+            if openssl pkeyutl -verify -pubin -inkey "$PUBLIC_KEY" -in "$j_digest_file" -sigfile "$j_sig_file" 2>/dev/null; then
+                echo "✔ Signature OK for $entry"
+                ((ok++))
+            else
+                echo "✖ Signature INVALID for $entry"
+                ((bad++))
+            fi
+        else
+            echo "⚠️ No signature/digest; skipping signature check for $entry"
+            ((bad++))
+        fi
+
+        prev_hash="$j_hash"
+    done
+
+    echo "Verification complete: ok=$ok bad=$bad"
+    [[ $bad -eq 0 ]] && return 0 || return 2
+}

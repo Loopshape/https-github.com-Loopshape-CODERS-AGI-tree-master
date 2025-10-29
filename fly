@@ -1,0 +1,2 @@
+#!/bin/bash
+/var/www/html/bridge/run?cmd=pm2+restart+nemodian-backup

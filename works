@@ -1,0 +1,8 @@
+# Core AI (loops every 15 minutes)
+pm2 start ai.sh --name nemodian-ai --interpreter bash -- "loop" -f
+
+# Backups every 2 hours
+pm2 restart nemodian-backup --cron "0 */2 * * *" -f
+
+# Patch every 6 hours
+pm2 start ai.sh --name nemodian-patch --interpreter bash -- "ai_patch" -f
