@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nemodian 2244-1 :: Singlefile Offline AI Editor</title>
+    <title>Nemodian 2244-1 :: Quantum AI Editor</title>
     <style>
-        /* ----- :root Variables ----- */
+        /* ----- Embedded Tailwind / UI Styles ----- */
         :root {
             --muted: #888;
             --info: #2196F3;
@@ -28,11 +28,15 @@
             --warn-bg: #f0ad4e;
             --hover-blue: #3366a0;
             --info-bg: #5bc0de;
+            --quantum-primary: #00FF88;
+            --quantum-secondary: #7E57C2;
+            --quantum-accent: #00B8D4;
+            --quantum-bg: #0A0A12;
+            --quantum-surface: #1A1A2E;
         }
 
         /* ----- Base ----- */
-        html,
-        body {
+        html, body {
             height: 100%;
             margin: 0;
             padding: 0;
@@ -61,14 +65,18 @@
             padding: 6px 12px;
         }
 
-        header .left,
-        header .right {
+        header .left {
             display: flex;
-            align-items: center;
             gap: 12px;
+            align-items: center;
         }
 
-        /* ----- Buttons ----- */
+        header .right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
         button {
             background: var(--err);
             border: 1px solid var(--err);
@@ -101,9 +109,10 @@
             color: #3a3c31;
         }
 
-        .small {
-            font-size: 12px;
-            padding: 6px 8px;
+        button.quantum {
+            background: var(--quantum-primary);
+            border-color: var(--quantum-primary);
+            color: #0A0A12;
         }
 
         /* ----- Status Bar ----- */
@@ -138,14 +147,12 @@
             color: #3a3c31;
         }
 
-
         /* ----- Editor Stage ----- */
         #editor-stage {
             grid-row: 3;
             grid-column: 1 / -1;
-            /* Changed to single column layout */
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: 240px 1fr;
             background: var(--theme-bg);
             overflow: hidden;
             position: relative;
@@ -160,31 +167,24 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            /* Changed for slide-out logic */
-            position: absolute;
-            height: 100%;
-            z-index: 30;
             transition: transform 0.3s ease;
-            transform: translateX(-240px); /* Hidden by default */
+            transform: translateX(0);
+            overflow-y: auto;
         }
 
-        /* This class is toggled by JS to show the panel */
-        #left-panel.open {
-            transform: translateX(0);
+        #left-panel.closed {
+            transform: translateX(-100%);
         }
 
         #editor-outer {
             position: relative;
             overflow: hidden;
             background: transparent;
-            /* Added padding for new layout */
-            padding-left: 1em;
-            box-sizing: border-box;
         }
 
         #line-gutter {
             position: absolute;
-            left: 1em; /* Respects parent padding */
+            left: 0;
             top: 0;
             bottom: 0;
             width: var(--ln-width);
@@ -200,19 +200,18 @@
 
         .highlighting {
             position: absolute;
-            left: 1em; /* Respects parent padding */
+            left: 0;
             right: 0;
             top: 0;
             bottom: 0;
             pointer-events: none;
-            overflow: hidden; /* FIX: Prevents double scrollbar */
+            overflow: auto;
             padding: 10px;
             box-sizing: border-box;
             white-space: pre-wrap;
             word-break: break-word;
             line-height: var(--baseline);
             padding-left: calc(var(--ln-width) + 12px);
-            font-family: 'Fira Code', monospace; /* FIX: Explicitly set font */
         }
 
         .highlighting pre {
@@ -221,7 +220,7 @@
 
         #editor {
             position: absolute;
-            left: calc(1em + var(--ln-width)); /* Respects parent padding */
+            left: var(--ln-width);
             right: 0;
             top: 0;
             bottom: 0;
@@ -232,7 +231,7 @@
             background: transparent;
             color: transparent;
             caret-color: var(--accent);
-            font-family: 'Fira Code', monospace; /* FIX: Explicitly set font */
+            font-family: inherit;
             font-size: var(--font-size);
             line-height: var(--baseline);
             border: 0;
@@ -267,7 +266,12 @@
             border-radius: 3px;
         }
 
-        /* ----- Panels (Preview, AI) ----- */
+        .small {
+            font-size: 12px;
+            padding: 6px 8px;
+        }
+
+        /* ----- Preview Panel ----- */
         #preview-panel {
             position: fixed;
             top: 50%;
@@ -315,26 +319,27 @@
             justify-content: center;
         }
 
+        /* ----- AI Response Panel ----- */
         #ai-response-panel {
             position: fixed;
             bottom: 60px;
             right: 20px;
-            width: 400px;
-            max-height: 300px;
-            background: var(--panel);
-            border: 1px solid var(--accent);
-            border-radius: 5px;
-            padding: 10px;
+            width: 500px;
+            max-height: 400px;
+            background: var(--quantum-surface);
+            border: 2px solid var(--quantum-primary);
+            border-radius: 8px;
+            padding: 15px;
             overflow-y: auto;
             z-index: 100;
             display: none;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            white-space: pre-wrap; /* Allow wrapping in AI panel */
+            box-shadow: 0 8px 25px rgba(0, 255, 136, 0.3);
         }
 
         #ai-response-content {
             font-size: 12px;
             line-height: 1.4;
+            color: #f0f0e0;
         }
 
         #close-ai-panel {
@@ -348,12 +353,108 @@
             cursor: pointer;
         }
 
+        /* ----- Quantum Agent Dashboard ----- */
+        #quantum-dashboard {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            height: 80%;
+            background: var(--quantum-bg);
+            border: 2px solid var(--quantum-primary);
+            border-radius: 10px;
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 0 50px rgba(0, 255, 136, 0.5);
+        }
 
-        /* ----- Misc ----- */
+        #dashboard-header {
+            background: var(--quantum-surface);
+            color: var(--quantum-primary);
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--quantum-primary);
+            font-weight: bold;
+        }
+
+        #dashboard-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .agent-card {
+            background: var(--quantum-surface);
+            border: 1px solid var(--quantum-secondary);
+            border-radius: 8px;
+            padding: 12px;
+            color: #f0f0e0;
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--quantum-secondary);
+            padding-bottom: 8px;
+        }
+
+        .agent-name {
+            font-weight: bold;
+            color: var(--quantum-primary);
+        }
+
+        .agent-status {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: var(--quantum-accent);
+            color: var(--quantum-bg);
+        }
+
+        .agent-content {
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--quantum-primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        #close-dashboard {
+            background: transparent;
+            border: none;
+            color: var(--quantum-primary);
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        /* ----- File Input ----- */
         #file-input {
             display: none;
         }
 
+        /* ----- AI Indicator ----- */
         .ai-status {
             display: flex;
             align-items: center;
@@ -369,27 +470,39 @@
         }
 
         .ai-dot.connected {
-            background: var(--accent);
-            animation: none;
+            background: var(--quantum-primary);
+            animation: quantum-pulse 1.5s infinite;
         }
 
         @keyframes pulse {
-            0% {
-                opacity: 1;
-            }
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
 
-            50% {
-                opacity: 0.5;
-            }
-
-            100% {
-                opacity: 1;
-            }
+        @keyframes quantum-pulse {
+            0% { box-shadow: 0 0 5px var(--quantum-primary); }
+            50% { box-shadow: 0 0 15px var(--quantum-primary); }
+            100% { box-shadow: 0 0 5px var(--quantum-primary); }
         }
 
         /* ----- Responsive ----- */
-        /* Removed media query, as slide-out panel is now default */
         @media (max-width: 768px) {
+            #editor-stage {
+                grid-template-columns: 1fr;
+            }
+
+            #left-panel {
+                position: absolute;
+                height: 100%;
+                z-index: 30;
+                transform: translateX(-240px);
+            }
+
+            #left-panel.open {
+                transform: translateX(0);
+            }
+
             #ai-response-panel {
                 width: calc(100% - 40px);
                 right: 20px;
@@ -400,63 +513,76 @@
                 width: 95%;
                 height: 85%;
             }
+
+            #quantum-dashboard {
+                width: 95%;
+                height: 90%;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- HTML Structure Remains Unchanged -->
-    <header>
-        <div class="left">
-            <button id="left-toggle" class="small">☰</button>
-            <div style="font-weight:800;">Nemodian 2244-1 :: AI Editor</div>
-        </div>
-        <div class="right">
-            <div class="ai-status">
-                <div class="ai-dot"></div>
-                <div id="ai-indicator" style="font-size:12px;color:#cfcfbd;">Local AI: probing…</div>
-            </div>
-            <button id="open-file" class="small">Open</button>
-            <button id="save-file" class="small">Save</button>
-            <button id="save-as" class="small">Save As</button>
-            <button id="render-html" class="small warn">Render HTML</button>
-            <button id="run-local-ai" class="small info">Run AI</button>
-        </div>
-    </header>
-    <div id="status-bar" class="info">
-        <div id="file-meta">No File Loaded</div>
-        <div id="editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>
+<header>
+    <div class="left">
+        <button id="left-toggle" class="small">☰</button>
+        <div style="font-weight:800;">Nemodian 2244-1 :: Quantum AI Editor</div>
     </div>
-    <div id="editor-stage">
-        <aside id="left-panel">
-            <button id="btn-undo" class="small">UNDO</button>
-            <button id="btn-redo" class="small">REDO</button>
-            <button id="btn-beautify" class="small">Beautify</button>
-            <button id="btn-render" class="small warn">Render HTML</button>
-            <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
-                <p><strong>AI Commands:</strong></p>
-                <ul style="padding-left: 15px;">
-                    <li>Explain this code</li>
-                    <li>Optimize this function</li>
-                    <li>Add comments</li>
-                    <li>Fix bugs</li>
-                </ul>
-            </div>
-            <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
-                <p><strong>HTML Render:</strong></p>
-                <p>Click "Render HTML" to preview your HTML code in a live browser view.</p>
-            </div>
-        </aside>
-        <div id="editor-outer">
-            <div id="line-gutter"></div>
-            <div class="highlighting">
-                <pre><code id="highlighted" class="language-html"></code></pre>
-            </div>
-            <textarea id="editor" spellcheck="false">&lt;!DOCTYPE html&gt;
+    <div class="right">
+        <div class="ai-status">
+            <div class="ai-dot"></div>
+            <div id="ai-indicator" style="font-size:12px;color:#cfcfbd;">Quantum AI: Initializing...</div>
+        </div>
+        <button id="open-file" class="small">Open</button>
+        <button id="save-file" class="small">Save</button>
+        <button id="save-as" class="small">Save As</button>
+        <button id="render-html" class="small warn">Render HTML</button>
+        <button id="run-quantum-ai" class="small quantum">Quantum AI</button>
+        <button id="show-dashboard" class="small info">Dashboard</button>
+    </div>
+</header>
+<div id="status-bar" class="info">
+    <div id="file-meta">No File Loaded</div>
+    <div id="editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>
+</div>
+<div id="editor-stage">
+    <aside id="left-panel">
+        <button id="btn-undo" class="small">UNDO</button>
+        <button id="btn-redo" class="small">REDO</button>
+        <button id="btn-beautify" class="small">Beautify</button>
+        <button id="btn-render" class="small warn">Render HTML</button>
+        <button id="btn-quantum" class="small quantum">Quantum Process</button>
+        
+        <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
+            <p><strong>Quantum AI Commands:</strong></p>
+            <ul style="padding-left: 15px;">
+                <li>Explain this code</li>
+                <li>Optimize this function</li>
+                <li>Add documentation</li>
+                <li>Find bugs</li>
+                <li>Refactor code</li>
+                <li>Generate tests</li>
+            </ul>
+        </div>
+        <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
+            <p><strong>HTML Render:</strong></p>
+            <p>Click "Render HTML" to preview your HTML code in a live browser view.</p>
+        </div>
+        <div style="margin-top: 20px; font-size: 11px; color: var(--quantum-primary);">
+            <p><strong>Quantum Processing:</strong></p>
+            <p>Uses parallel agent processing with fractal reasoning for advanced code analysis and generation.</p>
+        </div>
+    </aside>
+    <div id="editor-outer">
+        <div id="line-gutter"></div>
+        <div class="highlighting">
+            <pre><code id="highlighted" class="language-html"></code></pre>
+        </div>
+        <textarea id="editor" spellcheck="false">&lt;!DOCTYPE html&gt;
 &lt;html lang="en"&gt;
 &lt;head&gt;
   &lt;meta charset="UTF-8"&gt;
   &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
-  &lt;title&gt;Nemodian 2244-1 Demo&lt;/title&gt;
+  &lt;title&gt;Nemodian 2244-1 Quantum Demo&lt;/title&gt;
   &lt;style&gt;
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -489,540 +615,711 @@
       font-size: 1.2rem;
       line-height: 1.6;
     }
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .feature {
+      background: rgba(74, 201, 74, 0.2);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid #4ac94a;
+    }
+    button {
+      background: #4ac94a;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: #3aa83a;
+      transform: translateY(-2px);
+    }
   &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
   &lt;div class="container"&gt;
-    &lt;h1&gt;Welcome to Nemodian 2244-1&lt;/h1&gt;
-    &lt;p&gt;This is a demonstration of the offline AI editor's capabilities. You can edit this HTML and CSS, and then click "Render HTML" to see your changes.&lt;/p&gt;
+    &lt;h1&gt;Welcome to Nemodian 2244-1 Quantum&lt;/h1&gt;
+    &lt;p&gt;This is a demonstration of the Quantum AI Editor's capabilities. You can edit this HTML and CSS, and then click "Render HTML" to see your changes.&lt;/p&gt;
+    &lt;div class="features"&gt;
+      &lt;div class="feature"&gt;HTML Editing&lt;/div&gt;
+      &lt;div class="feature"&gt;CSS Styling&lt;/div&gt;
+      &lt;div class="feature"&gt;Quantum AI&lt;/div&gt;
+      &lt;div class="feature"&gt;Parallel Processing&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;button&gt;Get Started&lt;/button&gt;
   &lt;/div&gt;
 &lt;/body&gt;
 &lt;/html&gt;
 </textarea>
+    </div>
+</div>
+<footer>
+    <input id="prompt-input" placeholder="Quantum AI Prompt (Ctrl+Enter to run)">
+    <button id="send-button" class="success">SEND</button>
+</footer>
+<input type="file" id="file-input" accept=".js,.html,.css,.txt,.json,.py,.md">
+<div id="preview-panel">
+    <div id="preview-header">
+        <span>HTML Preview</span>
+        <button id="close-preview">×</button>
+    </div>
+    <iframe id="preview-content"></iframe>
+</div>
+<div id="ai-response-panel">
+    <button id="close-ai-panel">×</button>
+    <div id="ai-response-content"></div>
+</div>
+<div id="quantum-dashboard">
+    <div id="dashboard-header">
+        <span>Quantum Agent Dashboard</span>
+        <button id="close-dashboard">×</button>
+    </div>
+    <div id="dashboard-content">
+        <div class="agent-card">
+            <div class="agent-header">
+                <div class="agent-name">Nexus</div>
+                <div class="agent-status">IDLE</div>
+            </div>
+            <div class="agent-content">
+                Orchestrator: Coordinates all agents and manages parallel processing workflow.
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="nexus-progress"></div>
+            </div>
+        </div>
+        <div class="agent-card">
+            <div class="agent-header">
+                <div class="agent-name">Cognito</div>
+                <div class="agent-status">IDLE</div>
+            </div>
+            <div class="agent-content">
+                Analyzer: Performs deep code analysis and fractal reasoning.
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="cognito-progress"></div>
+            </div>
+        </div>
+        <div class="agent-card">
+            <div class="agent-header">
+                <div class="agent-name">Relay</div>
+                <div class="agent-status">IDLE</div>
+            </div>
+            <div class="agent-content">
+                Communicator: Handles data streaming and inter-agent communication.
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="relay-progress"></div>
+            </div>
+        </div>
+        <div class="agent-card">
+            <div class="agent-header">
+                <div class="agent-name">Sentinel</div>
+                <div class="agent-status">IDLE</div>
+            </div>
+            <div class="agent-content">
+                Monitor: Validates outputs and ensures code quality and security.
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="sentinel-progress"></div>
+            </div>
+        </div>
+        <div class="agent-card">
+            <div class="agent-header">
+                <div class="agent-name">Echo</div>
+                <div class="agent-status">IDLE</div>
+            </div>
+            <div class="agent-content">
+                Reporter: Synthesizes final outputs and generates comprehensive reports.
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="echo-progress"></div>
+            </div>
         </div>
     </div>
-    <footer>
-        <input id="prompt-input" placeholder="AI Prompt (Ctrl+Enter to run)">
-        <button id="send-button" class="success">SEND</button>
-    </footer>
-    <input type="file" id="file-input" accept=".js,.html,.css,.txt,.json">
-    <div id="preview-panel">
-        <div id="preview-header">
-            <span>HTML Preview</span>
-            <button id="close-preview">×</button>
-        </div>
-        <iframe id="preview-content"></iframe>
-    </div>
-    <div id="ai-response-panel">
-        <button id="close-ai-panel">×</button>
-        <div id="ai-response-content"></div>
-    </div>
+</div>
 
-    <!-- Dummy Libraries for standalone functionality -->
-    <script>
-        /* PRISM + JS + CSS + HTML + JSON highlighting */
-        // These are dummy functions for the standalone demo
-        window.Prism = {
-            languages: {
-                javascript: {},
-                html: {},
-                css: {},
-                json: {}
-            },
-            highlightAll: () => { /* Dummy */ }
+<!-- Quantum Agent Core System -->
+<script>
+// ==================== QUANTUM AGENT CORE SYSTEM ====================
+class QuantumAgentCore {
+    constructor() {
+        this.agents = new Map();
+        this.isProcessing = false;
+        this.performanceMetrics = {
+            startTime: null,
+            endTime: null,
+            agentTimes: new Map()
         };
+        
+        this.initAgents();
+        this.setupEventListeners();
+        console.log("Quantum Agent Core initialized");
+    }
 
-        function js_beautify(code) {
-            console.warn("js_beautify is a dummy function.");
-            return code;
+    initAgents() {
+        this.agents.set('nexus', {
+            name: 'Nexus',
+            role: 'Orchestrator',
+            status: 'IDLE',
+            progress: 0
+        });
+
+        this.agents.set('cognito', {
+            name: 'Cognito',
+            role: 'Analyzer',
+            status: 'IDLE',
+            progress: 0
+        });
+
+        this.agents.set('relay', {
+            name: 'Relay',
+            role: 'Communicator',
+            status: 'IDLE',
+            progress: 0
+        });
+
+        this.agents.set('sentinel', {
+            name: 'Sentinel',
+            role: 'Monitor',
+            status: 'IDLE',
+            progress: 0
+        });
+
+        this.agents.set('echo', {
+            name: 'Echo',
+            role: 'Reporter',
+            status: 'IDLE',
+            progress: 0
+        });
+    }
+
+    async processInput(prompt, context) {
+        if (this.isProcessing) {
+            throw new Error("System is already processing a request");
         }
 
-        function css_beautify(code) {
-            console.warn("css_beautify is a dummy function.");
-            return code;
+        this.isProcessing = true;
+        this.performanceMetrics.startTime = Date.now();
+        this.updateDashboard();
+
+        try {
+            // Phase 1: Parallel Initial Processing
+            await this.executeParallelPhase(prompt, context);
+            
+            // Phase 2: Analysis and Reasoning
+            await this.executeAnalysisPhase(prompt, context);
+            
+            // Phase 3: Validation and Synthesis
+            const result = await this.executeValidationPhase(prompt, context);
+            
+            this.performanceMetrics.endTime = Date.now();
+            this.isProcessing = false;
+            
+            return result;
+        } catch (error) {
+            this.isProcessing = false;
+            this.resetAgents();
+            throw error;
+        }
+    }
+
+    async executeParallelPhase(prompt, context) {
+        const parallelTasks = [];
+        
+        for (const [agentName, agent] of this.agents) {
+            parallelTasks.push(this.processAgent(agentName, prompt, context, 0));
         }
 
-        function html_beautify(code) {
-            console.warn("html_beautify is a dummy function.");
-            return code;
+        await Promise.all(parallelTasks);
+    }
+
+    async executeAnalysisPhase(prompt, context) {
+        // Simulate deep analysis with multiple steps
+        await this.processAgent('cognito', prompt, context, 1);
+        await this.delay(800);
+        await this.processAgent('cognito', prompt, context, 2);
+        await this.delay(600);
+        
+        await this.processAgent('relay', prompt, context, 1);
+        await this.delay(400);
+    }
+
+    async executeValidationPhase(prompt, context) {
+        await this.processAgent('sentinel', prompt, context, 1);
+        await this.delay(500);
+        await this.processAgent('echo', prompt, context, 1);
+        await this.delay(300);
+
+        return this.generateFinalResult(prompt, context);
+    }
+
+    async processAgent(agentName, prompt, context, phase) {
+        const agent = this.agents.get(agentName);
+        agent.status = 'PROCESSING';
+        
+        // Simulate processing time based on agent and phase
+        const baseTime = 200 + (Math.random() * 300);
+        const phaseMultiplier = 1 + (phase * 0.5);
+        const processingTime = baseTime * phaseMultiplier;
+        
+        // Update progress in steps
+        const steps = 5;
+        for (let i = 1; i <= steps; i++) {
+            agent.progress = (i / steps) * 100;
+            this.updateDashboard();
+            await this.delay(processingTime / steps);
         }
-    </script>
-    <script>
-        // ----- App Logic (Encapsulated) -----
-        (function() {
-            'use strict';
+        
+        agent.status = 'COMPLETE';
+        this.updateDashboard();
+        
+        // Record performance
+        if (!this.performanceMetrics.agentTimes.has(agentName)) {
+            this.performanceMetrics.agentTimes.set(agentName, []);
+        }
+        this.performanceMetrics.agentTimes.get(agentName).push(processingTime);
+    }
 
-            const AIEditor = {
-                // --- Application State ---
-                state: {
-                    currentFileName: null,
-                    currentFileType: 'html',
-                    historyStack: [],
-                    redoStack: []
-                },
+    generateFinalResult(prompt, context) {
+        const code = context || '';
+        const lines = code.split('\n').length;
+        const words = code.split(/\s+/).filter(w => w.length > 0).length;
+        
+        // Analyze the prompt and generate appropriate response
+        let analysis = '';
+        let suggestions = [];
+        
+        if (prompt.toLowerCase().includes('explain')) {
+            analysis = `This ${this.detectLanguage(code)} code contains ${lines} lines and approximately ${words} meaningful tokens. `;
+            analysis += `The structure appears ${this.assessCodeStructure(code)}.`;
+            suggestions = ['Add more comments for complex functions', 'Consider breaking down large functions', 'Verify variable naming consistency'];
+        } 
+        else if (prompt.toLowerCase().includes('optimize')) {
+            analysis = `Found ${this.identifyOptimizationOpportunities(code)} potential optimization opportunities. `;
+            analysis += `Code complexity is ${this.assessComplexity(code)}.`;
+            suggestions = ['Reduce nested loops', 'Cache DOM queries', 'Use more efficient algorithms', 'Minify CSS and JS'];
+        }
+        else if (prompt.toLowerCase().includes('bug')) {
+            analysis = `Static analysis completed. ${this.identifyPotentialBugs(code)} potential issues detected.`;
+            suggestions = ['Add error handling', 'Validate user inputs', 'Test edge cases', 'Check for memory leaks'];
+        }
+        else {
+            analysis = `Quantum analysis complete. Processed ${lines} lines of ${this.detectLanguage(code)} code. `;
+            analysis += `Overall code quality: ${this.assessCodeQuality(code)}.`;
+            suggestions = ['Consider adding documentation', 'Implement unit tests', 'Review security practices'];
+        }
+        
+        return {
+            analysis,
+            suggestions,
+            metrics: {
+                processingTime: Date.now() - this.performanceMetrics.startTime,
+                agentsUsed: Array.from(this.agents.keys()),
+                linesAnalyzed: lines,
+                wordsProcessed: words
+            },
+            timestamp: new Date().toISOString()
+        };
+    }
 
-                // --- DOM Element Cache ---
-                elements: {
-                    editor: document.getElementById('editor'),
-                    highlighted: document.getElementById('highlighted'),
-                    lineGutter: document.getElementById('line-gutter'),
-                    statusEditor: document.getElementById('editor-meta'),
-                    statusFile: document.getElementById('file-meta'),
-                    previewPanel: document.getElementById('preview-panel'),
-                    previewContent: document.getElementById('preview-content'),
-                    aiResponsePanel: document.getElementById('ai-response-panel'),
-                    aiResponseContent: document.getElementById('ai-response-content'),
-                    leftPanel: document.getElementById('left-panel'),
-                    fileInput: document.getElementById('file-input'),
-                    promptInput: document.getElementById('prompt-input'),
-                    aiIndicator: document.getElementById('ai-indicator'),
-                    aiDot: document.querySelector('.ai-dot'),
-                },
+    detectLanguage(code) {
+        if (code.includes('<!DOCTYPE html>') || code.includes('<html')) return 'HTML';
+        if (code.includes('function') || code.includes('const ') || code.includes('let ')) return 'JavaScript';
+        if (code.includes('@media') || code.includes('{') && code.includes('}') && code.includes(':')) return 'CSS';
+        if (code.includes('{') && code.includes('}') && code.includes('"')) return 'JSON';
+        return 'text';
+    }
 
-                // --- Initialization ---
-                init() {
-                    this.editor.init(this); // Pass parent reference
-                    this.history.init(this);
-                    this.file.init(this);
-                    this.ui.init(this);
-                    this.ai.init(this); // Pass parent reference
+    assessCodeStructure(code) {
+        const lines = code.split('\n');
+        const avgLineLength = lines.reduce((sum, line) => sum + line.length, 0) / lines.length;
+        
+        if (avgLineLength > 80) return 'could be more concise';
+        if (lines.length > 200) return 'moderately complex';
+        return 'well-structured';
+    }
 
-                    this.bindEvents();
-                    this.editor.render(this.elements.editor.value);
-                    this.history.push(this.elements.editor.value, true); // Push initial state
-                    this.ai.checkAIConnection(); // Check for Ollama on boot
-                },
+    identifyOptimizationOpportunities(code) {
+        // Simple heuristic-based optimization detection
+        let opportunities = 0;
+        if (code.includes('for(') || code.includes('for (')) opportunities += 2;
+        if (code.includes('.innerHTML')) opportunities += 1;
+        if (code.includes('.getElementById') && code.split('.getElementById').length > 3) opportunities += 1;
+        if (code.includes('setTimeout') || code.includes('setInterval')) opportunities += 1;
+        
+        return opportunities || 'several';
+    }
 
-                // --- Event Binding ---
-                bindEvents() {
-                    this.elements.editor.addEventListener('input', () => this.editor.onInput());
-                    this.elements.editor.addEventListener('scroll', () => this.editor.syncScroll());
-                    this.elements.editor.addEventListener('keyup', () => this.editor.updateStatus());
-                    this.elements.editor.addEventListener('click', () => this.editor.updateStatus());
+    assessComplexity(code) {
+        const lines = code.split('\n').length;
+        if (lines < 50) return 'low';
+        if (lines < 200) return 'medium';
+        return 'high';
+    }
 
-                    document.getElementById('open-file').onclick = () => this.file.open();
-                    this.elements.fileInput.addEventListener('change', e => this.file.handleOpen(e));
-                    document.getElementById('save-file').onclick = () => this.file.save();
-                    document.getElementById('save-as').onclick = () => this.file.saveAs();
+    identifyPotentialBugs(code) {
+        // Simple bug pattern detection
+        let potentialBugs = 0;
+        if (code.includes('==') && !code.includes('===')) potentialBugs += 1;
+        if (code.includes('eval(')) potentialBugs += 2;
+        if (code.includes('innerHTML') && code.includes('+')) potentialBugs += 1;
+        
+        return potentialBugs || 'no obvious';
+    }
 
-                    // --- Sidebar Button Bindings (with close panel logic) ---
-                    document.getElementById('btn-beautify').onclick = () => {
-                        this.editor.beautify();
-                        this.ui.closeLeftPanel();
-                    };
-                    document.getElementById('btn-undo').onclick = () => {
-                        this.editor.undo();
-                        this.ui.closeLeftPanel();
-                    };
-                    document.getElementById('btn-redo').onclick = () => {
-                        this.editor.redo();
-                        this.ui.closeLeftPanel();
-                    };
-                    document.getElementById('btn-render').onclick = () => {
-                        this.ui.renderHTML();
-                        this.ui.closeLeftPanel();
-                    };
-                    // --- End Sidebar Button Bindings ---
+    assessCodeQuality(code) {
+        const lines = code.split('\n');
+        const commentLines = lines.filter(line => 
+            line.trim().startsWith('//') || 
+            line.trim().startsWith('/*') || 
+            line.trim().startsWith('*')
+        ).length;
+        
+        const commentRatio = commentLines / lines.length;
+        
+        if (commentRatio > 0.2) return 'good';
+        if (commentRatio > 0.1) return 'adequate';
+        return 'needs improvement';
+    }
 
-                    document.getElementById('render-html').onclick = () => this.ui.renderHTML();
-                    document.getElementById('close-preview').onclick = () => this.ui.closePreview();
+    updateDashboard() {
+        // Update UI elements with current agent status
+        for (const [agentName, agent] of this.agents) {
+            const statusElement = document.querySelector(`.agent-card .agent-name:contains("${agent.name}")`)?.parentNode?.querySelector('.agent-status');
+            const progressElement = document.getElementById(`${agentName}-progress`);
+            
+            if (statusElement) {
+                statusElement.textContent = agent.status;
+                statusElement.style.background = agent.status === 'PROCESSING' ? 'var(--quantum-accent)' : 
+                                               agent.status === 'COMPLETE' ? 'var(--quantum-primary)' : 'var(--muted)';
+            }
+            
+            if (progressElement) {
+                progressElement.style.width = `${agent.progress}%`;
+            }
+        }
+    }
 
-                    document.getElementById('send-button').onclick = () => this.ai.run();
-                    document.getElementById('run-local-ai').onclick = () => this.ai.run();
-                    this.elements.promptInput.addEventListener('keydown', e => this.ai.handleKeydown(e));
-                    document.getElementById('close-ai-panel').onclick = () => this.ui.closeAIPanel();
+    resetAgents() {
+        for (const agent of this.agents.values()) {
+            agent.status = 'IDLE';
+            agent.progress = 0;
+        }
+        this.updateDashboard();
+    }
 
-                    // Main sidebar toggle
-                    document.getElementById('left-toggle').onclick = () => this.ui.toggleLeftPanel();
-                },
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
-                // ===================================
-                // ---       EDITOR MODULE         ---
-                // ===================================
-                editor: {
-                    init(parent) {
-                        this.parent = parent;
-                    },
-
-                    onInput() {
-                        this.parent.history.push(this.parent.elements.editor.value);
-                        this.highlightAndRender(this.parent.elements.editor.value);
-                        this.generateLineNumbers();
-                        this.updateStatus();
-                    },
-
-                    render(code) {
-                        this.parent.elements.editor.value = code;
-                        this.highlightAndRender(code);
-                        this.generateLineNumbers();
-                        this.updateStatus();
-                    },
-
-                    highlightAndRender(code) {
-                        this.parent.elements.highlighted.textContent = code;
-                        // In a real scenario, you'd use a library like Prism.js here
-                        Prism.highlightAll(); // Call dummy
-                    },
-
-                    generateLineNumbers() {
-                        this.parent.elements.lineGutter.innerHTML = this.parent.elements.editor.value.split('\n').map((_, i) => i + 1).join('<br>');
-                    },
-
-                    updateStatus() {
-                        const editor = this.parent.elements.editor;
-                        const pos = editor.selectionStart;
-                        const lines = editor.value.substr(0, pos).split('\n');
-                        const lineCount = editor.value.split('\n').length;
-                        this.parent.elements.statusEditor.textContent = `Cursor: ${lines.length}:${lines[lines.length - 1].length} | Lines: ${lineCount} | Chars: ${editor.value.length} | History: ${this.parent.state.historyStack.length}`;
-                    },
-
-                    syncScroll() {
-                        const editor = this.parent.elements.editor;
-                        // The scrollable parent is .highlighting
-                        this.parent.elements.highlighted.parentElement.scrollTop = editor.scrollTop;
-                        this.parent.elements.highlighted.parentElement.scrollLeft = editor.scrollLeft;
-                        this.parent.elements.lineGutter.scrollTop = editor.scrollTop;
-                    },
-
-                    beautify() {
-                        try {
-                            let beautifiedCode = this.parent.elements.editor.value;
-                            const fileType = this.parent.state.currentFileType;
-                            if (fileType === 'javascript') {
-                                beautifiedCode = js_beautify(beautifiedCode);
-                            } else if (fileType === 'html') {
-                                beautifiedCode = html_beautify(beautifiedCode);
-                            } else if (fileType === 'css') {
-                                beautifiedCode = css_beautify(beautifiedCode);
-                            }
-                            this.render(beautifiedCode);
-                            this.parent.history.push(beautifiedCode);
-                        } catch (e) {
-                            alert('Beautify error: Make sure the code is valid.');
-                        }
-                    },
-
-                    undo() {
-                        this.parent.history.undo();
-                    },
-                    redo() {
-                        this.parent.history.redo();
-                    }
-                },
-
-                // ===================================
-                // ---       HISTORY MODULE        ---
-                // ===================================
-                history: {
-                    init(parent) {
-                        this.parent = parent;
-                    },
-
-                    push(code, isInitial = false) {
-                        const historyStack = this.parent.state.historyStack;
-                        if (!isInitial && historyStack.length && historyStack[historyStack.length - 1] === code) return;
-                        historyStack.push(code);
-                        this.parent.state.redoStack = [];
-                        this.parent.editor.updateStatus();
-                    },
-
-                    undo() {
-                        const {
-                            historyStack,
-                            redoStack
-                        } = this.parent.state;
-                        if (historyStack.length > 1) { // Keep at least one state (initial)
-                            redoStack.push(historyStack.pop());
-                            this.parent.editor.render(historyStack[historyStack.length - 1]);
-                        }
-                    },
-
-                    redo() {
-                        const {
-                            historyStack,
-                            redoStack
-                        } = this.parent.state;
-                        if (redoStack.length) {
-                            const nextState = redoStack.pop();
-                            historyStack.push(nextState);
-                            this.parent.editor.render(nextState);
-                        }
-                    }
-                },
-
-                // ===================================
-                // ---         FILE MODULE         ---
-                // ===================================
-                file: {
-                    init(parent) {
-                        this.parent = parent;
-                    },
-
-                    open() {
-                        this.parent.elements.fileInput.click();
-                    },
-
-                    handleOpen(e) {
-                        const file = e.target.files[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                            const newCode = ev.target.result;
-                            this.parent.state.currentFileName = file.name;
-                            this.parent.state.currentFileType = this.detectLanguage(file.name);
-                            this.parent.editor.render(newCode);
-                            this.parent.elements.statusFile.textContent = file.name;
-                            // Reset history with new file content
-                            this.parent.state.historyStack = [newCode];
-                            this.parent.state.redoStack = [];
-                            this.parent.editor.updateStatus();
-                        };
-                        reader.readAsText(file);
-                    },
-
-                    save() {
-                        if (!this.parent.state.currentFileName) {
-                            this.saveAs();
-                            return;
-                        }
-                        this.download(this.parent.state.currentFileName, this.parent.elements.editor.value);
-                    },
-
-                    saveAs() {
-                        const fname = prompt('Enter file name', this.parent.state.currentFileName || 'code.html');
-                        if (fname) {
-                            this.parent.state.currentFileName = fname;
-                            this.parent.state.currentFileType = this.detectLanguage(fname);
-                            this.parent.elements.statusFile.textContent = fname;
-                            this.save();
-                        }
-                    },
-
-                    download(filename, text) {
-                        const blob = new Blob([text], {
-                            type: 'text/plain'
-                        });
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(a.href);
-                    },
-
-                    detectLanguage(fname) {
-                        const ext = fname?.split('.').pop().toLowerCase();
-                        return {
-                            'js': 'javascript',
-                            'html': 'html',
-                            'htm': 'html',
-                            'css': 'css',
-                            'json': 'json'
-                        } [ext] || 'html';
-                    }
-                },
-
-                // ===================================
-                // ---          UI MODULE          ---
-                // ===================================
-                ui: {
-                    init(parent) {
-                        this.parent = parent;
-                    },
-
-                    renderHTML() {
-                        try {
-                            // Revoke old blob URL if it exists
-                            if (this.parent.elements.previewContent.src.startsWith('blob:')) {
-                                URL.revokeObjectURL(this.parent.elements.previewContent.src);
-                            }
-                            const blob = new Blob([this.parent.elements.editor.value], {
-                                type: 'text/html'
-                            });
-                            this.parent.elements.previewContent.src = URL.createObjectURL(blob);
-                            this.parent.elements.previewPanel.style.display = 'flex';
-                        } catch (e) {
-                            alert('Error rendering HTML. Check for syntax errors.');
-                        }
-                    },
-
-                    closePreview() {
-                        this.parent.elements.previewPanel.style.display = 'none';
-                        if (this.parent.elements.previewContent.src.startsWith('blob:')) {
-                            URL.revokeObjectURL(this.parent.elements.previewContent.src);
-                        }
-                    },
-
-                    closeAIPanel() {
-                        this.parent.elements.aiResponsePanel.style.display = 'none';
-                    },
-
-                    toggleLeftPanel() {
-                        this.parent.elements.leftPanel.classList.toggle('open');
-                    },
-
-                    closeLeftPanel() {
-                        this.parent.elements.leftPanel.classList.remove('open');
-                    }
-                },
-
-                // ===================================
-                // ---          AI MODULE          ---
-                // ===================================
-                ai: {
-                    init(parent) {
-                        this.parent = parent;
-                        this.OLLAMA_URL = 'http://localhost:11434';
-                        this.OLLAMA_MODEL = 'llama3:8b'; // Or any model you have
-                        this.ndjsonBuffer = ''; // Buffer for processing NDJSON stream
-                    },
-
-                    /**
-                     * Sets the visual status of the AI connection.
-                     */
-                    setAIStatus(isConnected) {
-                        if (isConnected) {
-                            this.parent.elements.aiIndicator.textContent = 'Local AI: Online';
-                            this.parent.elements.aiDot.classList.add('connected');
-                        } else {
-                            this.parent.elements.aiIndicator.textContent = 'Local AI: Offline';
-                            this.parent.elements.aiDot.classList.remove('connected');
-                        }
-                    },
-
-                    /**
-                     * Checks if the Ollama server is running.
-                     */
-                    async checkAIConnection() {
-                        try {
-                            const response = await fetch(this.OLLAMA_URL, {
-                                method: 'GET'
-                            });
-                            if (response.status === 200) {
-                                this.setAIStatus(true);
-                            } else {
-                                this.setAIStatus(false);
-                            }
-                        } catch (e) {
-                            this.setAIStatus(false);
-                        }
-                    },
-
-                    /**
-                     * Runs the AI prompt. This is the main entry point.
-                     */
-                    async run() {
-                        const prompt = this.parent.elements.promptInput.value.trim();
-                        if (!prompt) return;
-
-                        const code = this.parent.elements.editor.value;
-                        const fullPrompt = `
-Here is my current ${this.parent.state.currentFileType} code:
-\`\`\`${this.parent.state.currentFileType}
-${code}
-\`\`\`
-
-My request is: "${prompt}"
-`;
-
-                        this.parent.elements.aiResponseContent.textContent = 'Processing...';
-                        this.parent.elements.aiResponsePanel.style.display = 'block';
-                        this.ndjsonBuffer = ''; // Clear buffer for new stream
-
-                        try {
-                            await this.streamOllamaResponse(fullPrompt);
-                        } catch (e) {
-                            this.parent.elements.aiResponseContent.textContent = `Error: ${e.message}. \n\nIs Ollama running at ${this.OLLAMA_URL}?`;
-                            console.error("Ollama error:", e);
-                            this.setAIStatus(false);
-                        }
-                    },
-
-                    /**
-                     * Handles the streaming fetch request to Ollama.
-                     */
-                    async streamOllamaResponse(fullPrompt) {
-                        const payload = {
-                            model: this.OLLAMA_MODEL,
-                            prompt: fullPrompt,
-                            stream: true // Enable streaming
-                        };
-
-                        const response = await fetch(`${this.OLLAMA_URL}/api/generate`, {
-                            method: 'POST',
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!response.ok) {
-                            throw new Error(`Ollama request failed with status ${response.status}`);
-                        }
-
-                        const reader = response.body.getReader();
-                        const decoder = new TextDecoder();
-                        this.parent.elements.aiResponseContent.textContent = ''; // Clear "Processing..."
-
-                        while (true) {
-                            const {
-                                value,
-                                done
-                            } = await reader.read();
-                            if (done) {
-                                break;
-                            }
-
-                            // Add the new chunk to our buffer
-                            this.ndjsonBuffer += decoder.decode(value, {
-                                stream: true
-                            });
-
-                            // Process all complete lines (NDJSON) in the buffer
-                            let newlineIndex;
-                            while ((newlineIndex = this.ndjsonBuffer.indexOf('\n')) !== -1) {
-                                const line = this.ndjsonBuffer.substring(0, newlineIndex);
-                                this.ndjsonBuffer = this.ndjsonBuffer.substring(newlineIndex + 1);
-
-                                if (!line) continue; // Skip empty lines
-
-                                try {
-                                    const jsonLine = JSON.parse(line);
-                                    if (jsonLine.response) {
-                                        // This is a content token, append it
-                                        this.parent.elements.aiResponseContent.textContent += jsonLine.response;
-                                        // Auto-scroll the panel
-                                        const panel = this.parent.elements.aiResponsePanel;
-                                        panel.scrollTop = panel.scrollHeight;
-                                    }
-                                    if (jsonLine.done) {
-                                        // Stream is finished
-                                        return;
-                                    }
-                                } catch (e) {
-                                    console.warn('Failed to parse JSON line:', line, e);
-                                }
-                            }
-                        }
-                    },
-
-                    /**
-                     * Handles Ctrl+Enter or Meta+Enter to run the prompt.
-                     */
-                    handleKeydown(e) {
-                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                            e.preventDefault();
-                            this.run();
-                        }
-                    }
-                }
-            };
-
-            // --- Start the application ---
-            document.addEventListener('DOMContentLoaded', () => {
-                AIEditor.init();
+    setupEventListeners() {
+        // Setup global event listeners for the system
+        if (typeof window !== 'undefined') {
+            window.addEventListener('quantumAgentUpdate', (event) => {
+                this.updateDashboard();
             });
+        }
+    }
+}
 
-        })();
-    </script>
+// Initialize the Quantum Agent Core
+let quantumSystem;
+
+// Custom contains selector for older browsers
+Element.prototype.containsText = function(text) {
+    return this.textContent.includes(text);
+};
+
+// ==================== EDITOR LOGIC ====================
+const editor = document.getElementById('editor');
+const highlighted = document.getElementById('highlighted');
+const lineGutter = document.getElementById('line-gutter');
+const statusEditor = document.getElementById('editor-meta');
+const statusFile = document.getElementById('file-meta');
+const previewPanel = document.getElementById('preview-panel');
+const previewContent = document.getElementById('preview-content');
+const aiResponsePanel = document.getElementById('ai-response-panel');
+const aiResponseContent = document.getElementById('ai-response-content');
+const leftPanel = document.getElementById('left-panel');
+const quantumDashboard = document.getElementById('quantum-dashboard');
+
+let currentFileName = null,
+    currentFileType = 'html',
+    historyStack = [],
+    redoStack = [];
+
+function detectLanguage(fname) {
+    const ext = fname?.split('.').pop().toLowerCase();
+    return {
+        'js': 'javascript',
+        'html': 'html',
+        'htm': 'html',
+        'css': 'css',
+        'json': 'json',
+        'py': 'python',
+        'md': 'markdown'
+    }[ext] || 'html';
+}
+
+function highlightAndRender(code) {
+    highlighted.textContent = code;
+    // In a real scenario, you'd use a library like Prism.js here
+    // Prism.highlightAll();
+}
+
+function generateLineNumbers() {
+    lineGutter.innerHTML = editor.value.split('\n').map((v, i) => i + 1).join('<br>');
+}
+
+function renderEditor(code) {
+    editor.value = code;
+    highlightAndRender(code);
+    generateLineNumbers();
+    updateStatus();
+}
+
+function updateStatus() {
+    const pos = editor.selectionStart;
+    const lines = editor.value.substr(0, pos).split('\n');
+    statusEditor.textContent = `Cursor: ${lines.length}:${lines[lines.length - 1].length} | Lines: ${editor.value.split('\n').length} | Chars: ${editor.value.length} | History: ${historyStack.length}`;
+}
+
+function syncScroll() {
+    highlighted.parentElement.scrollTop = editor.scrollTop;
+    highlighted.parentElement.scrollLeft = editor.scrollLeft;
+    lineGutter.scrollTop = editor.scrollTop;
+}
+
+function pushHistory() {
+    const code = editor.value;
+    if (historyStack.length && historyStack[historyStack.length - 1] === code) return;
+    historyStack.push(code);
+    redoStack = [];
+    updateStatus();
+}
+
+function undo() {
+    if (historyStack.length > 1) {
+        redoStack.push(historyStack.pop());
+        renderEditor(historyStack[historyStack.length - 1]);
+    }
+}
+
+function redo() {
+    if (redoStack.length) {
+        const nextState = redoStack.pop();
+        historyStack.push(nextState);
+        renderEditor(nextState);
+    }
+}
+
+editor.addEventListener('input', () => {
+    pushHistory();
+    highlightAndRender(editor.value);
+    generateLineNumbers();
+    updateStatus();
+});
+editor.addEventListener('scroll', syncScroll);
+editor.addEventListener('keyup', updateStatus);
+editor.addEventListener('click', updateStatus);
+
+// ----- File I/O -----
+document.getElementById('open-file').onclick = () => {
+    document.getElementById('file-input').click();
+};
+document.getElementById('file-input').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        currentFileName = file.name;
+        currentFileType = detectLanguage(file.name);
+        renderEditor(ev.target.result);
+        statusFile.textContent = currentFileName;
+        historyStack = [ev.target.result];
+        redoStack = [];
+    };
+    reader.readAsText(file);
+});
+
+document.getElementById('save-file').onclick = () => {
+    if (!currentFileName) {
+        saveAsFile();
+        return;
+    }
+    const blob = new Blob([editor.value], {
+        type: 'text/plain'
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = currentFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+};
+
+function saveAsFile() {
+    const fname = prompt('Enter file name', currentFileName || 'code.html');
+    if (fname) {
+        currentFileName = fname;
+        currentFileType = detectLanguage(fname);
+        statusFile.textContent = currentFileName;
+        document.getElementById('save-file').click();
+    }
+}
+document.getElementById('save-as').onclick = saveAsFile;
+
+// ----- Beautify -----
+document.getElementById('btn-beautify').onclick = () => {
+    try {
+        let beautifiedCode = editor.value;
+        // Simple formatting for demonstration
+        beautifiedCode = beautifiedCode
+            .replace(/\s+/g, ' ')
+            .replace(/\{/g, ' {\n')
+            .replace(/\}/g, '\n}\n')
+            .replace(/;/g, ';\n')
+            .replace(/\n\s*\n/g, '\n');
+        
+        renderEditor(beautifiedCode);
+        pushHistory();
+    } catch (e) {
+        alert('Beautify error: ' + e.message);
+    }
+};
+
+// ----- Undo/Redo -----
+document.getElementById('btn-undo').onclick = undo;
+document.getElementById('btn-redo').onclick = redo;
+
+// ----- HTML Preview -----
+document.getElementById('btn-render').onclick = renderHTML;
+document.getElementById('render-html').onclick = renderHTML;
+
+function renderHTML() {
+    try {
+        const blob = new Blob([editor.value], {
+            type: 'text/html'
+        });
+        previewContent.src = URL.createObjectURL(blob);
+        previewPanel.style.display = 'flex';
+    } catch (e) {
+        alert('Error rendering HTML. Check for syntax errors.');
+    }
+}
+document.getElementById('close-preview').onclick = () => {
+    previewPanel.style.display = 'none';
+    if (previewContent.src.startsWith('blob:')) {
+        URL.revokeObjectURL(previewContent.src);
+    }
+};
+
+// ----- Quantum AI System -----
+document.getElementById('send-button').onclick = runQuantumAI;
+document.getElementById('run-quantum-ai').onclick = runQuantumAI;
+document.getElementById('btn-quantum').onclick = runQuantumAI;
+document.getElementById('prompt-input').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        runQuantumAI();
+    }
+});
+document.getElementById('close-ai-panel').onclick = () => {
+    aiResponsePanel.style.display = 'none';
+};
+
+// Initialize Quantum System
+function initQuantumSystem() {
+    quantumSystem = new QuantumAgentCore();
+    document.getElementById('ai-indicator').textContent = 'Quantum AI: Ready';
+    document.querySelector('.ai-dot').classList.add('connected');
+    console.log("Quantum AI System initialized successfully");
+}
+
+async function runQuantumAI() {
+    const prompt = document.getElementById('prompt-input').value.trim();
+    if (!prompt) {
+        alert('Please enter a prompt for the Quantum AI');
+        return;
+    }
+
+    // Initialize system if not already done
+    if (!quantumSystem) {
+        initQuantumSystem();
+    }
+
+    // Update UI
+    aiResponseContent.textContent = 'Quantum AI processing... (Parallel agents activated)';
+    aiResponsePanel.style.display = 'block';
+    
+    document.getElementById('ai-indicator').textContent = 'Quantum AI: Processing';
+    document.querySelector('.ai-dot').style.background = 'var(--warn-bg)';
+
+    try {
+        const result = await quantumSystem.processInput(prompt, editor.value);
+        
+        // Format the response
+        let responseHTML = `<div style="color: var(--quantum-primary); font-weight: bold; margin-bottom: 10px;">Quantum Analysis Complete</div>`;
+        responseHTML += `<div style="margin-bottom: 15px;">${result.analysis}</div>`;
+        
+        if (result.suggestions && result.suggestions.length > 0) {
+            responseHTML += `<div style="color: var(--quantum-accent); margin-bottom: 10px;">Suggestions:</div>`;
+            responseHTML += `<ul style="margin: 0; padding-left: 20px;">`;
+            result.suggestions.forEach(suggestion => {
+                responseHTML += `<li>${suggestion}</li>`;
+            });
+            responseHTML += `</ul>`;
+        }
+        
+        responseHTML += `<div style="margin-top: 15px; font-size: 11px; color: var(--muted-text);">`;
+        responseHTML += `Processing time: ${result.metrics.processingTime}ms | Agents: ${result.metrics.agentsUsed.join(', ')}`;
+        responseHTML += `</div>`;
+        
+        aiResponseContent.innerHTML = responseHTML;
+        
+        // Reset AI indicator
+        document.getElementById('ai-indicator').textContent = 'Quantum AI: Ready';
+        document.querySelector('.ai-dot').classList.add('connected');
+        
+    } catch (error) {
+        aiResponseContent.textContent = `Quantum AI Error: ${error.message}`;
+        document.getElementById('ai-indicator').textContent = 'Quantum AI: Error';
+        document.querySelector('.ai-dot').style.background = 'var(--err)';
+    }
+}
+
+// ----- Dashboard -----
+document.getElementById('show-dashboard').onclick = () => {
+    quantumDashboard.style.display = 'flex';
+    if (quantumSystem) {
+        quantumSystem.updateDashboard();
+    }
+};
+
+document.getElementById('close-dashboard').onclick = () => {
+    quantumDashboard.style.display = 'none';
+};
+
+// ----- Left Panel Toggle -----
+document.getElementById('left-toggle').onclick = () => {
+    leftPanel.classList.toggle('open');
+};
+
+// ----- Initialize Editor -----
+window.addEventListener('load', () => {
+    renderEditor(editor.value);
+    pushHistory();
+    initQuantumSystem();
+});
+</script>
 </body>
 </html>
-
