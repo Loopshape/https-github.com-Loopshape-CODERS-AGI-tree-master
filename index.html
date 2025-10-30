@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nemodian 2244-1 :: Singlefile Offline AI Editor</title>
     <style>
-        /* ----- Embedded Tailwind / UI Styles ----- */
+        /* ----- :root Variables ----- */
         :root {
             --muted: #888;
             --info: #2196F3;
@@ -31,7 +31,8 @@
         }
 
         /* ----- Base ----- */
-        html, body {
+        html,
+        body {
             height: 100%;
             margin: 0;
             padding: 0;
@@ -60,18 +61,14 @@
             padding: 6px 12px;
         }
 
-        header .left {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
+        header .left,
         header .right {
             display: flex;
-            gap: 8px;
             align-items: center;
+            gap: 12px;
         }
 
+        /* ----- Buttons ----- */
         button {
             background: var(--err);
             border: 1px solid var(--err);
@@ -102,6 +99,11 @@
             background: var(--warn-bg);
             border-color: var(--warn-bg);
             color: #3a3c31;
+        }
+
+        .small {
+            font-size: 12px;
+            padding: 6px 8px;
         }
 
         /* ----- Status Bar ----- */
@@ -136,12 +138,14 @@
             color: #3a3c31;
         }
 
+
         /* ----- Editor Stage ----- */
         #editor-stage {
             grid-row: 3;
             grid-column: 1 / -1;
+            /* Changed to single column layout */
             display: grid;
-            grid-template-columns: 240px 1fr;
+            grid-template-columns: 1fr;
             background: var(--theme-bg);
             overflow: hidden;
             position: relative;
@@ -156,23 +160,31 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            /* Changed for slide-out logic */
+            position: absolute;
+            height: 100%;
+            z-index: 30;
             transition: transform 0.3s ease;
-            transform: translateX(0);
+            transform: translateX(-240px); /* Hidden by default */
         }
 
-        #left-panel.closed {
-            transform: translateX(-100%);
+        /* This class is toggled by JS to show the panel */
+        #left-panel.open {
+            transform: translateX(0);
         }
 
         #editor-outer {
             position: relative;
             overflow: hidden;
             background: transparent;
+            /* Added padding for new layout */
+            padding-left: 1em;
+            box-sizing: border-box;
         }
 
         #line-gutter {
             position: absolute;
-            left: 0;
+            left: 1em; /* Respects parent padding */
             top: 0;
             bottom: 0;
             width: var(--ln-width);
@@ -188,18 +200,19 @@
 
         .highlighting {
             position: absolute;
-            left: 0;
+            left: 1em; /* Respects parent padding */
             right: 0;
             top: 0;
             bottom: 0;
             pointer-events: none;
-            overflow: auto;
+            overflow: hidden; /* FIX: Prevents double scrollbar */
             padding: 10px;
             box-sizing: border-box;
             white-space: pre-wrap;
             word-break: break-word;
             line-height: var(--baseline);
             padding-left: calc(var(--ln-width) + 12px);
+            font-family: 'Fira Code', monospace; /* FIX: Explicitly set font */
         }
 
         .highlighting pre {
@@ -208,7 +221,7 @@
 
         #editor {
             position: absolute;
-            left: var(--ln-width);
+            left: calc(1em + var(--ln-width)); /* Respects parent padding */
             right: 0;
             top: 0;
             bottom: 0;
@@ -219,7 +232,7 @@
             background: transparent;
             color: transparent;
             caret-color: var(--accent);
-            font-family: inherit;
+            font-family: 'Fira Code', monospace; /* FIX: Explicitly set font */
             font-size: var(--font-size);
             line-height: var(--baseline);
             border: 0;
@@ -230,7 +243,6 @@
             z-index: 20;
             padding-left: 12px;
         }
-
 
         /* ----- Footer ----- */
         footer {
@@ -255,12 +267,7 @@
             border-radius: 3px;
         }
 
-        .small {
-            font-size: 12px;
-            padding: 6px 8px;
-        }
-
-        /* ----- Preview Panel ----- */
+        /* ----- Panels (Preview, AI) ----- */
         #preview-panel {
             position: fixed;
             top: 50%;
@@ -308,7 +315,6 @@
             justify-content: center;
         }
 
-        /* ----- AI Response Panel ----- */
         #ai-response-panel {
             position: fixed;
             bottom: 60px;
@@ -323,6 +329,7 @@
             z-index: 100;
             display: none;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            white-space: pre-wrap; /* Allow wrapping in AI panel */
         }
 
         #ai-response-content {
@@ -341,12 +348,12 @@
             cursor: pointer;
         }
 
-        /* ----- File Input ----- */
+
+        /* ----- Misc ----- */
         #file-input {
             display: none;
         }
 
-        /* ----- AI Indicator ----- */
         .ai-status {
             display: flex;
             align-items: center;
@@ -370,31 +377,19 @@
             0% {
                 opacity: 1;
             }
+
             50% {
                 opacity: 0.5;
             }
+
             100% {
                 opacity: 1;
             }
         }
 
         /* ----- Responsive ----- */
+        /* Removed media query, as slide-out panel is now default */
         @media (max-width: 768px) {
-            #editor-stage {
-                grid-template-columns: 1fr;
-            }
-
-            #left-panel {
-                position: absolute;
-                height: 100%;
-                z-index: 30;
-                transform: translateX(-240px);
-            }
-
-            #left-panel.open {
-                transform: translateX(0);
-            }
-
             #ai-response-panel {
                 width: calc(100% - 40px);
                 right: 20px;
@@ -409,53 +404,54 @@
     </style>
 </head>
 <body>
-<header>
-    <div class="left">
-        <button id="left-toggle" class="small">☰</button>
-        <div style="font-weight:800;">Nemodian 2244-1 :: AI Editor</div>
+    <!-- HTML Structure Remains Unchanged -->
+    <header>
+        <div class="left">
+            <button id="left-toggle" class="small">☰</button>
+            <div style="font-weight:800;">Nemodian 2244-1 :: AI Editor</div>
+        </div>
+        <div class="right">
+            <div class="ai-status">
+                <div class="ai-dot"></div>
+                <div id="ai-indicator" style="font-size:12px;color:#cfcfbd;">Local AI: probing…</div>
+            </div>
+            <button id="open-file" class="small">Open</button>
+            <button id="save-file" class="small">Save</button>
+            <button id="save-as" class="small">Save As</button>
+            <button id="render-html" class="small warn">Render HTML</button>
+            <button id="run-local-ai" class="small info">Run AI</button>
+        </div>
+    </header>
+    <div id="status-bar" class="info">
+        <div id="file-meta">No File Loaded</div>
+        <div id="editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>
     </div>
-    <div class="right">
-        <div class="ai-status">
-            <div class="ai-dot"></div>
-            <div id="ai-indicator" style="font-size:12px;color:#cfcfbd;">Local AI: probing…</div>
-        </div>
-        <button id="open-file" class="small">Open</button>
-        <button id="save-file" class="small">Save</button>
-        <button id="save-as" class="small">Save As</button>
-        <button id="render-html" class="small warn">Render HTML</button>
-        <button id="run-local-ai" class="small info">Run AI</button>
-    </div>
-</header>
-<div id="status-bar" class="info">
-    <div id="file-meta">No File Loaded</div>
-    <div id="editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>
-</div>
-<div id="editor-stage">
-    <aside id="left-panel">
-        <button id="btn-undo" class="small">UNDO</button>
-        <button id="btn-redo" class="small">REDO</button>
-        <button id="btn-beautify" class="small">Beautify</button>
-        <button id="btn-render" class="small warn">Render HTML</button>
-        <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
-            <p><strong>AI Commands:</strong></p>
-            <ul style="padding-left: 15px;">
-                <li>Explain this code</li>
-                <li>Optimize this function</li>
-                <li>Add comments</li>
-                <li>Fix bugs</li>
-            </ul>
-        </div>
-        <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
-            <p><strong>HTML Render:</strong></p>
-            <p>Click "Render HTML" to preview your HTML code in a live browser view.</p>
-        </div>
-    </aside>
-    <div id="editor-outer">
-        <div id="line-gutter"></div>
-        <div class="highlighting">
-            <pre><code id="highlighted" class="language-html"></code></pre>
-        </div>
-        <textarea id="editor" spellcheck="false">&lt;!DOCTYPE html&gt;
+    <div id="editor-stage">
+        <aside id="left-panel">
+            <button id="btn-undo" class="small">UNDO</button>
+            <button id="btn-redo" class="small">REDO</button>
+            <button id="btn-beautify" class="small">Beautify</button>
+            <button id="btn-render" class="small warn">Render HTML</button>
+            <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
+                <p><strong>AI Commands:</strong></p>
+                <ul style="padding-left: 15px;">
+                    <li>Explain this code</li>
+                    <li>Optimize this function</li>
+                    <li>Add comments</li>
+                    <li>Fix bugs</li>
+                </ul>
+            </div>
+            <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
+                <p><strong>HTML Render:</strong></p>
+                <p>Click "Render HTML" to preview your HTML code in a live browser view.</p>
+            </div>
+        </aside>
+        <div id="editor-outer">
+            <div id="line-gutter"></div>
+            <div class="highlighting">
+                <pre><code id="highlighted" class="language-html"></code></pre>
+            </div>
+            <textarea id="editor" spellcheck="false">&lt;!DOCTYPE html&gt;
 &lt;html lang="en"&gt;
 &lt;head&gt;
   &lt;meta charset="UTF-8"&gt;
@@ -493,332 +489,540 @@
       font-size: 1.2rem;
       line-height: 1.6;
     }
-    .features {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 15px;
-      margin: 20px 0;
-    }
-    .feature {
-      background: rgba(74, 201, 74, 0.2);
-      padding: 10px 15px;
-      border-radius: 8px;
-      border: 1px solid #4ac94a;
-    }
-    button {
-      background: #4ac94a;
-      color: white;
-      border: none;
-      padding: 12px 25px;
-      border-radius: 5px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    button:hover {
-      background: #3aa83a;
-      transform: translateY(-2px);
-    }
   &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
   &lt;div class="container"&gt;
     &lt;h1&gt;Welcome to Nemodian 2244-1&lt;/h1&gt;
     &lt;p&gt;This is a demonstration of the offline AI editor's capabilities. You can edit this HTML and CSS, and then click "Render HTML" to see your changes.&lt;/p&gt;
-    &lt;div class="features"&gt;
-      &lt;div class="feature"&gt;HTML Editing&lt;/div&gt;
-      &lt;div class="feature"&gt;CSS Styling&lt;/div&gt;
-      &lt;div class="feature"&gt;AI Assistance&lt;/div&gt;
-    &lt;/div&gt;
-    &lt;button&gt;Get Started&lt;/button&gt;
   &lt;/div&gt;
 &lt;/body&gt;
 &lt;/html&gt;
 </textarea>
+        </div>
     </div>
-</div>
-<footer>
-    <input id="prompt-input" placeholder="AI Prompt (Ctrl+Enter to run)">
-    <button id="send-button" class="success">SEND</button>
-</footer>
-<input type="file" id="file-input" accept=".js,.html,.css,.txt,.json">
-<div id="preview-panel">
-    <div id="preview-header">
-        <span>HTML Preview</span>
-        <button id="close-preview">×</button>
+    <footer>
+        <input id="prompt-input" placeholder="AI Prompt (Ctrl+Enter to run)">
+        <button id="send-button" class="success">SEND</button>
+    </footer>
+    <input type="file" id="file-input" accept=".js,.html,.css,.txt,.json">
+    <div id="preview-panel">
+        <div id="preview-header">
+            <span>HTML Preview</span>
+            <button id="close-preview">×</button>
+        </div>
+        <iframe id="preview-content"></iframe>
     </div>
-    <iframe id="preview-content"></iframe>
-</div>
-<div id="ai-response-panel">
-    <button id="close-ai-panel">×</button>
-    <div id="ai-response-content"></div>
-</div>
+    <div id="ai-response-panel">
+        <button id="close-ai-panel">×</button>
+        <div id="ai-response-content"></div>
+    </div>
 
-<!-- Embedded Prism & Beautify (minified) -->
-<script>
-    /* PRISM + JS + CSS + HTML + JSON highlighting */
-    window.Prism = {
-        languages: {
-            javascript: {},
-            html: {},
-            css: {},
-            json: {}
-        }
-    };
-    /* Minimal highlighting simulation */
-</script>
-<script>
-    function js_beautify(code) {
-        return code;
-    }
-
-    function css_beautify(code) {
-        return code;
-    }
-
-    function html_beautify(code) {
-        return code;
-    }
-</script>
-<script>
-    /* Minimal jQuery + GSAP stubs */
-    window.$ = document.querySelectorAll.bind(document);
-    const gsap = {
-        to: (el, opt) => {
-            el.style.transform = opt.x ? `translateX(${opt.x})` : el.style.transform;
-        }
-    };
-</script>
-<script>
-    // ----- Editor Logic -----
-    const editor = document.getElementById('editor');
-    const highlighted = document.getElementById('highlighted');
-    const lineGutter = document.getElementById('line-gutter');
-    const statusEditor = document.getElementById('editor-meta');
-    const statusFile = document.getElementById('file-meta');
-    const previewPanel = document.getElementById('preview-panel');
-    const previewContent = document.getElementById('preview-content');
-    const aiResponsePanel = document.getElementById('ai-response-panel');
-    const aiResponseContent = document.getElementById('ai-response-content');
-    const leftPanel = document.getElementById('left-panel');
-
-    let currentFileName = null,
-        currentFileType = 'html',
-        historyStack = [],
-        redoStack = [];
-
-    function detectLanguage(fname) {
-        const ext = fname?.split('.').pop().toLowerCase();
-        return {
-            'js': 'javascript',
-            'html': 'html',
-            'htm': 'html',
-            'css': 'css',
-            'json': 'json'
-        } [ext] || 'html';
-    }
-
-    function highlightAndRender(code) {
-        highlighted.textContent = code;
-        // In a real scenario, you'd use a library like Prism.js here
-        // Prism.highlightAll();
-    }
-
-    function generateLineNumbers() {
-        lineGutter.innerHTML = editor.value.split('\n').map((v, i) => i + 1).join('<br>');
-    }
-
-    function renderEditor(code) {
-        editor.value = code;
-        highlightAndRender(code);
-        generateLineNumbers();
-        updateStatus();
-    }
-
-    function updateStatus() {
-        const pos = editor.selectionStart;
-        const lines = editor.value.substr(0, pos).split('\n');
-        statusEditor.textContent = `Cursor: ${lines.length}:${lines[lines.length - 1].length} | Lines: ${editor.value.split('\n').length} | Chars: ${editor.value.length} | History: ${historyStack.length}`;
-    }
-
-    function syncScroll() {
-        highlighted.parentElement.scrollTop = editor.scrollTop;
-        highlighted.parentElement.scrollLeft = editor.scrollLeft;
-        lineGutter.scrollTop = editor.scrollTop;
-    }
-
-    function pushHistory() {
-        const code = editor.value;
-        if (historyStack.length && historyStack[historyStack.length - 1] === code) return;
-        historyStack.push(code);
-        redoStack = [];
-        updateStatus();
-    }
-
-    function undo() {
-        if (historyStack.length > 1) {
-            redoStack.push(historyStack.pop());
-            renderEditor(historyStack[historyStack.length - 1]);
-        }
-    }
-
-    function redo() {
-        if (redoStack.length) {
-            const nextState = redoStack.pop();
-            historyStack.push(nextState);
-            renderEditor(nextState);
-        }
-    }
-
-    editor.addEventListener('input', () => {
-        pushHistory();
-        highlightAndRender(editor.value);
-        generateLineNumbers();
-        updateStatus();
-    });
-    editor.addEventListener('scroll', syncScroll);
-    editor.addEventListener('keyup', updateStatus);
-    editor.addEventListener('click', updateStatus);
-
-    // ----- File I/O -----
-    document.getElementById('open-file').onclick = () => {
-        document.getElementById('file-input').click();
-    };
-    document.getElementById('file-input').addEventListener('change', e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-            currentFileName = file.name;
-            currentFileType = detectLanguage(file.name);
-            renderEditor(ev.target.result);
-            statusFile.textContent = currentFileName;
-            historyStack = [ev.target.result];
-            redoStack = [];
+    <!-- Dummy Libraries for standalone functionality -->
+    <script>
+        /* PRISM + JS + CSS + HTML + JSON highlighting */
+        // These are dummy functions for the standalone demo
+        window.Prism = {
+            languages: {
+                javascript: {},
+                html: {},
+                css: {},
+                json: {}
+            },
+            highlightAll: () => { /* Dummy */ }
         };
-        reader.readAsText(file);
-    });
 
-    document.getElementById('save-file').onclick = () => {
-        if (!currentFileName) {
-            saveAsFile();
-            return;
+        function js_beautify(code) {
+            console.warn("js_beautify is a dummy function.");
+            return code;
         }
-        const blob = new Blob([editor.value], {
-            type: 'text/plain'
-        });
-        const a = document.createElement('a');
-a.href = URL.createObjectURL(blob);
-        a.download = currentFileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(a.href);
-    };
 
-    function saveAsFile() {
-        const fname = prompt('Enter file name', currentFileName || 'code.html');
-        if (fname) {
-            currentFileName = fname;
-            currentFileType = detectLanguage(fname);
-            statusFile.textContent = currentFileName;
-            document.getElementById('save-file').click();
+        function css_beautify(code) {
+            console.warn("css_beautify is a dummy function.");
+            return code;
         }
-    }
-    document.getElementById('save-as').onclick = saveAsFile;
 
-    // ----- Beautify -----
-    document.getElementById('btn-beautify').onclick = () => {
-        try {
-            let beautifiedCode = editor.value;
-            if (currentFileType === 'javascript') {
-                beautifiedCode = js_beautify(editor.value);
-            } else if (currentFileType === 'html') {
-                beautifiedCode = html_beautify(editor.value);
-            } else if (currentFileType === 'css') {
-                beautifiedCode = css_beautify(editor.value);
-            }
-            renderEditor(beautifiedCode);
-            pushHistory();
-        } catch (e) {
-            alert('Beautify error: Make sure the code is valid.');
+        function html_beautify(code) {
+            console.warn("html_beautify is a dummy function.");
+            return code;
         }
-    };
+    </script>
+    <script>
+        // ----- App Logic (Encapsulated) -----
+        (function() {
+            'use strict';
 
-    // ----- Undo/Redo -----
-    document.getElementById('btn-undo').onclick = undo;
-    document.getElementById('btn-redo').onclick = redo;
+            const AIEditor = {
+                // --- Application State ---
+                state: {
+                    currentFileName: null,
+                    currentFileType: 'html',
+                    historyStack: [],
+                    redoStack: []
+                },
 
-    // ----- HTML Preview -----
-    document.getElementById('btn-render').onclick = renderHTML;
-    document.getElementById('render-html').onclick = renderHTML;
+                // --- DOM Element Cache ---
+                elements: {
+                    editor: document.getElementById('editor'),
+                    highlighted: document.getElementById('highlighted'),
+                    lineGutter: document.getElementById('line-gutter'),
+                    statusEditor: document.getElementById('editor-meta'),
+                    statusFile: document.getElementById('file-meta'),
+                    previewPanel: document.getElementById('preview-panel'),
+                    previewContent: document.getElementById('preview-content'),
+                    aiResponsePanel: document.getElementById('ai-response-panel'),
+                    aiResponseContent: document.getElementById('ai-response-content'),
+                    leftPanel: document.getElementById('left-panel'),
+                    fileInput: document.getElementById('file-input'),
+                    promptInput: document.getElementById('prompt-input'),
+                    aiIndicator: document.getElementById('ai-indicator'),
+                    aiDot: document.querySelector('.ai-dot'),
+                },
 
-    function renderHTML() {
-        try {
-            const blob = new Blob([editor.value], {
-                type: 'text/html'
+                // --- Initialization ---
+                init() {
+                    this.editor.init(this); // Pass parent reference
+                    this.history.init(this);
+                    this.file.init(this);
+                    this.ui.init(this);
+                    this.ai.init(this); // Pass parent reference
+
+                    this.bindEvents();
+                    this.editor.render(this.elements.editor.value);
+                    this.history.push(this.elements.editor.value, true); // Push initial state
+                    this.ai.checkAIConnection(); // Check for Ollama on boot
+                },
+
+                // --- Event Binding ---
+                bindEvents() {
+                    this.elements.editor.addEventListener('input', () => this.editor.onInput());
+                    this.elements.editor.addEventListener('scroll', () => this.editor.syncScroll());
+                    this.elements.editor.addEventListener('keyup', () => this.editor.updateStatus());
+                    this.elements.editor.addEventListener('click', () => this.editor.updateStatus());
+
+                    document.getElementById('open-file').onclick = () => this.file.open();
+                    this.elements.fileInput.addEventListener('change', e => this.file.handleOpen(e));
+                    document.getElementById('save-file').onclick = () => this.file.save();
+                    document.getElementById('save-as').onclick = () => this.file.saveAs();
+
+                    // --- Sidebar Button Bindings (with close panel logic) ---
+                    document.getElementById('btn-beautify').onclick = () => {
+                        this.editor.beautify();
+                        this.ui.closeLeftPanel();
+                    };
+                    document.getElementById('btn-undo').onclick = () => {
+                        this.editor.undo();
+                        this.ui.closeLeftPanel();
+                    };
+                    document.getElementById('btn-redo').onclick = () => {
+                        this.editor.redo();
+                        this.ui.closeLeftPanel();
+                    };
+                    document.getElementById('btn-render').onclick = () => {
+                        this.ui.renderHTML();
+                        this.ui.closeLeftPanel();
+                    };
+                    // --- End Sidebar Button Bindings ---
+
+                    document.getElementById('render-html').onclick = () => this.ui.renderHTML();
+                    document.getElementById('close-preview').onclick = () => this.ui.closePreview();
+
+                    document.getElementById('send-button').onclick = () => this.ai.run();
+                    document.getElementById('run-local-ai').onclick = () => this.ai.run();
+                    this.elements.promptInput.addEventListener('keydown', e => this.ai.handleKeydown(e));
+                    document.getElementById('close-ai-panel').onclick = () => this.ui.closeAIPanel();
+
+                    // Main sidebar toggle
+                    document.getElementById('left-toggle').onclick = () => this.ui.toggleLeftPanel();
+                },
+
+                // ===================================
+                // ---       EDITOR MODULE         ---
+                // ===================================
+                editor: {
+                    init(parent) {
+                        this.parent = parent;
+                    },
+
+                    onInput() {
+                        this.parent.history.push(this.parent.elements.editor.value);
+                        this.highlightAndRender(this.parent.elements.editor.value);
+                        this.generateLineNumbers();
+                        this.updateStatus();
+                    },
+
+                    render(code) {
+                        this.parent.elements.editor.value = code;
+                        this.highlightAndRender(code);
+                        this.generateLineNumbers();
+                        this.updateStatus();
+                    },
+
+                    highlightAndRender(code) {
+                        this.parent.elements.highlighted.textContent = code;
+                        // In a real scenario, you'd use a library like Prism.js here
+                        Prism.highlightAll(); // Call dummy
+                    },
+
+                    generateLineNumbers() {
+                        this.parent.elements.lineGutter.innerHTML = this.parent.elements.editor.value.split('\n').map((_, i) => i + 1).join('<br>');
+                    },
+
+                    updateStatus() {
+                        const editor = this.parent.elements.editor;
+                        const pos = editor.selectionStart;
+                        const lines = editor.value.substr(0, pos).split('\n');
+                        const lineCount = editor.value.split('\n').length;
+                        this.parent.elements.statusEditor.textContent = `Cursor: ${lines.length}:${lines[lines.length - 1].length} | Lines: ${lineCount} | Chars: ${editor.value.length} | History: ${this.parent.state.historyStack.length}`;
+                    },
+
+                    syncScroll() {
+                        const editor = this.parent.elements.editor;
+                        // The scrollable parent is .highlighting
+                        this.parent.elements.highlighted.parentElement.scrollTop = editor.scrollTop;
+                        this.parent.elements.highlighted.parentElement.scrollLeft = editor.scrollLeft;
+                        this.parent.elements.lineGutter.scrollTop = editor.scrollTop;
+                    },
+
+                    beautify() {
+                        try {
+                            let beautifiedCode = this.parent.elements.editor.value;
+                            const fileType = this.parent.state.currentFileType;
+                            if (fileType === 'javascript') {
+                                beautifiedCode = js_beautify(beautifiedCode);
+                            } else if (fileType === 'html') {
+                                beautifiedCode = html_beautify(beautifiedCode);
+                            } else if (fileType === 'css') {
+                                beautifiedCode = css_beautify(beautifiedCode);
+                            }
+                            this.render(beautifiedCode);
+                            this.parent.history.push(beautifiedCode);
+                        } catch (e) {
+                            alert('Beautify error: Make sure the code is valid.');
+                        }
+                    },
+
+                    undo() {
+                        this.parent.history.undo();
+                    },
+                    redo() {
+                        this.parent.history.redo();
+                    }
+                },
+
+                // ===================================
+                // ---       HISTORY MODULE        ---
+                // ===================================
+                history: {
+                    init(parent) {
+                        this.parent = parent;
+                    },
+
+                    push(code, isInitial = false) {
+                        const historyStack = this.parent.state.historyStack;
+                        if (!isInitial && historyStack.length && historyStack[historyStack.length - 1] === code) return;
+                        historyStack.push(code);
+                        this.parent.state.redoStack = [];
+                        this.parent.editor.updateStatus();
+                    },
+
+                    undo() {
+                        const {
+                            historyStack,
+                            redoStack
+                        } = this.parent.state;
+                        if (historyStack.length > 1) { // Keep at least one state (initial)
+                            redoStack.push(historyStack.pop());
+                            this.parent.editor.render(historyStack[historyStack.length - 1]);
+                        }
+                    },
+
+                    redo() {
+                        const {
+                            historyStack,
+                            redoStack
+                        } = this.parent.state;
+                        if (redoStack.length) {
+                            const nextState = redoStack.pop();
+                            historyStack.push(nextState);
+                            this.parent.editor.render(nextState);
+                        }
+                    }
+                },
+
+                // ===================================
+                // ---         FILE MODULE         ---
+                // ===================================
+                file: {
+                    init(parent) {
+                        this.parent = parent;
+                    },
+
+                    open() {
+                        this.parent.elements.fileInput.click();
+                    },
+
+                    handleOpen(e) {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            const newCode = ev.target.result;
+                            this.parent.state.currentFileName = file.name;
+                            this.parent.state.currentFileType = this.detectLanguage(file.name);
+                            this.parent.editor.render(newCode);
+                            this.parent.elements.statusFile.textContent = file.name;
+                            // Reset history with new file content
+                            this.parent.state.historyStack = [newCode];
+                            this.parent.state.redoStack = [];
+                            this.parent.editor.updateStatus();
+                        };
+                        reader.readAsText(file);
+                    },
+
+                    save() {
+                        if (!this.parent.state.currentFileName) {
+                            this.saveAs();
+                            return;
+                        }
+                        this.download(this.parent.state.currentFileName, this.parent.elements.editor.value);
+                    },
+
+                    saveAs() {
+                        const fname = prompt('Enter file name', this.parent.state.currentFileName || 'code.html');
+                        if (fname) {
+                            this.parent.state.currentFileName = fname;
+                            this.parent.state.currentFileType = this.detectLanguage(fname);
+                            this.parent.elements.statusFile.textContent = fname;
+                            this.save();
+                        }
+                    },
+
+                    download(filename, text) {
+                        const blob = new Blob([text], {
+                            type: 'text/plain'
+                        });
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(a.href);
+                    },
+
+                    detectLanguage(fname) {
+                        const ext = fname?.split('.').pop().toLowerCase();
+                        return {
+                            'js': 'javascript',
+                            'html': 'html',
+                            'htm': 'html',
+                            'css': 'css',
+                            'json': 'json'
+                        } [ext] || 'html';
+                    }
+                },
+
+                // ===================================
+                // ---          UI MODULE          ---
+                // ===================================
+                ui: {
+                    init(parent) {
+                        this.parent = parent;
+                    },
+
+                    renderHTML() {
+                        try {
+                            // Revoke old blob URL if it exists
+                            if (this.parent.elements.previewContent.src.startsWith('blob:')) {
+                                URL.revokeObjectURL(this.parent.elements.previewContent.src);
+                            }
+                            const blob = new Blob([this.parent.elements.editor.value], {
+                                type: 'text/html'
+                            });
+                            this.parent.elements.previewContent.src = URL.createObjectURL(blob);
+                            this.parent.elements.previewPanel.style.display = 'flex';
+                        } catch (e) {
+                            alert('Error rendering HTML. Check for syntax errors.');
+                        }
+                    },
+
+                    closePreview() {
+                        this.parent.elements.previewPanel.style.display = 'none';
+                        if (this.parent.elements.previewContent.src.startsWith('blob:')) {
+                            URL.revokeObjectURL(this.parent.elements.previewContent.src);
+                        }
+                    },
+
+                    closeAIPanel() {
+                        this.parent.elements.aiResponsePanel.style.display = 'none';
+                    },
+
+                    toggleLeftPanel() {
+                        this.parent.elements.leftPanel.classList.toggle('open');
+                    },
+
+                    closeLeftPanel() {
+                        this.parent.elements.leftPanel.classList.remove('open');
+                    }
+                },
+
+                // ===================================
+                // ---          AI MODULE          ---
+                // ===================================
+                ai: {
+                    init(parent) {
+                        this.parent = parent;
+                        this.OLLAMA_URL = 'http://localhost:11434';
+                        this.OLLAMA_MODEL = 'llama3:8b'; // Or any model you have
+                        this.ndjsonBuffer = ''; // Buffer for processing NDJSON stream
+                    },
+
+                    /**
+                     * Sets the visual status of the AI connection.
+                     */
+                    setAIStatus(isConnected) {
+                        if (isConnected) {
+                            this.parent.elements.aiIndicator.textContent = 'Local AI: Online';
+                            this.parent.elements.aiDot.classList.add('connected');
+                        } else {
+                            this.parent.elements.aiIndicator.textContent = 'Local AI: Offline';
+                            this.parent.elements.aiDot.classList.remove('connected');
+                        }
+                    },
+
+                    /**
+                     * Checks if the Ollama server is running.
+                     */
+                    async checkAIConnection() {
+                        try {
+                            const response = await fetch(this.OLLAMA_URL, {
+                                method: 'GET'
+                            });
+                            if (response.status === 200) {
+                                this.setAIStatus(true);
+                            } else {
+                                this.setAIStatus(false);
+                            }
+                        } catch (e) {
+                            this.setAIStatus(false);
+                        }
+                    },
+
+                    /**
+                     * Runs the AI prompt. This is the main entry point.
+                     */
+                    async run() {
+                        const prompt = this.parent.elements.promptInput.value.trim();
+                        if (!prompt) return;
+
+                        const code = this.parent.elements.editor.value;
+                        const fullPrompt = `
+Here is my current ${this.parent.state.currentFileType} code:
+\`\`\`${this.parent.state.currentFileType}
+${code}
+\`\`\`
+
+My request is: "${prompt}"
+`;
+
+                        this.parent.elements.aiResponseContent.textContent = 'Processing...';
+                        this.parent.elements.aiResponsePanel.style.display = 'block';
+                        this.ndjsonBuffer = ''; // Clear buffer for new stream
+
+                        try {
+                            await this.streamOllamaResponse(fullPrompt);
+                        } catch (e) {
+                            this.parent.elements.aiResponseContent.textContent = `Error: ${e.message}. \n\nIs Ollama running at ${this.OLLAMA_URL}?`;
+                            console.error("Ollama error:", e);
+                            this.setAIStatus(false);
+                        }
+                    },
+
+                    /**
+                     * Handles the streaming fetch request to Ollama.
+                     */
+                    async streamOllamaResponse(fullPrompt) {
+                        const payload = {
+                            model: this.OLLAMA_MODEL,
+                            prompt: fullPrompt,
+                            stream: true // Enable streaming
+                        };
+
+                        const response = await fetch(`${this.OLLAMA_URL}/api/generate`, {
+                            method: 'POST',
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Ollama request failed with status ${response.status}`);
+                        }
+
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        this.parent.elements.aiResponseContent.textContent = ''; // Clear "Processing..."
+
+                        while (true) {
+                            const {
+                                value,
+                                done
+                            } = await reader.read();
+                            if (done) {
+                                break;
+                            }
+
+                            // Add the new chunk to our buffer
+                            this.ndjsonBuffer += decoder.decode(value, {
+                                stream: true
+                            });
+
+                            // Process all complete lines (NDJSON) in the buffer
+                            let newlineIndex;
+                            while ((newlineIndex = this.ndjsonBuffer.indexOf('\n')) !== -1) {
+                                const line = this.ndjsonBuffer.substring(0, newlineIndex);
+                                this.ndjsonBuffer = this.ndjsonBuffer.substring(newlineIndex + 1);
+
+                                if (!line) continue; // Skip empty lines
+
+                                try {
+                                    const jsonLine = JSON.parse(line);
+                                    if (jsonLine.response) {
+                                        // This is a content token, append it
+                                        this.parent.elements.aiResponseContent.textContent += jsonLine.response;
+                                        // Auto-scroll the panel
+                                        const panel = this.parent.elements.aiResponsePanel;
+                                        panel.scrollTop = panel.scrollHeight;
+                                    }
+                                    if (jsonLine.done) {
+                                        // Stream is finished
+                                        return;
+                                    }
+                                } catch (e) {
+                                    console.warn('Failed to parse JSON line:', line, e);
+                                }
+                            }
+                        }
+                    },
+
+                    /**
+                     * Handles Ctrl+Enter or Meta+Enter to run the prompt.
+                     */
+                    handleKeydown(e) {
+                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                            e.preventDefault();
+                            this.run();
+                        }
+                    }
+                }
+            };
+
+            // --- Start the application ---
+            document.addEventListener('DOMContentLoaded', () => {
+                AIEditor.init();
             });
-            previewContent.src = URL.createObjectURL(blob);
-            previewPanel.style.display = 'flex';
-        } catch (e) {
-            alert('Error rendering HTML. Check for syntax errors.');
-        }
-    }
-    document.getElementById('close-preview').onclick = () => {
-        previewPanel.style.display = 'none';
-        if (previewContent.src.startsWith('blob:')) {
-            URL.revokeObjectURL(previewContent.src);
-        }
-    };
 
-    // ----- AI -----
-    document.getElementById('send-button').onclick = runAI;
-    document.getElementById('run-local-ai').onclick = runAI;
-    document.getElementById('prompt-input').addEventListener('keydown', e => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-            e.preventDefault();
-            runAI();
-        }
-    });
-    document.getElementById('close-ai-panel').onclick = () => {
-        aiResponsePanel.style.display = 'none';
-    };
-
-    function simulateAIResponse(prompt) {
-        let r = '';
-        if (prompt.toLowerCase().includes('explain')) {
-            r = `This is ${currentFileType} code with ${editor.value.split('\n').length} lines.`;
-        } else if (prompt.toLowerCase().includes('optimize')) {
-            r = 'Consider minifying and checking dependencies.';
-        } else if (prompt.toLowerCase().includes('comment')) {
-            r = 'Consider adding comments.';
-        } else if (prompt.toLowerCase().includes('bug')) {
-            r = 'No obvious bugs detected.';
-        } else {
-            r = `Prompt received: "${prompt}"`;
-        }
-        return r;
-    }
-
-    function runAI() {
-        const prompt = document.getElementById('prompt-input').value.trim();
-        if (!prompt) return;
-        aiResponseContent.textContent = 'Processing...';
-        aiResponsePanel.style.display = 'block';
-        setTimeout(() => {
-            aiResponseContent.textContent = simulateAIResponse(prompt);
-        }, 500);
-    }
-    
-    // ----- Left Panel Toggle -----
-    document.getElementById('left-toggle').onclick = () => {
-        leftPanel.classList.toggle('open');
-    };
-
-    // ----- Init -----
-    renderEditor(editor.value);
-    pushHistory();
-</script>
+        })();
+    </script>
 </body>
 </html>
+

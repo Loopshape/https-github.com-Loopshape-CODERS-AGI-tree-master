@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Autonomous 5-Agent System | Ollama Fractal Reasoning</title>
+<!-- Load necessary external libraries -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+
+<style>
+/* Base Styles & Material Dark Theme - KEPT */
+body{margin:0;background:#121212;color:#eee;font-family:'Inter',Roboto,sans-serif;height:100vh;overflow:hidden;}
+#three-canvas{position:fixed;top:0;left:0;z-index:10;width:100%;height:100%;}
+#ui-container{
+    position:absolute;top:0;left:0;width:100%;height:100%;z-index:20;
+    padding:16px;display:grid;
+    grid-template-columns:repeat(12, 1fr); 
+    grid-template-rows: auto 1fr auto; 
+    gap: 16px;
+    pointer-events:none;
+}
+.agent-card{
+    background:#1F1F1F;
+    border-radius:16px;
+    padding:16px;
+    color:#eee;
+    box-shadow:0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4);
+    pointer-events:auto;
+    transition: box-shadow 0.3s ease;
+}
+
+/* Grid Layout - KEPT */
+#agent-nexus { grid-column: 5 / 9; grid-row: 1 / 2; height: fit-content; } 
+#agent-echo { grid-column: 1 / 13; grid-row: 2 / 3; max-height: 100%; overflow-y: auto; z-index: 20; }
+#agent-cognito { grid-column: 1 / 5; grid-row: 3 / 4; height: fit-content; } 
+#agent-relay { grid-column: 5 / 9; grid-row: 3 / 4; height: fit-content; } 
+#agent-sentinel { grid-column: 9 / 13; grid-row: 3 / 4; height: fit-content; } 
+
+/* Material Typography & Color - KEPT */
+.agent-title{color:#BB86FC;font-weight:700;font-size:1.4em;}
+.agent-subtitle{color:#03DAC6;font-weight:300;font-size:0.8em;margin-bottom:8px;}
+.agent-content{
+    margin-top:12px;
+    font-size:0.9em;
+    color:rgba(255,255,255,0.7);
+    max-height: 100px;
+    overflow-y: auto;
+}
+/* Input Prompt Styling - KEPT */
+#prompt-container{
+    position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);
+    display:flex;gap:12px;z-index:25;
+    width: min(90vw, 600px);
+    background: #1F1F1F;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+}
+#prompt-input{
+    flex-grow:1;
+    background:transparent;
+    border:none;
+    border-bottom:2px solid rgba(187,134,252,0.5);
+    color:#eee;
+    font-size:1em;
+    padding:8px;
+    outline:none;
+    transition: border-color 0.3s ease;
+}
+#prompt-input:focus{border-bottom-color:#BB86FC;}
+#prompt-submit{
+    width:48px;height:48px;
+    border-radius:50%;
+    background:#03DAC6;
+    color: #121212;
+    border:none;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow: 0 4px 10px rgba(3,218,198,0.4);
+    transition: transform 0.1s;
+}
+#prompt-submit:active{transform:scale(0.95);}
+
+/* Data Packet Animation - KEPT */
+.data-packet{
+    position:fixed;width:12px;height:12px;border-radius:50%;
+    background:#BB86FC;
+    box-shadow:0 0 10px #BB86FC;
+    opacity:0;
+    z-index:30;
+}
+.spinner{border:4px solid rgba(255,255,255,0.1);border-left-color:#03DAC6;border-radius:50%;width:16px;height:16px;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* PrismJS Code Highlighting Theme - KEPT */
+pre[class*="language-"] {
+    margin: 0; padding: 10px; border-radius: 6px;
+    background: #121212;
+    font-size: 0.8em;
+    white-space: pre-wrap;
+    word-break: break-all;
+    border: 1px solid #333;
+}
+.token.string { color: #81C784; }
+.token.keyword { color: #BB86FC; }
+.token.comment { color: #666666; }
+</style>
+</head>
+<body>
+
+<canvas id="three-canvas"></canvas>
+<div id="prompt-container">
+<input type="text" id="prompt-input" placeholder="Enter command or question..." autofocus>
+<button id="prompt-submit">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3l18 9-18 9V3z"/></svg>
+</button>
+</div>
+
+<div id="ui-container">
+<div id="agent-nexus" class="agent-card"><div class="agent-title">Nexus</div><div class="agent-subtitle">Orchestrator (core)</div><div class="agent-content">Idle. Awaiting command.</div></div>
+<div id="agent-cognito" class="agent-card"><div class="agent-title">Cognito</div><div class="agent-subtitle">Analyzer (loop)</div><div class="agent-content">Offline</div></div>
+<div id="agent-relay" class="agent-card"><div class="agent-title">Relay</div><div class="agent-subtitle">Communicator (2244)</div><div class="agent-content">Offline</div></div>
+<div id="agent-sentinel" class="agent-card"><div class="agent-title">Sentinel</div><div class="agent-subtitle">Monitor (coin)</div><div class="agent-content">Offline</div></div>
+<div id="agent-echo" class="agent-card"><div class="agent-title">Echo</div><div class="agent-subtitle">Reporter (code)</div><div class="agent-content">Awaiting final report...</div></div>
+</div>
+
+<script type="module">
+// 🚨 IMPORTANT: This script is configured to use your local Ollama instance.
+// 1. Ollama must be running on http://localhost:11434.
+// 2. You must have the models 'core', 'loop', '2244', 'coin', and 'code' (or similar lightweight models renamed/aliased in Ollama) pulled locally.
+// 3. Due to CORS restrictions, this will likely only work if the page is served by a local server that proxies the Ollama requests, or if your browser's security allows cross-origin requests to localhost.
+
+// --- Ollama Configuration ---
+const ollamaHost = "http://localhost:11434"; 
+const ollamaGenerateUrl = `${ollamaHost}/api/generate`;
+
+// Map agents to their designated local Ollama model (You must have these models pulled)
+const ollamaModelConfig = {
+    nexus: 'core',
+    cognito: 'loop', 
+    relay: '2244',   
+    sentinel: 'coin', 
+    echo: 'code'     
+};
+
+const crew = {
+    nexus: { model: ollamaModelConfig.nexus, el: document.getElementById('agent-nexus'), content: document.querySelector('#agent-nexus .agent-content') },
+    cognito: { model: ollamaModelConfig.cognito, el: document.getElementById('agent-cognito'), content: document.querySelector('#agent-cognito .agent-content') },
+    relay: { model: ollamaModelConfig.relay, el: document.getElementById('agent-relay'), content: document.querySelector('#agent-relay .agent-content') },
+    sentinel: { model: ollamaModelConfig.sentinel, el: document.getElementById('agent-sentinel'), content: document.querySelector('#agent-sentinel .agent-content') },
+    echo: { model: ollamaModelConfig.echo, el: document.getElementById('agent-echo'), content: document.querySelector('#agent-echo .agent-content') }
+};
+
+let isGenerating = false;
+
+// --- Simulated Local Memory (Persistence Layer) ---
+const LocalMem = {
+    getKey: (key) => {
+        try {
+            return JSON.parse(sessionStorage.getItem(key));
+        } catch {
+            return null;
+        }
+    },
+    setKey: (key, value) => {
+        sessionStorage.setItem(key, JSON.stringify(value));
+    },
+    addAchievement: (achievement) => {
+        const achievements = LocalMem.getKey('vectored_achievements') || [];
+        achievements.push({ id: Date.now(), text: achievement });
+        LocalMem.setKey('vectored_achievements', achievements.slice(-5)); // Keep last 5
+    }
+};
+
+// --- LLM Interaction Helpers ---
+
+function isHumanPrompt(text){
+    return /\?$|^who|^what|^how|^when|^where|^why|^wer|^was|^wie|^wann|^wo|^warum/i.test(text.trim());
+}
+
+async function ollamaCall(model, systemPrompt, userPrompt, context = "") {
+    const fullPrompt = `${context}\n\nUSER PROMPT: ${userPrompt}`;
+    
+    // Ollama API Payload
+    const payload = {
+        model: model,
+        prompt: fullPrompt,
+        system: systemPrompt,
+        stream: false, // For simplicity in this non-streaming example
+        options: {
+            temperature: 0.1, // Lower temperature for logic/code tasks
+        }
+    };
+
+    try {
+        const response = await fetch(ollamaGenerateUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Ollama error: ${response.status} ${response.statusText}. Check your local Ollama server status and model names.`);
+        }
+        
+        const data = await response.json();
+        // Ollama 'generate' returns the text in the 'response' field
+        return data.response || "Error: No response text found from Ollama.";
+
+    } catch (e) {
+        console.error(`Ollama API Failure for model ${model}:`, e);
+        throw new Error(`Ollama Connection Error: ${e.message}`);
+    }
+}
+
+async function echoAnswer(promptText, finalAnswer){
+    const isQuestion = isHumanPrompt(promptText);
+    crew.echo.el.style.boxShadow = '0 0 20px #03DAC6';
+    crew.echo.content.innerHTML = `<p class="text-sm">Response received from **Sentinel**. Compiling final report...</p>`;
+
+    // Report / Code Block Formatting
+    try {
+        // Extract code block content if present
+        const codeMatch = finalAnswer.match(/```(?:javascript|js)\n([\s\S]*?)\n```/i);
+        const content = codeMatch ? codeMatch[1].trim() : finalAnswer.trim();
+
+        if (codeMatch || !isQuestion) {
+            // Treat as a command/code response
+            const highlightedCode = Prism.highlight(content, Prism.languages.javascript, 'javascript');
+            crew.echo.content.innerHTML = `<pre class="language-javascript"><code class="language-javascript">${highlightedCode}</code></pre>`;
+        } else {
+             // Treat as a direct, analytical response to a question
+             crew.echo.content.innerHTML = `<p>${content}</p>`;
+        }
+    } catch(e) {
+         crew.echo.content.innerHTML = `<p class="text-red-400">Error highlighting code. Raw output:</p><pre>${finalAnswer}</pre>`;
+    }
+
+    // Simulate saving the successful result to memory
+    LocalMem.addAchievement(finalAnswer.substring(0, 50) + '...'); 
+    crew.echo.el.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4)';
+}
+
+// --- Agent Workflow (Fractal-based Reasoning Simulation) ---
+
+async function startCrewSimulation(promptText) {
+    if (isGenerating) return;
+    isGenerating = true;
+    const submitBtn = document.getElementById('prompt-submit');
+    submitBtn.disabled = true;
+
+    // Clear previous output and set initial status
+    Object.values(crew).forEach(a => {
+        a.content.innerHTML = a.el.id === 'agent-nexus'
+            ? `<div class="flex items-center space-x-2"><div class="spinner"></div><span>Processing input...</span></div>`
+            : 'Idle.';
+        a.el.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4)';
+    });
+    crew.echo.content.innerHTML = `<p class="text-sm">Awaiting report...</p>`;
+
+    const step = async (agentKey, statusMessage, duration = 800) => {
+        const agent = crew[agentKey];
+        agent.el.style.boxShadow = '0 0 20px #FFD54F'; // Highlight in Yellow
+        agent.content.innerHTML = `<div class="flex items-center space-x-2"><div class="spinner"></div><span>${statusMessage}</span></div>`;
+        await new Promise(r => setTimeout(r, duration));
+        agent.el.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4)';
+    };
+
+    try {
+        let currentPrompt = promptText;
+        let cognitoOutput = "";
+        let relayOutput = "";
+        const allAchievements = JSON.stringify(LocalMem.getKey('vectored_achievements') || []);
+        
+        const inputRect = document.getElementById('prompt-container').getBoundingClientRect();
+        const nexusRect = crew.nexus.el.getBoundingClientRect();
+
+        // 1. NEXUS -> COGNITO (Initial Fractal Reasoning)
+        animateDataPacket(inputRect, nexusRect, () => {
+             step('nexus', `Command received. Directing to **Cognito** (Model: ${crew.cognito.model})...`, 500).then(() => {
+                const cognitoRect = crew.cognito.el.getBoundingClientRect();
+                animateDataPacket(nexusRect, cognitoRect, async () => {
+                    await step('cognito', `Executing Fractal Loop. Building initial genesis-hashed entropy...`, 1500);
+
+                    const cog_systemPrompt = "You are the primary Analyzer. Your task is to generate a concise plan or a draft code/answer in response to the user prompt. Use a stream-of-thought process that can be rehashed by other agents.";
+                    cognitoOutput = await ollamaCall(crew.cognito.model, cog_systemPrompt, currentPrompt);
+                    crew.cognito.content.innerHTML = `<p class="text-sm">Plan Drafted. Routing to **Relay** for cryptographic tokenstreaming rehash.</p>`;
+
+                    // 2. COGNITO -> RELAY (Algorithmic Tracking & Rehash)
+                    const cognitoRectUpdated = crew.cognito.el.getBoundingClientRect();
+                    const relayRect = crew.relay.el.getBoundingClientRect();
+                    animateDataPacket(cognitoRectUpdated, relayRect, async () => {
+                        await step('relay', `Performing Algorithmic Tracking and Rehash... (Model: ${crew.relay.model})`, 1000);
+                        
+                        const relay_context = `RAW PLAN/OUTPUT FROM COGNITO: ${cognitoOutput}`;
+                        const relay_systemPrompt = "You are the Communicator. Your task is to take the provided RAW PLAN and rehash it to its most efficient, direct, and runnable form. Focus on cryptographic token efficiency and shortest-path logic. Only output the final, refined plan/code. Do not add commentary.";
+                        relayOutput = await ollamaCall(crew.relay.model, relay_systemPrompt, currentPrompt, relay_context);
+                        crew.relay.content.innerHTML = `<p class="text-sm">Rehash complete. Routing to **Sentinel** for Qbit-Proof Validation.</p>`;
+
+                        // 3. RELAY -> SENTINEL (Validation & Memory Check)
+                        const relayRectUpdated = crew.relay.el.getBoundingClientRect();
+                        const sentinelRect = crew.sentinel.el.getBoundingClientRect();
+                        animateDataPacket(relayRectUpdated, sentinelRect, async () => {
+                            await step('sentinel', `Validating against local qbit-rehashed proofs (${allAchievements.length} in memory)... (Model: ${crew.sentinel.model})`, 1000);
+
+                            const sentinel_context = `REHASHED OUTPUT FROM RELAY: ${relayOutput}\n\nCONTEXT FROM PERSISTENT QBIT MEMORY (JSON/SQLite Simulation): ${allAchievements}`;
+                            const sentinel_systemPrompt = "You are the Monitor. Your task is to check the REHASHED OUTPUT against the provided PERSISTENT MEMORY for a 'vectorized achievement-spreaded lead'. Ensure the output is stable, responsible, and directly addresses the initial prompt in the shortest time. Output ONLY the final, validated answer/code block. If memory suggests a better path, correct it.";
+                            const finalAnswer = await ollamaCall(crew.sentinel.model, sentinel_systemPrompt, currentPrompt, sentinel_context);
+                            crew.sentinel.content.innerHTML = `<p class="text-sm">Qbit-Proof enforced. Routing to **Echo** for final report.</p>`;
+                            
+                            // 4. SENTINEL -> ECHO (Final Report)
+                            const sentinelRectUpdated = crew.sentinel.el.getBoundingClientRect();
+                            const echoRect = crew.echo.el.getBoundingClientRect();
+                            animateDataPacket(sentinelRectUpdated, echoRect, async () => {
+                                await step('echo', `Generating final report (Model: ${crew.echo.model})...`, 500);
+                                await echoAnswer(promptText, finalAnswer);
+
+                                // Final state
+                                crew.nexus.content.innerHTML = 'Idle. Awaiting command.';
+                                crew.cognito.content.innerHTML = 'Ready.';
+                                crew.relay.content.innerHTML = 'Ready.';
+                                crew.sentinel.content.innerHTML = 'Ready.';
+                                
+                                isGenerating = false;
+                                submitBtn.disabled = false;
+                            });
+                        });
+                    });
+                });
+            });
+        });
+
+    } catch (e) {
+        console.error("Simulation failed:", e);
+        Object.values(crew).forEach(a => a.el.style.boxShadow = '0 0 20px #ff0000');
+        crew.echo.content.innerHTML = `<p class="text-red-400 font-bold">CRITICAL ERROR: ${e.message}</p><p class="text-red-400">Please check if Ollama is running on http://localhost:11434 and that the models ('core', 'loop', '2244', 'coin', 'code') are available.</p>`;
+        isGenerating = false;
+        submitBtn.disabled = false;
+    }
+}
+
+// --- GSAP Data Packet Animation - KEPT ---
+function animateDataPacket(sourceRect, targetRect, onComplete) {
+    const packet = document.createElement('div');
+    packet.className = 'data-packet';
+    document.body.appendChild(packet);
+
+    const startX = sourceRect.left + sourceRect.width / 2;
+    const startY = sourceRect.top + sourceRect.height / 2;
+
+    const endX = targetRect.left + targetRect.width / 2;
+    const endY = targetRect.top + targetRect.height / 2;
+
+    gsap.set(packet, { x: startX, y: startY, opacity: 1, scale: 0.5 });
+
+    gsap.to(packet, {
+        x: endX,
+        y: endY,
+        scale: 1.5,
+        opacity: 0.8,
+        duration: 0.8,
+        ease: "power2.inOut",
+        onComplete: () => {
+            packet.remove();
+            onComplete && onComplete();
+        }
+    });
+}
+
+// --- Three.js Plasma Background Setup - KEPT ---
+let scene, camera, renderer, uniforms, mesh;
+let width = window.innerWidth, height = window.innerHeight;
+
+const vertexShader = `void main(){gl_Position=vec4(position,1.0);}`;
+const fragmentShader = `
+uniform float time;
+uniform vec2 resolution;
+float plasma(vec2 p){return sin(p.x*10.0+time)+sin(p.y*10.0+time/2.0)+sin((p.x+p.y)*10.0+time/3.0)+sin(length(p)*10.0+time/4.0);}
+void main(){
+    vec2 uv=gl_FragCoord.xy/resolution.xy;
+    uv=2.0*uv-1.0;
+    float p=plasma(uv*0.5);
+    vec3 color=0.5+0.5*cos(3.14159*(uv.xyx+vec3(0.0,0.6,0.9)+p*0.2));
+    // Dark Material inspired color palette
+    color*=vec3(0.1,0.1,0.3)+p*0.15;
+    gl_FragColor=vec4(color,1.0);
+}`;
+
+function initThree() {
+    scene = new THREE.Scene();
+    camera = new THREE.Camera();
+    camera.position.z = 1;
+    renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') });
+    renderer.setSize(width, height);
+
+    uniforms = { time: { type: 'f', value: 1.0 }, resolution: { type: 'v2', value: new THREE.Vector2(width, height) } };
+    const material = new THREE.ShaderMaterial({ uniforms: uniforms, vertexShader: vertexShader, fragmentShader: fragmentShader });
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    window.addEventListener('resize', onWindowResize);
+    onWindowResize();
+    animateThree();
+}
+
+function onWindowResize() {
+    width = window.innerWidth; height = window.innerHeight;
+    renderer.setSize(width, height);
+    uniforms.resolution.value.x = width;
+    uniforms.resolution.value.y = height;
+}
+
+function animateThree() {
+    requestAnimationFrame(animateThree);
+    uniforms.time.value += 0.05;
+    renderer.render(scene, camera);
+}
+
+
+// --- Event Listeners and Initialization - KEPT ---
+
+window.addEventListener('load', () => {
+    initThree(); // Start the 3D background
+    const promptInput = document.getElementById('prompt-input');
+    const promptSubmit = document.getElementById('prompt-submit');
+
+    // Initial state for non-Nexus agents
+    crew.cognito.content.innerHTML = 'Ready (Model: loop).';
+    crew.relay.content.innerHTML = 'Ready (Model: 2244).';
+    crew.sentinel.content.innerHTML = 'Ready (Model: coin).';
+    crew.echo.content.innerHTML = 'Ready. Enter a command (like "write a javascript function to sort an array") or a question to begin.';
+
+    const handleSubmit = () => {
+        const promptText = promptInput.value.trim();
+        if (promptText && !isGenerating) {
+            startCrewSimulation(promptText);
+            promptInput.value = ''; // Clear input after submission
+        }
+    };
+
+    promptSubmit.addEventListener('click', handleSubmit);
+    promptInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleSubmit();
+        }
+    });
+
+    console.log("Autonomous 5-Agent System Initialized (Ollama Backend).");
+});
+</script>
+
+</body>
+</html>
