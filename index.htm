@@ -3,889 +3,723 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QUANTUM HYPER-THREADED 5-AGENT SYSTEM | Fractal Reasoning Boost</title>
-<!-- Load necessary external libraries -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<title>Nemodian 2244-1 :: AI Code Editor with HTML Render</title>
+
+<!-- Prism & js-beautify via CDN -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify-css.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify-html.js"></script>
+
+<!-- jQuery + GSAP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
 <style>
-/* Enhanced Base Styles with Quantum Visual Effects */
-body{margin:0;background:#0a0a0a;color:#eee;font-family:'Inter',Roboto,sans-serif;height:100vh;overflow:hidden;}
-#three-canvas{position:fixed;top:0;left:0;z-index:10;width:100%;height:100%;}
-#ui-container{
-    position:absolute;top:0;left:0;width:100%;height:100%;z-index:20;
-    padding:16px;display:grid;
-    grid-template-columns:repeat(12, 1fr); 
-    grid-template-rows: auto 1fr auto; 
-    gap: 16px;
-    pointer-events:none;
+:root{
+  --baseline: 1.5em;
+  --header-h: calc(var(--baseline) * 1.6);
+  --status-h: var(--baseline);
+  --footer-h: calc(var(--baseline) * 2);
+  --font-size: 13px;
+  --ln-width: 50px;
+  --theme-bg: #3a3c31;
+  --panel: #313328;
+  --header-bg: #2e3026;
+  --status-bg: #22241e;
+  --accent: #4ac94a;
+  --muted: #999966;
+  --err: #a03333;
+  --warn: #f0ad4e;
+  --hover-blue: #3366a0;
+  --info: #5bc0de;
 }
 
-/* Enhanced Material Card Styling with Quantum Effects */
-.agent-card{
-    background:rgba(31,31,31,0.9);
-    border-radius:16px;
-    padding:16px;
-    color:#eee;
-    box-shadow:0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4);
-    pointer-events:auto;
-    transition: all 0.4s ease;
-    border: 1px solid transparent;
-    backdrop-filter: blur(10px);
-}
-.agent-card.quantum-active {
-    border: 1px solid #BB86FC;
-    box-shadow: 0 0 30px rgba(187,134,252,0.6), 0 4px 20px rgba(0,0,0,0.8);
-    background: rgba(31,31,31,0.95);
+/* Base */
+html, body {height:100%; margin:0; padding:0; font-family:'Fira Code', monospace; font-size:var(--font-size); line-height:var(--baseline); background:var(--theme-bg); color:#f0f0e0;}
+body {display:grid; grid-template-rows: var(--header-h) var(--status-h) 1fr var(--footer-h); overflow:hidden;}
+
+/* Header */
+header{grid-row:1; grid-column:1/-1; background:var(--header-bg); border-bottom:1px solid #22241e; display:flex; align-items:center; justify-content:space-between; padding:6px 12px;}
+header .left {display:flex; gap:12px; align-items:center;}
+header .right {display:flex; gap:8px; align-items:center;}
+button{background:var(--err); border:1px solid var(--err); color:#f0f0e0; padding:6px 8px; cursor:pointer; font-size:12px; transition:all .2s; border-radius:3px;}
+button:hover{background:var(--hover-blue); border-color:var(--hover-blue);}
+button.success{background:var(--accent); border-color:var(--accent);}
+button.info{background:var(--info); border-color:var(--info);}
+button.warn{background:var(--warn); border-color:var(--warn); color:#3a3c31;}
+
+/* Status */
+#status-bar{grid-row:2; grid-column:1/-1; background:var(--status-bg); display:flex; justify-content:space-between; align-items:center; padding:4px 12px; font-size:12px;}
+#status-bar.error{background:var(--err); color:#f0f0e0;}
+#status-bar.warn{background:var(--warn); color:#3a3c31;}
+#status-bar.success{background:var(--accent); color:#3a3c31;}
+#status-bar.info{background:var(--info); color:#3a3c31;}
+
+/* Editor stage */
+#editor-stage{grid-row:3; grid-column:1/-1; display:grid; grid-template-columns:240px 1fr; background:var(--theme-bg); overflow:hidden;}
+#left-panel{width:240px; background:var(--panel); border-right:1px solid #22241e; padding:10px; box-sizing:border-box; display:flex; flex-direction:column; gap:8px; transform:translateX(0);}
+#left-panel.open{transform:translateX(0);}
+#editor-outer{position:relative; overflow:hidden; background:transparent;}
+#line-gutter{position:absolute; left:0; top:0; bottom:0; width:var(--ln-width); background:var(--panel); color:var(--muted); padding:10px 8px; box-sizing:border-box; overflow:auto; font-variant-numeric:tabular-nums;}
+.highlighting{position:absolute; left:0; right:0; top:0; bottom:0; pointer-events:none; overflow:auto; padding:10px; box-sizing:border-box; white-space:pre-wrap; word-break:break-word; line-height:var(--baseline); padding-left: calc(var(--ln-width)+12px);}
+.highlighting pre{margin:0;}
+#editor{position:absolute; left:var(--ln-width); right:12px; top:0; bottom:0; padding:10px; margin:0; box-sizing:border-box; overflow:auto; background:transparent; color:transparent; caret-color:var(--accent); font-family:inherit; font-size:var(--font-size); line-height:var(--baseline); border:0; outline:0; resize:none; white-space:pre-wrap; word-break:break-word; z-index:20; padding-left:calc(var(--ln-width)+12px);}
+
+/* Footer */
+footer{grid-row:4; grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; padding:6px 12px; background:var(--header-bg); border-top:1px solid #22241e;}
+#prompt-input{flex:1; margin-right:8px; padding:8px; background:var(--status-bg); border:1px solid var(--accent); color:#f0f0e0; font-family:inherit; border-radius:3px;}
+.small{font-size:12px; padding:6px 8px;}
+
+/* Preview Panel */
+#preview-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 80%;
+  background: white;
+  border: 2px solid var(--accent);
+  border-radius: 5px;
+  z-index: 1000;
+  display: none;
+  box-shadow: 0 0 30px rgba(0,0,0,0.7);
 }
 
-/* Enhanced Grid Layout */
-#agent-nexus { 
-    grid-column: 5 / 9; 
-    grid-row: 1 / 2; 
-    height: fit-content;
-} 
-#agent-echo { 
-    grid-column: 1 / 13; 
-    grid-row: 2 / 3; 
-    max-height: 100%; 
-    overflow-y: auto; 
-    z-index: 20;
-}
-#agent-cognito { 
-    grid-column: 1 / 5; 
-    grid-row: 3 / 4; 
-    height: fit-content;
-} 
-#agent-relay { 
-    grid-column: 5 / 9; 
-    grid-row: 3 / 4; 
-    height: fit-content;
-} 
-#agent-sentinel { 
-    grid-column: 9 / 13; 
-    grid-row: 3 / 4; 
-    height: fit-content;
+#preview-header {
+  background: var(--header-bg);
+  color: #f0f0e0;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--accent);
 }
 
-/* Enhanced Typography & Quantum Colors */
-.agent-title{color:#BB86FC;font-weight:700;font-size:1.4em;display:flex;align-items:center;gap:8px;}
-.agent-subtitle{color:#03DAC6;font-weight:300;font-size:0.8em;margin-bottom:8px;}
-.agent-content{
-    margin-top:12px;
-    font-size:0.9em;
-    color:rgba(255,255,255,0.7);
-    max-height: 100px;
-    overflow-y: auto;
+#preview-content {
+  width: 100%;
+  height: calc(100% - 40px);
+  border: none;
+  background: white;
 }
-.quantum-boost-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #03DAC6;
-    box-shadow: 0 0 10px #03DAC6;
-    animation: pulse 2s infinite;
+
+#close-preview {
+  background: transparent;
+  border: none;
+  color: #f0f0e0;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+/* AI Response Panel */
+#ai-response-panel {
+  position: fixed;
+  bottom: 60px;
+  right: 20px;
+  width: 400px;
+  max-height: 300px;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  padding: 10px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+#ai-response-content {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+#close-ai-panel {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* File Input */
+#file-input {
+  display: none;
+}
+
+/* AI Indicator */
+.ai-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ai-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--err);
+  animation: pulse 2s infinite;
+}
+
+.ai-dot.connected {
+  background: var(--accent);
+}
+
 @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(1.2); }
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 
-/* Enhanced Input Prompt */
-#prompt-container{
-    position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);
-    display:flex;gap:12px;z-index:25;
-    width: min(90vw, 600px);
-    background: rgba(31,31,31,0.95);
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 10px 30px rgba(187,134,252,0.3);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(187,134,252,0.3);
-}
-#prompt-input{
-    flex-grow:1;
-    background:transparent;
-    border:none;
-    border-bottom:2px solid rgba(187,134,252,0.5);
-    color:#eee;
-    font-size:1em;
-    padding:8px;
-    outline:none;
-    transition: border-color 0.3s ease;
-}
-#prompt-input:focus{border-bottom-color:#BB86FC;}
-#prompt-submit{
-    width:48px;height:48px;
-    border-radius:50%;
-    background:linear-gradient(135deg, #03DAC6, #BB86FC);
-    color: #121212;
-    border:none;
-    cursor:pointer;
-    display:flex;align-items:center;justify-content:center;
-    box-shadow: 0 4px 15px rgba(3,218,198,0.6);
-    transition: all 0.3s ease;
-}
-#prompt-submit:active{transform:scale(0.95);}
-#prompt-submit:hover{box-shadow: 0 6px 20px rgba(187,134,252,0.8);}
-
-/* Enhanced Data Packet Animation */
-.data-packet{
-    position:fixed;width:8px;height:8px;border-radius:50%;
-    background:linear-gradient(135deg, #BB86FC, #03DAC6);
-    box-shadow:0 0 15px #BB86FC;
-    opacity:0;
-    z-index:30;
-}
-.quantum-particle {
-    position: fixed;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #03DAC6;
-    pointer-events: none;
-    z-index: 15;
-}
-.spinner{border:4px solid rgba(255,255,255,0.1);border-left-color:#03DAC6;border-radius:50%;width:16px;height:16px;animation:spin 1s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-
-/* Quantum Fractal Visualization */
-.fractal-progress {
-    height: 4px;
-    background: linear-gradient(90deg, #03DAC6, #BB86FC);
-    border-radius: 2px;
-    margin-top: 8px;
-    transition: width 0.5s ease;
-}
-
-/* Enhanced Code Styling */
-pre[class*="language-"] {
-    margin: 0; padding: 10px; border-radius: 6px;
-    background: rgba(18,18,18,0.9);
-    font-size: 0.8em;
-    white-space: pre-wrap;
-    word-break: break-all;
-    border: 1px solid rgba(187,134,252,0.3);
-    backdrop-filter: blur(5px);
-}
-.token.string { color: #81C784; }
-.token.keyword { color: #BB86FC; }
-.token.comment { color: #666666; }
-
-/* Hyper-threaded Verbose Output */
-.verbose-thinking {
-    background: rgba(30,30,40,0.8);
-    border-left: 3px solid #BB86FC;
-    padding: 8px 12px;
-    margin: 4px 0;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-    font-size: 0.8em;
-    max-height: 200px;
-    overflow-y: auto;
+/* Responsive */
+@media (max-width: 768px) {
+  #editor-stage {
+    grid-template-columns: 1fr;
+  }
+  
+  #left-panel {
+    position: absolute;
+    height: 100%;
+    z-index: 30;
+    transform: translateX(-240px);
+  }
+  
+  #left-panel.open {
+    transform: translateX(0);
+  }
+  
+  #ai-response-panel {
+    width: calc(100% - 40px);
+    right: 20px;
+    left: 20px;
+  }
+  
+  #preview-panel {
+    width: 95%;
+    height: 85%;
+  }
 }
 </style>
 </head>
 <body>
 
-<canvas id="three-canvas"></canvas>
-<div id="prompt-container">
-<input type="text" id="prompt-input" placeholder="Enter quantum-enhanced command..." autofocus>
-<button id="prompt-submit">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3l18 9-18 9V3z"/></svg>
-</button>
+<header>
+<div class="left">
+  <button id="left-toggle" class="small">☰</button>
+  <div style="font-weight:800;">Nemodian 2244-1 :: AI Editor</div>
+</div>
+<div class="right">
+  <div class="ai-status">
+    <div class="ai-dot"></div>
+    <div id="ai-indicator" style="font-size:12px;color:#cfcfbd;">Local AI: probing…</div>
+  </div>
+  <button id="open-file" class="small">Open</button>
+  <button id="save-file" class="small">Save</button>
+  <button id="save-as" class="small">Save As</button>
+  <button id="render-html" class="small warn">Render HTML</button>
+  <button id="run-local-ai" class="small info">Run AI</button>
+</div>
+</header>
+
+<div id="status-bar" class="info">
+  <div id="file-meta">No File Loaded</div>
+  <div id="editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>
 </div>
 
-<div id="ui-container">
-<div id="agent-nexus" class="agent-card"><div class="agent-title">Nexus <div class="quantum-boost-indicator"></div></div><div class="agent-subtitle">Quantum Orchestrator (Core)</div><div class="agent-content">Quantum state: Superposition ready.</div><div class="fractal-progress" style="width:0%"></div></div>
-<div id="agent-cognito" class="agent-card"><div class="agent-title">Cognito <div class="quantum-boost-indicator"></div></div><div class="agent-subtitle">Fractal Analyzer (Loop)</div><div class="agent-content">Fractal depth: Calibrating...</div><div class="fractal-progress" style="width:0%"></div></div>
-<div id="agent-relay" class="agent-card"><div class="agent-title">Relay <div class="quantum-boost-indicator"></div></div><div class="agent-subtitle">Hyper-Communicator (2244)</div><div class="agent-content">Entanglement: Establishing...</div><div class="fractal-progress" style="width:0%"></div></div>
-<div id="agent-sentinel" class="agent-card"><div class="agent-title">Sentinel <div class="quantum-boost-indicator"></div></div><div class="agent-subtitle">Quantum Monitor (Coin)</div><div class="agent-content">Superstate: Monitoring...</div><div class="fractal-progress" style="width:0%"></div></div>
-<div id="agent-echo" class="agent-card"><div class="agent-title">Echo <div class="quantum-boost-indicator"></div></div><div class="agent-subtitle">Meta-Reporter (Code)</div><div class="agent-content">Awaiting quantum final report...</div><div class="fractal-progress" style="width:0%"></div></div>
+<div id="editor-stage">
+<aside id="left-panel">
+  <button id="btn-undo" class="small">UNDO</button>
+  <button id="btn-redo" class="small">REDO</button>
+  <button id="btn-beautify" class="small">Beautify</button>
+  <button id="btn-render" class="small warn">Render HTML</button>
+  <div style="margin-top: 20px; font-size: 11px; color: var(--muted);">
+    <p><strong>AI Commands:</strong></p>
+    <ul style="padding-left: 15px;">
+      <li>Explain this code</li>
+      <li>Optimize this function</li>
+      <li>Add comments</li>
+      <li>Fix bugs</li>
+    </ul>
+  </div>
+  <div style="margin-top: 20px; font-size: 11px; color: var(--muted);">
+    <p><strong>HTML Render:</strong></p>
+    <p>Click "Render HTML" to preview your HTML code in a live browser view.</p>
+  </div>
+</aside>
+
+<div id="editor-outer">
+  <div id="line-gutter"></div>
+  <div class="highlighting"><pre><code id="highlighted" class="language-html"></code></pre></div>
+  <textarea id="editor">&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;Nemodian 2244-1 Demo&lt;/title&gt;
+  &lt;style&gt;
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      color: white;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      max-width: 600px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #4ac94a, #5bc0de);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      font-size: 1.2rem;
+      line-height: 1.6;
+    }
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .feature {
+      background: rgba(74, 201, 74, 0.2);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid #4ac94a;
+    }
+    button {
+      background: #4ac94a;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: #3aa83a;
+      transform: translateY(-2px);
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class="container"&gt;
+    &lt;h1&gt;Nemodian 2244-1&lt;/h1&gt;
+    &lt;p&gt;Advanced AI-Powered Code Editor with HTML Rendering&lt;/p&gt;
+    
+    &lt;div class="features"&gt;
+      &lt;div class="feature"&gt;AI Integration&lt;/div&gt;
+      &lt;div class="feature"&gt;Live Preview&lt;/div&gt;
+      &lt;div class="feature"&gt;Syntax Highlighting&lt;/div&gt;
+      &lt;div class="feature"&gt;Code Beautification&lt;/div&gt;
+    &lt;/div&gt;
+    
+    &lt;p&gt;This HTML is rendered live from the editor code. Try modifying it and click "Render HTML" again to see changes!&lt;/p&gt;
+    
+    &lt;button onclick="showMessage()"&gt;Click Me!&lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;script&gt;
+    function showMessage() {
+      alert('Hello from Nemodian 2244-1! This JavaScript is executed in the preview.');
+    }
+    
+    // Dynamic element creation demo
+    setTimeout(() => {
+      const dynamicElement = document.createElement('div');
+      dynamicElement.innerHTML = '&lt;p&gt;This element was added dynamically via JavaScript!&lt;/p&gt;';
+      dynamicElement.style.marginTop = '20px';
+      dynamicElement.style.padding = '10px';
+      dynamicElement.style.background = 'rgba(255,255,255,0.1)';
+      dynamicElement.style.borderRadius = '5px';
+      document.querySelector('.container').appendChild(dynamicElement);
+    }, 2000);
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</textarea>
+</div>
 </div>
 
-<!-- QUANTUM FRACTAL ACCELERATOR IMPLEMENTATION -->
+<footer>
+<input id="prompt-input" placeholder="AI Prompt (Ctrl+Enter to run)">
+<button id="send-button" class="success">SEND</button>
+</footer>
+
+<!-- Hidden file input -->
+<input type="file" id="file-input" accept=".js,.html,.css,.txt,.json">
+
+<!-- Preview Panel -->
+<div id="preview-panel">
+  <div id="preview-header">
+    <span>HTML Preview</span>
+    <button id="close-preview">×</button>
+  </div>
+  <iframe id="preview-content"></iframe>
+</div>
+
+<!-- AI Response Panel -->
+<div id="ai-response-panel">
+  <button id="close-ai-panel">×</button>
+  <div id="ai-response-content"></div>
+</div>
+
 <script>
-/**
- * @class QuantumFractalAccelerator
- * Enhanced with hyper-threading and multi-agent integration
- */
-class QuantumFractalAccelerator {
-    static _quantumStates = new Map();
-    static _fractalCache = new Map();
-    static _entanglementMatrix = new Map();
+// --- Core ---
+const editor = $('#editor')[0];
+const highlighted = $('#highlighted')[0];
+const lineGutter = $('#line-gutter')[0];
+const statusEditor = $('#editor-meta')[0];
+const statusFile = $('#file-meta')[0];
+const leftPanel = $('#left-panel');
+const aiIndicator = $('#ai-indicator')[0];
+const aiDot = $('.ai-dot')[0];
+const statusBar = $('#status-bar')[0];
+const fileInput = $('#file-input')[0];
+const aiResponsePanel = $('#ai-response-panel')[0];
+const aiResponseContent = $('#ai-response-content')[0];
+const previewPanel = $('#preview-panel')[0];
+const previewContent = $('#preview-content')[0];
 
-    static _quantumEnhancementFactor(agentId = 'default') {
-        const baseFactor = (Math.random() * 9 + 1) / 100;
-        const entangledBoost = this._getEntanglementBoost(agentId);
-        return Math.min(0.15, baseFactor * (1 + entangledBoost));
-    }
+let currentFileName = null;
+let currentFileType = 'html';
 
-    static _fractalReasoning(depth, maxDepth, complexity = 1) {
-        const cacheKey = `${depth}-${maxDepth}-${complexity}`;
-        if (this._fractalCache.has(cacheKey)) {
-            return this._fractalCache.get(cacheKey);
-        }
-
-        if (depth >= maxDepth) {
-            return 1 + (complexity * 0.02);
-        }
-
-        const recursiveGain = this._fractalReasoning(depth + 1, maxDepth, complexity);
-        const currentGain = (1 + (0.07 / depth)) * recursiveGain * complexity;
-
-        this._fractalCache.set(cacheKey, currentGain);
-        return currentGain;
-    }
-
-    static _getEntanglementBoost(agentId) {
-        let totalBoost = 0;
-        let connectionCount = 0;
-
-        this._entanglementMatrix.forEach((strength, connectedAgent) => {
-            if (connectedAgent !== agentId) {
-                totalBoost += strength;
-                connectionCount++;
-            }
-        });
-
-        return connectionCount > 0 ? totalBoost / connectionCount : 0;
-    }
-
-    static _updateEntanglement(fromAgent, toAgent, strength = 0.1) {
-        const key = `${fromAgent}-${toAgent}`;
-        this._entanglementMatrix.set(key, strength);
-    }
-
-    static accelerateMultiAgent(agents, targetReasoningDepth = 7) {
-        console.log(`🚀 QUANTUM HYPER-THREADING ACTIVATED | Depth: ${targetReasoningDepth}`);
-        
-        const results = new Map();
-        let totalBoost = 0;
-
-        // Create entanglement between all agents
-        agents.forEach((fromAgent, fromId) => {
-            agents.forEach((toAgent, toId) => {
-                if (fromId !== toId) {
-                    this._updateEntanglement(fromId, toId, 0.15);
-                }
-            });
-        });
-
-        // Apply quantum fractal acceleration to each agent
-        agents.forEach((agent, agentId) => {
-            const quantumBoost = agent.progress * this._quantumEnhancementFactor(agentId);
-            const fractalFactor = this._fractalReasoning(1, targetReasoningDepth, agent.complexity || 1);
-            const entangledBoost = this._getEntanglementBoost(agentId);
-            
-            const enhancedProgress = agent.progress + quantumBoost * fractalFactor * (1 + entangledBoost);
-            const finalProgress = Math.min(100, enhancedProgress);
-
-            results.set(agentId, {
-                progress: finalProgress,
-                quantumBoost,
-                fractalFactor,
-                entangledBoost,
-                enhancement: finalProgress - agent.progress
-            });
-
-            totalBoost += finalProgress - agent.progress;
-        });
-
-        console.log(`⚡ QUANTUM BOOST SUMMARY: +${totalBoost.toFixed(2)}% across ${agents.size} agents`);
-        return results;
-    }
-
-    static accelerateProgress(currentProgress, targetReasoningDepth = 5, complexity = 1) {
-        const quantumBoost = currentProgress * this._quantumEnhancementFactor();
-        const fractalFactor = this._fractalReasoning(1, Math.max(1, targetReasoningDepth), complexity);
-        const enhancedProgress = currentProgress + quantumBoost * fractalFactor;
-        return Math.min(100, enhancedProgress);
-    }
-}
-</script>
-
-<!-- ENVIRONMENT VARIABLE INJECTION -->
-<script>
-    (function() {
-        window.__API_KEY_INJECTION__ = window.__API_KEY_INJECTION__ || null; 
-        window.__app_id = window.__app_id || 'quantum-simulation-app-v2';
-        window.__firebase_config = window.__firebase_config || JSON.stringify({
-            apiKey: null,
-            authDomain: null,
-            projectId: null,
-            storageBucket: null,
-            messagingSenderId: null,
-            appId: null
-        });
-        window.__initial_auth_token = window.__initial_auth_token || null;
-        window.__FEATURE_FLAGS__ = window.__FEATURE_FLAGS__ || {
-            enableQuantumAcceleration: true,
-            enableHyperThreading: true,
-            enableFractalReasoning: true,
-            enableDebugMode: false
-        };
-
-        console.log("[QUANTUM ENV INJECTION] Enhanced globals initialized");
-    })();
-</script>
-
-<script type="module">
-// --- Enhanced Firebase & Auth Setup ---
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-window.firebaseApp = null;
-window.db = null;
-window.auth = null;
-window.userId = 'unauthenticated-user';
-
-const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
-const firebaseConfig = typeof window.__firebase_config !== 'undefined' ? JSON.parse(window.__firebase_config) : null;
-const initialAuthToken = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
-
-if (firebaseConfig && Object.keys(firebaseConfig).some(key => firebaseConfig[key] !== null)) {
-    setLogLevel('Debug');
-    window.firebaseApp = initializeApp(firebaseConfig);
-    window.db = getFirestore(window.firebaseApp);
-    window.auth = getAuth(window.firebaseApp);
-
-    onAuthStateChanged(window.auth, async (user) => {
-        if (user) window.userId = user.uid;
-        else if (!user && initialAuthToken) {
-            try { await signInWithCustomToken(window.auth, initialAuthToken); window.userId = window.auth.currentUser.uid; }
-            catch { await signInAnonymously(window.auth); window.userId = window.auth.currentUser.uid; }
-        } else { await signInAnonymously(window.auth); window.userId = window.auth.currentUser.uid; }
-        console.log("Quantum Firebase Auth Ready. User ID:", window.userId);
-    });
-} else {
-    console.log("Firebase not configured. Running in quantum unauthenticated mode.");
+// Detect language based on file extension
+function detectLanguage(filename) {
+  if (!filename) return 'html';
+  
+  const ext = filename.split('.').pop().toLowerCase();
+  const languageMap = {
+    'js': 'javascript',
+    'html': 'html',
+    'htm': 'html',
+    'css': 'css',
+    'json': 'json'
+  };
+  
+  return languageMap[ext] || 'html';
 }
 
-// --- Enhanced Core Application Logic ---
-const injectedApiKey = typeof window.__API_KEY_INJECTION__ !== 'undefined' && window.__API_KEY_INJECTION__ !== null 
-    ? window.__API_KEY_INJECTION__ 
-    : "AIzaSyBtto2pvY2bTO26XwuV1hAB9RbSqYo3Fnw";
+function highlightAndRender(code){
+  try{
+    highlighted.innerHTML = Prism.highlight(code, Prism.languages[currentFileType], currentFileType);
+    highlighted.className = `language-${currentFileType}`;
+  }catch(e){ 
+    highlighted.textContent = code; 
+    highlighted.className = '';
+  }
+}
+
+function generateLineNumbers(){
+  const lines = editor.value.split('\n').length;
+  lineGutter.textContent = Array.from({length:lines},(_,i)=>i+1).join('\n');
+}
+
+function renderEditor(code){
+  editor.value = code;
+  highlightAndRender(code);
+  generateLineNumbers();
+  updateStatus();
+}
+
+function updateStatus(){
+  const pos = editor.selectionStart;
+  const code = editor.value;
+  const linesArr = code.substr(0,pos).split('\n');
+  statusEditor.textContent = `Cursor: ${linesArr.length}:${linesArr[linesArr.length-1].length} | Lines: ${code.split('\n').length} | Chars: ${code.length} | History: ${historyStack.length}`;
+}
+
+function syncScroll(){
+  $('.highlighting')[0].scrollTop = editor.scrollTop;
+  $('.highlighting')[0].scrollLeft = editor.scrollLeft;
+  lineGutter.scrollTop = editor.scrollTop;
+}
+
+// History
+let historyStack=[], redoStack=[], MAX_HISTORY=400;
+function pushHistory(){
+  const code=editor.value;
+  if(historyStack.length && historyStack[historyStack.length-1]===code) return;
+  historyStack.push(code);
+  if(historyStack.length>MAX_HISTORY) historyStack.shift();
+  redoStack=[];
+  updateStatus();
+}
+
+function undo(){ 
+  if(historyStack.length){ 
+    redoStack.push(editor.value); 
+    renderEditor(historyStack.pop()); 
+  } 
+}
+
+function redo(){ 
+  if(redoStack.length){ 
+    historyStack.push(editor.value); 
+    renderEditor(redoStack.pop()); 
+  } 
+}
+
+// File Operations
+function openFile(){
+  fileInput.click();
+}
+
+function saveFile(){
+  if (!currentFileName) {
+    saveAsFile();
+    return;
+  }
+  
+  const blob = new Blob([editor.value], {type: 'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = currentFileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  setStatus(`Saved: ${currentFileName}`, 'success');
+}
+
+function saveAsFile(){
+  const fileName = prompt('Enter file name:', currentFileName || 'code.html');
+  if (fileName) {
+    currentFileName = fileName;
+    currentFileType = detectLanguage(fileName);
+    saveFile();
+  }
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    currentFileName = file.name;
+    currentFileType = detectLanguage(file.name);
+    renderEditor(e.target.result);
+    setStatus(`Opened: ${file.name}`, 'success');
+    updateFileMeta();
+  };
+  reader.readAsText(file);
+}
+
+function updateFileMeta() {
+  statusFile.textContent = currentFileName ? `File: ${currentFileName}` : 'No File Loaded';
+}
+
+// Status Management
+function setStatus(message, type = 'info') {
+  statusBar.textContent = message;
+  statusBar.className = type;
+  
+  // Auto-clear status after 5 seconds for non-error messages
+  if (type !== 'error') {
+    setTimeout(() => {
+      statusBar.className = 'info';
+      updateStatusDisplay();
+    }, 5000);
+  }
+}
+
+function updateStatusDisplay() {
+  if (currentFileName) {
+    statusFile.textContent = `File: ${currentFileName}`;
+  } else {
+    statusFile.textContent = 'No File Loaded';
+  }
+  
+  const pos = editor.selectionStart;
+  const code = editor.value;
+  const linesArr = code.substr(0,pos).split('\n');
+  statusEditor.textContent = `Cursor: ${linesArr.length}:${linesArr[linesArr.length-1].length} | Lines: ${code.split('\n').length} | Chars: ${code.length} | History: ${historyStack.length}`;
+}
+
+// HTML Rendering
+function renderHTML() {
+  if (currentFileType !== 'html') {
+    setStatus('HTML rendering only works with HTML files', 'warn');
+    return;
+  }
+  
+  const htmlContent = editor.value;
+  const blob = new Blob([htmlContent], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  
+  previewContent.src = url;
+  previewPanel.style.display = 'block';
+  
+  setStatus('HTML rendered in preview panel', 'success');
+}
+
+// AI Integration
+function simulateAIResponse(prompt) {
+  // This is a mock implementation - in a real app, you'd call an AI API
+  const code = editor.value;
+  let response = '';
+  
+  if (prompt.toLowerCase().includes('explain')) {
+    response = `I'll explain the code:\n\nThis is ${currentFileType} code. It contains ${code.split('\n').length} lines.`;
     
-const apiKey = injectedApiKey; 
-const modelName = "gemini-2.5-flash-preview-09-2025";
-const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
-const crew = {
-    nexus: { 
-        model:'core', 
-        el: document.getElementById('agent-nexus'), 
-        content: document.querySelector('#agent-nexus .agent-content'),
-        progress: 0,
-        complexity: 1.2
-    },
-    cognito: { 
-        model:'loop', 
-        el: document.getElementById('agent-cognito'), 
-        content: document.querySelector('#agent-cognito .agent-content'),
-        progress: 0,
-        complexity: 1.4
-    },
-    relay: { 
-        model:'2244', 
-        el: document.getElementById('agent-relay'), 
-        content: document.querySelector('#agent-relay .agent-content'),
-        progress: 0,
-        complexity: 1.1
-    },
-    sentinel: { 
-        model:'coin', 
-        el: document.getElementById('agent-sentinel'), 
-        content: document.querySelector('#agent-sentinel .agent-content'),
-        progress: 0,
-        complexity: 1.3
-    },
-    echo: { 
-        model:'code', 
-        el: document.getElementById('agent-echo'), 
-        content: document.querySelector('#agent-echo .agent-content'),
-        progress: 0,
-        complexity: 1.5
+    if (currentFileType === 'html') {
+      response += '\n\nThis HTML document appears to be a web page with styling and JavaScript functionality.';
+      if (code.includes('<style>')) {
+        response += '\n- Contains embedded CSS styles';
+      }
+      if (code.includes('<script>')) {
+        response += '\n- Contains JavaScript code';
+      }
     }
-};
-
-let isGenerating = false;
-let isSpeaking = false;
-let currentThinkingDepth = 7;
-
-// --- Enhanced Quantum Visualization ---
-function createQuantumParticles(sourceElement, count = 15) {
-    const rect = sourceElement.getBoundingClientRect();
-    for (let i = 0; i < count; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'quantum-particle';
-        particle.style.left = (rect.left + rect.width / 2) + 'px';
-        particle.style.top = (rect.top + rect.height / 2) + 'px';
-        document.body.appendChild(particle);
-
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 50 + Math.random() * 100;
-        const duration = 0.8 + Math.random() * 0.7;
-
-        gsap.to(particle, {
-            x: Math.cos(angle) * distance,
-            y: Math.sin(angle) * distance,
-            opacity: 0,
-            scale: 0,
-            duration: duration,
-            ease: "power2.out",
-            onComplete: () => particle.remove()
-        });
-    }
+  } else if (prompt.toLowerCase().includes('optimize')) {
+    response = 'Based on my analysis, I suggest the following optimizations:\n\n1. Consider minifying the code for production use.\n2. Ensure all external resources are properly linked.';
+  } else if (prompt.toLowerCase().includes('comment')) {
+    response = 'I can help add comments to make the code more understandable.';
+  } else if (prompt.toLowerCase().includes('bug')) {
+    response = 'I don\'t see any obvious bugs, but you should test the functionality thoroughly.';
+  } else if (prompt.toLowerCase().includes('render')) {
+    response = 'Click the "Render HTML" button to see a live preview of your HTML code.';
+  } else {
+    response = `I received your request: "${prompt}". In a real implementation, I would analyze your code and provide helpful suggestions.`;
+  }
+  
+  return response;
 }
 
-function updateFractalProgress(agentId, progress) {
-    const progressBar = crew[agentId].el.querySelector('.fractal-progress');
-    if (progressBar) {
-        progressBar.style.width = `${progress}%`;
-    }
+function showAIResponse(response) {
+  aiResponseContent.textContent = response;
+  aiResponsePanel.style.display = 'block';
 }
 
-// --- Enhanced LLM Interaction with Quantum Boost ---
-function isHumanPrompt(text){
-    return /\?$|^who|^what|^how|^when|^where|^why|^wer|^was|^wie|^wann|^wo|^warum/i.test(text.trim());
+function runAI() {
+  const prompt = $('#prompt-input').val().trim();
+  if (!prompt) {
+    setStatus('Please enter a prompt for the AI', 'warn');
+    return;
+  }
+  
+  setStatus('AI processing...', 'info');
+  
+  // Simulate AI processing delay
+  setTimeout(() => {
+    const response = simulateAIResponse(prompt);
+    showAIResponse(response);
+    setStatus('AI response ready', 'success');
+  }, 1500);
 }
 
-async function echoAnswer(promptText, answer){
-    const isQuestion = isHumanPrompt(promptText);
-    crew.echo.el.classList.add('quantum-active');
-    
-    // Apply quantum acceleration to the display process
-    const displayProgress = QuantumFractalAccelerator.accelerateProgress(0, 3, 1.2);
-    updateFractalProgress('echo', displayProgress);
-
-    crew.echo.content.innerHTML = `<div class="verbose-thinking">🚀 QUANTUM PROCESSING: Applying fractal reasoning depth ${currentThinkingDepth}</div>`;
-
-    if(isQuestion){
-        crew.echo.content.innerHTML += `<div class="verbose-thinking">🎯 QUESTION ANALYSIS: Human query detected</div>`;
-        await generateTTSAndPlay(answer);
-    } else {
-        crew.echo.content.innerHTML += `<div class="verbose-thinking">⚡ COMMAND EXECUTION: Code generation initiated</div>`;
-        try {
-            const codeMatch = answer.match(/```(?:javascript|js)\n([\s\S]*?)\n```/i);
-            const content = codeMatch ? codeMatch[1].trim() : answer.trim();
-            const highlightedCode = Prism.highlight(content, Prism.languages.javascript, 'javascript');
-            
-            crew.echo.content.innerHTML += `<div class="verbose-thinking">✅ CODE OPTIMIZATION: Quantum fractal acceleration applied</div>`;
-            crew.echo.content.innerHTML += `<pre class="language-javascript"><code class="language-javascript">${highlightedCode}</code></pre>`;
-        } catch(e) {
-            crew.echo.content.innerHTML += `<div class="verbose-thinking">❌ ERROR: ${e.message}</div>`;
-        }
-    }
-
-    updateFractalProgress('echo', 100);
-    setTimeout(() => crew.echo.el.classList.remove('quantum-active'), 1000);
-}
-
-// --- HYPER-THREADED QUANTUM AGENT WORKFLOW ---
-async function startQuantumCrewSimulation(promptText) {
-    if (isGenerating || isSpeaking) return;
-    if (apiKey === "YOUR_GEMINI_API_KEY_HERE" || apiKey === null) {
-         alert("Quantum acceleration requires valid API key configuration.");
-         return;
-    }
-    
-    isGenerating = true;
-    const submitBtn = document.getElementById('prompt-submit');
-    submitBtn.disabled = true;
-
-    // Initialize quantum state for all agents
-    Object.values(crew).forEach(agent => {
-        agent.progress = 0;
-        updateFractalProgress(Object.keys(crew).find(key => crew[key] === agent), 0);
-        agent.content.innerHTML = `<div class="flex items-center space-x-2"><div class="spinner"></div><span>Quantum initialization...</span></div>`;
-        agent.el.classList.remove('quantum-active');
-    });
-
-    crew.echo.content.innerHTML = `<div class="verbose-thinking">🌌 QUANTUM FRACTAL ACCELERATOR: Initializing hyper-threaded reasoning...</div>`;
-
-    const quantumStep = async (agentKey, statusMessage, duration = 800, reasoningDepth = 5) => {
-        const agent = crew[agentKey];
-        agent.el.classList.add('quantum-active');
-        createQuantumParticles(agent.el);
-        
-        // Apply quantum acceleration to this step
-        const stepProgress = QuantumFractalAccelerator.accelerateProgress(agent.progress, reasoningDepth, agent.complexity);
-        agent.progress = stepProgress;
-        updateFractalProgress(agentKey, stepProgress);
-
-        const boostedDuration = duration / (1 + (reasoningDepth * 0.1)); // Faster with higher reasoning
-        agent.content.innerHTML = `<div class="flex items-center space-x-2"><div class="spinner"></div><span>${statusMessage} [Q-Boost: ${reasoningDepth}x]</span></div>`;
-        
-        await new Promise(r => setTimeout(r, boostedDuration));
-        agent.el.classList.remove('quantum-active');
-    };
-
-    try {
-        // PHASE 1: QUANTUM INITIALIZATION
-        const inputRect = document.getElementById('prompt-container').getBoundingClientRect();
-        const nexusRect = crew.nexus.el.getBoundingClientRect();
-        
-        animateDataPacket(inputRect, nexusRect, async () => {
-            await quantumStep('nexus', `Quantum command received. Entangling agents...`, 600, 7);
-
-            // PHASE 2: HYPER-THREADED MULTI-AGENT PROCESSING
-            const cognitoRect = crew.cognito.el.getBoundingClientRect();
-            animateDataPacket(nexusRect, cognitoRect, async () => {
-                await quantumStep('cognito', `Executing fractal reasoning...`, 1200, 8);
-
-                const systemPrompt = isHumanPrompt(promptText)
-                    ? "You are a quantum-enhanced AI system. Provide deeply analytical, fractal-reasoned answers with multi-dimensional insights."
-                    : "You are a quantum coding agent. Provide optimized, commented JavaScript code with quantum-inspired algorithms and fractal optimization patterns.";
-
-                const payload = {
-                    contents: [{ parts: [{ text: promptText }] }],
-                    tools: [{ "google_search": {} }],
-                    systemInstruction: { parts: [{ text: systemPrompt }] },
-                    generationConfig: {
-                        temperature: 0.7,
-                        topK: 40,
-                        topP: 0.95
-                    }
-                };
-
-                let responseData = null, retryCount = 0, maxRetries = 3;
-                while (retryCount < maxRetries) {
-                    try {
-                        const response = await fetch(apiUrl, { 
-                            method: 'POST', 
-                            headers: { 'Content-Type': 'application/json' }, 
-                            body: JSON.stringify(payload) 
-                        });
-                        if (!response.ok) {
-                            if (response.status === 429 && retryCount < maxRetries - 1) {
-                                const backoff = (Math.pow(2, retryCount) * 1000 + Math.random() * 1000);
-                                await new Promise(r => setTimeout(r, backoff)); 
-                                retryCount++; 
-                                continue;
-                            } else { 
-                                throw new Error(`Quantum API error: ${response.status}`); 
-                            }
-                        }
-                        responseData = await response.json();
-                        break;
-                    } catch (e) { 
-                        throw new Error(`Quantum Processing Failure: ${e.message}`); 
-                    }
-                }
-
-                // PHASE 3: QUANTUM VALIDATION & ENTANGLEMENT
-                const cognitoRectUpdated = crew.cognito.el.getBoundingClientRect();
-                const echoRect = crew.echo.el.getBoundingClientRect();
-                
-                animateDataPacket(cognitoRectUpdated, echoRect, async () => {
-                    // Apply multi-agent quantum acceleration
-                    const quantumResults = QuantumFractalAccelerator.accelerateMultiAgent(
-                        new Map([
-                            ['relay', {progress: 60, complexity: 1.1}],
-                            ['sentinel', {progress: 70, complexity: 1.3}],
-                            ['echo', {progress: 80, complexity: 1.5}]
-                        ]), 
-                        currentThinkingDepth
-                    );
-
-                    await quantumStep('relay', `Hyper-threaded transmission...`, 800, 6);
-                    await quantumStep('sentinel', `Quantum validation...`, 900, 7);
-
-                    // PHASE 4: META-CODED FINAL OUTPUT
-                    await quantumStep('echo', `Generating superstate report...`, 600, 9);
-
-                    const generatedText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text || "Quantum void: No response detected.";
-                    
-                    crew.echo.content.innerHTML = `<div class="verbose-thinking">✅ QUANTUM PROCESSING COMPLETE: All agents entangled and boosted</div>`;
-                    await echoAnswer(promptText, generatedText);
-
-                    // Final quantum state
-                    quantumStep('nexus', `Quantum equilibrium achieved`, 400, 5);
-                    quantumStep('cognito', `Fractal reasoning stored`, 300, 4);
-                    quantumStep('relay', `Entanglement maintained`, 300, 4);
-                    quantumStep('sentinel', `Superstate monitoring`, 300, 4);
-
-                    // Enhanced persistence
-                    if (window.db && window.userId !== 'unauthenticated-user') {
-                        const docRef = doc(window.db, `quantum_artifacts/${appId}/users/${window.userId}/agent_reports`, `quantum_report_${Date.now()}`);
-                        await setDoc(docRef, { 
-                            prompt: promptText, 
-                            response: generatedText.substring(0, 150) + '...', 
-                            quantum_depth: currentThinkingDepth,
-                            timestamp: new Date().toISOString(),
-                            enhancement: "fractal_quantum_v2"
-                        });
-                    }
-                    
-                    isGenerating = false;
-                    submitBtn.disabled = false;
-                    currentThinkingDepth = Math.min(10, currentThinkingDepth + 0.5); // Progressive depth increase
-                });
-            });
-        });
-
-    } catch (e) {
-        console.error("Quantum simulation failed:", e);
-        Object.values(crew).forEach(a => {
-            a.el.style.boxShadow = '0 0 30px #ff0000';
-            a.content.innerHTML = `<p class="text-red-400 font-bold">QUANTUM COLLAPSE: ${e.message}</p>`;
-        });
-        isGenerating = false;
-        submitBtn.disabled = false;
-    }
-}
-
-// --- Enhanced GSAP Data Packet Animation ---
-function animateDataPacket(sourceRect, targetRect, onComplete) {
-    const packet = document.createElement('div');
-    packet.className = 'data-packet';
-    document.body.appendChild(packet);
-
-    const startX = sourceRect.left + sourceRect.width / 2;
-    const startY = sourceRect.top + sourceRect.height / 2;
-    const endX = targetRect.left + targetRect.width / 2;
-    const endY = targetRect.top + targetRect.height / 2;
-
-    gsap.set(packet, { x: startX, y: startY, opacity: 1, scale: 0.3 });
-
-    gsap.to(packet, {
-        x: endX,
-        y: endY,
-        scale: 1.8,
-        opacity: 0.9,
-        duration: 0.6,
-        ease: "power2.inOut",
-        onComplete: () => {
-            packet.remove();
-            createQuantumParticles({getBoundingClientRect: () => targetRect}, 8);
-            onComplete && onComplete();
-        }
-    });
-}
-
-// --- Enhanced Three.js Quantum Plasma Background ---
-let scene, camera, renderer, uniforms, mesh;
-let width = window.innerWidth, height = window.innerHeight;
-
-const vertexShader = `void main(){gl_Position=vec4(position,1.0);}`;
-const fragmentShader = `
-uniform float time;
-uniform vec2 resolution;
-const float PI = 3.14159265359;
-
-float fractalNoise(vec2 p) {
-    return sin(p.x*12.0+time)*cos(p.y*8.0+time/1.5)+sin((p.x+p.y)*15.0+time/2.0)*0.5;
-}
-
-float quantumField(vec2 uv) {
-    float f = 0.0;
-    vec2 q = vec2(fractalNoise(uv), fractalNoise(uv+vec2(5.2,1.3)));
-    vec2 r = vec2(fractalNoise(uv+4.0*q+vec2(1.7,9.2)), fractalNoise(uv+4.0*q+vec2(8.3,2.8)));
-    f = fractalNoise(uv+4.0*r);
-    return f;
-}
-
-void main(){
-    vec2 uv = (gl_FragCoord.xy-0.5*resolution.xy)/resolution.y;
-    uv *= 2.0;
-    
-    float q = quantumField(uv);
-    float q2 = quantumField(uv*1.5+0.5);
-    float q3 = quantumField(uv*2.0-0.3);
-    
-    vec3 color = 0.5 + 0.5*cos(PI*(q*0.5+vec3(0.0,0.6,0.9)+q2*0.3));
-    color *= vec3(0.1,0.15,0.3) + q3*0.2;
-    color += vec3(0.4,0.2,0.6) * abs(q) * 0.3;
-    
-    gl_FragColor = vec4(color,1.0);
-}`;
-
-function initThree() {
-    scene = new THREE.Scene();
-    camera = new THREE.Camera();
-    camera.position.z = 1;
-    renderer = new THREE.WebGLRenderer({ 
-        canvas: document.getElementById('three-canvas'),
-        alpha: true,
-        antialias: true 
-    });
-    renderer.setSize(width, height);
-
-    uniforms = { 
-        time: { type: 'f', value: 1.0 }, 
-        resolution: { type: 'v2', value: new THREE.Vector2(width, height) } 
-    };
-    
-    const material = new THREE.ShaderMaterial({ 
-        uniforms: uniforms, 
-        vertexShader: vertexShader, 
-        fragmentShader: fragmentShader 
-    });
-    
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
-
-    window.addEventListener('resize', onWindowResize);
-    onWindowResize();
-    animateThree();
-}
-
-function onWindowResize() {
-    width = window.innerWidth; 
-    height = window.innerHeight;
-    renderer.setSize(width, height);
-    uniforms.resolution.value.x = width;
-    uniforms.resolution.value.y = height;
-}
-
-function animateThree() {
-    requestAnimationFrame(animateThree);
-    uniforms.time.value += 0.02; // Slower, more quantum-like
-    renderer.render(scene, camera);
-}
-
-// --- Audio TTS Utility Functions (Keep existing) ---
-function base64ToArrayBuffer(base64) {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-}
-
-function pcmToWav(pcm16, sampleRate = 24000) {
-    const numChannels = 1;
-    const bitsPerSample = 16;
-    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-    const blockAlign = numChannels * (bitsPerSample / 8);
-    const dataSize = pcm16.byteLength;
-    const buffer = new ArrayBuffer(44 + dataSize);
-    const view = new DataView(buffer);
-
-    function writeString(view, offset, string) {
-        for (let i = 0; i < string.length; i++) {
-            view.setUint8(offset + i, string.charCodeAt(i));
-        }
-    }
-    writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + dataSize, true); writeString(view, 8, 'WAVE');
-    writeString(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
-    view.setUint16(22, numChannels, true); view.setUint32(24, sampleRate, true);
-    view.setUint32(28, byteRate, true); view.setUint16(32, blockAlign, true); view.setUint16(34, bitsPerSample, true);
-    writeString(view, 36, 'data'); view.setUint32(40, dataSize, true);
-
-    let offset = 44;
-    for (let i = 0; i < pcm16.length; i++) { view.setInt16(offset, pcm16[i], true); offset += 2; }
-    return new Blob([buffer], { type: 'audio/wav' });
-}
-
-function playAudioBuffer(wavBlob) {
-    if (isSpeaking) return;
-    const audioUrl = URL.createObjectURL(wavBlob);
-    const audio = new Audio(audioUrl);
-
-    audio.onplay = () => { 
-        isSpeaking = true; 
-        crew.echo.el.classList.add('quantum-active');
-        createQuantumParticles(crew.echo.el, 20);
-    };
-    audio.onended = () => {
-        isSpeaking = false;
-        crew.echo.el.classList.remove('quantum-active');
-        URL.revokeObjectURL(audioUrl);
-    };
-    audio.play();
-}
-
-async function generateTTSAndPlay(textToSpeak) {
-    if (isSpeaking) return;
-    crew.echo.content.innerHTML = `<div class="flex items-center space-x-2"><div class="spinner"></div><span>Quantum speech synthesis...</span></div>`;
-
-    const ttsModelUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
-    const payload = {
-        contents: [{ parts: [{ text: textToSpeak }] }],
-        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } },
-    };
-
-    let responseData = null, retryCount = 0, maxRetries = 3;
-    while (retryCount < maxRetries) {
-        try {
-            const response = await fetch(ttsModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!response.ok) {
-                if (response.status === 429 && retryCount < maxRetries - 1) { 
-                    await new Promise(r => setTimeout(r, (Math.pow(2, retryCount) * 1000 + Math.random() * 1000))); 
-                    retryCount++; 
-                    continue; 
-                } else { 
-                    throw new Error(`Quantum TTS API error: ${response.status}`); 
-                }
-            }
-            responseData = await response.json();
-            break;
-        } catch (e) {
-            console.error("Quantum TTS generation failed:", e);
-            crew.echo.content.innerHTML = `<span class="text-red-500">Quantum TTS Error: Temporal anomaly detected.</span>`;
-            return;
-        }
-    }
-
-    const part = responseData?.candidates?.[0]?.content?.parts?.[0];
-    const audioData = part?.inlineData?.data;
-    const mimeType = part?.inlineData?.mimeType;
-
-    if (audioData && mimeType && mimeType.startsWith("audio/L16")) {
-        const rateMatch = mimeType.match(/rate=(\d+)/);
-        const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-        const pcmDataBuffer = base64ToArrayBuffer(audioData);
-        const pcm16 = new Int16Array(pcmDataBuffer);
-        const wavBlob = pcmToWav(pcm16, sampleRate);
-        crew.echo.content.innerHTML = `<p class="text-green-400">Quantum vocalization active...</p>`;
-        playAudioBuffer(wavBlob);
-    } else {
-        console.error("No quantum audio data returned from TTS API.");
-        crew.echo.content.innerHTML = `<span class="text-red-500">Quantum TTS Error: Waveform collapse.</span>`;
-    }
-}
-
-// --- Enhanced Event Listeners and Initialization ---
-window.addEventListener('load', () => {
-    initThree();
-    const promptInput = document.getElementById('prompt-input');
-    const promptSubmit = document.getElementById('prompt-submit');
-
-    // Quantum initialization state
-    crew.cognito.content.innerHTML = 'Quantum ready. Fractal depth calibrated.';
-    crew.relay.content.innerHTML = 'Hyper-threaded. Entanglement established.';
-    crew.sentinel.content.innerHTML = 'Superstate monitoring active.';
-    crew.echo.content.innerHTML = 'Quantum reporting system online. Enter a command or question to begin hyper-threaded processing.';
-
-    const handleSubmit = () => {
-        const promptText = promptInput.value.trim();
-        if (promptText && !isGenerating && !isSpeaking) {
-            startQuantumCrewSimulation(promptText);
-            promptInput.value = '';
-        }
-    };
-
-    promptSubmit.addEventListener('click', handleSubmit);
-    promptInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            handleSubmit();
-        }
-    });
-
-    console.log("🚀 QUANTUM HYPER-THREADED 5-AGENT SYSTEM INITIALIZED");
-    console.log("🌌 Fractal Reasoning Depth:", currentThinkingDepth);
-    console.log("⚡ Quantum Acceleration: ACTIVE");
+// Events
+$('#editor').on('input propertychange',()=>{
+  pushHistory(); 
+  highlightAndRender(editor.value); 
+  generateLineNumbers(); 
+  updateStatus();
 });
+
+$('#editor').on('scroll', syncScroll);
+$('#editor').on('keyup click', updateStatus);
+
+$('#btn-undo').click(undo);
+$('#btn-redo').click(redo);
+$('#btn-beautify').click(()=>{ 
+  try {
+    let beautified = editor.value;
+    
+    if (currentFileType === 'javascript') {
+      beautified = js_beautify(editor.value, {indent_size: 2});
+    } else if (currentFileType === 'html') {
+      beautified = html_beautify(editor.value, {indent_size: 2});
+    } else if (currentFileType === 'css') {
+      beautified = css_beautify(editor.value, {indent_size: 2});
+    }
+    
+    editor.value = beautified; 
+    renderEditor(editor.value); 
+    setStatus('Code beautified', 'success');
+  } catch(e) {
+    setStatus('Error beautifying code', 'error');
+  }
+});
+
+$('#btn-render').click(renderHTML);
+$('#render-html').click(renderHTML);
+
+$('#left-toggle').click(()=>{ 
+  gsap.to(leftPanel,{x:leftPanel.hasClass('open')?'-240px':'0px', duration:0.3}); 
+  leftPanel.toggleClass('open'); 
+});
+
+// File operation events
+$('#open-file').click(openFile);
+$('#save-file').click(saveFile);
+$('#save-as').click(saveAsFile);
+$('#file-input').change(handleFileSelect);
+
+// AI events
+$('#send-button').click(runAI);
+$('#run-local-ai').click(runAI);
+$('#prompt-input').keydown(e=>{ 
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ 
+    runAI(); 
+  } 
+});
+
+$('#close-ai-panel').click(() => {
+  aiResponsePanel.style.display = 'none';
+});
+
+$('#close-preview').click(() => {
+  previewPanel.style.display = 'none';
+  // Revoke the object URL to free memory
+  if (previewContent.src && previewContent.src.startsWith('blob:')) {
+    URL.revokeObjectURL(previewContent.src);
+  }
+});
+
+// Simulate AI connection
+setTimeout(() => {
+  aiIndicator.textContent = 'Local AI: Connected';
+  aiDot.classList.add('connected');
+}, 2000);
+
+// Init
+renderEditor(editor.value);
+pushHistory();
+updateFileMeta();
 </script>
 </body>
 </html>
+

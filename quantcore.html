@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nemodian Quantum Core Interface</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060608;
+  --glow-cyan: #00ffe0;
+  --glow-magenta: #ff00e0;
+  --text: #e0f8ff;
+}
+body {
+  margin: 0;
+  overflow: hidden;
+  height: 100vh;
+  font-family: 'Orbitron', sans-serif;
+  background: radial-gradient(circle at 50% 50%, #0a0c10 0%, #020204 100%);
+  color: var(--text);
+}
+
+/* === CORE CONTAINER === */
+#quantum-core {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* === CENTRAL ORB === */
+.core-orb {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--glow-cyan), var(--glow-magenta));
+  box-shadow: 0 0 40px var(--glow-cyan), 0 0 100px var(--glow-magenta);
+  animation: corePulse 3s ease-in-out infinite;
+  z-index: 2;
+}
+@keyframes corePulse {
+  0%,100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+/* === AGENT NODES === */
+.agent-node {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px solid var(--glow-cyan);
+  box-shadow: 0 0 20px var(--glow-cyan);
+  background: rgba(10,15,20,0.4);
+  backdrop-filter: blur(10px);
+  text-align: center;
+  line-height: 80px;
+  font-size: 0.75rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+.agent-node:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 40px var(--glow-magenta);
+}
+
+/* === AGENT POSITIONS === */
+[data-agent="nexus"]    { transform: translate(-220px, -200px); }
+[data-agent="cognito"]  { transform: translate(240px, -130px); }
+[data-agent="relay"]    { transform: translate(270px, 140px); }
+[data-agent="sentinel"] { transform: translate(-260px, 130px); }
+[data-agent="echo"]     { transform: translate(0, 270px); }
+
+/* === BEAM CANVAS === */
+.canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+}
+
+/* === TELEMETRY PANEL === */
+#telemetry {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  padding: 8px 20px;
+  background: rgba(0,0,0,0.25);
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(6px);
+  z-index: 5;
+}
+
+/* === AGENT FOCUS OVERLAY === */
+#focus-hud {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 25px;
+  background: rgba(15, 20, 25, 0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,255,255,0.3);
+  display: none;
+  backdrop-filter: blur(10px);
+}
+#focus-hud.active {
+  display: block;
+}
+#focus-hud h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--glow-cyan);
+}
+#focus-hud p {
+  margin: 4px 0;
+  font-size: 0.85rem;
+}
+</style>
+</head>
+<body>
+<div id="quantum-core">
+  <canvas id="energyCanvas" class="canvas"></canvas>
+  <div class="core-orb"></div>
+  <div class="agent-node" data-agent="nexus">Nexus</div>
+  <div class="agent-node" data-agent="cognito">Cognito</div>
+  <div class="agent-node" data-agent="relay">Relay</div>
+  <div class="agent-node" data-agent="sentinel">Sentinel</div>
+  <div class="agent-node" data-agent="echo">Echo</div>
+</div>
+
+<div id="focus-hud">
+  <h2 id="focus-name"></h2>
+  <p id="focus-energy"></p>
+  <p id="focus-links"></p>
+</div>
+
+<div id="telemetry">
+  <span id="pool">Pool: 100</span>
+  <span id="flow">Flow: —</span>
+</div>
+
+<script>
+/* === BASIC ENERGY SYSTEM === */
+class QuantumEnergyTracker {
+  static flowLog = [];
+  static energyPool = 100;
+  static agentLevels = new Map([
+    ['nexus', 20],
+    ['cognito', 20],
+    ['relay', 20],
+    ['sentinel', 20],
+    ['echo', 20]
+  ]);
+
+  static transfer(from, to, amount) {
+    const available = this.agentLevels.get(from);
+    const actual = Math.min(amount, available);
+    this.agentLevels.set(from, available - actual);
+    this.agentLevels.set(to, this.agentLevels.get(to) + actual * 0.95);
+    this.energyPool -= actual * 0.05;
+    this.flowLog.push({ from, to, amount: actual, timestamp: Date.now() });
+    if (this.flowLog.length > 50) this.flowLog.shift();
+  }
+
+  static simulate() {
+    const keys = Array.from(this.agentLevels.keys());
+    const from = keys[Math.floor(Math.random() * keys.length)];
+    let to;
+    do { to = keys[Math.floor(Math.random() * keys.length)]; } while (to === from);
+    this.transfer(from, to, Math.random() * 3 + 1);
+  }
+
+  static start() {
+    setInterval(() => this.simulate(), 1000);
+  }
+}
+
+/* === VISUALS === */
+const ctx = energyCanvas.getContext('2d');
+energyCanvas.width = innerWidth;
+energyCanvas.height = innerHeight;
+
+const nodes = [...document.querySelectorAll('.agent-node')];
+const focusHUD = document.getElementById('focus-hud');
+let focused = null;
+
+function drawBeams() {
+  ctx.clearRect(0, 0, energyCanvas.width, energyCanvas.height);
+  const rect = energyCanvas.getBoundingClientRect();
+
+  QuantumEnergyTracker.flowLog.slice(-5).forEach(f => {
+    const from = nodes.find(n => n.dataset.agent === f.from);
+    const to = nodes.find(n => n.dataset.agent === f.to);
+    if (!from || !to) return;
+
+    const r1 = from.getBoundingClientRect();
+    const r2 = to.getBoundingClientRect();
+    const p1 = { x: r1.left + r1.width/2 - rect.left, y: r1.top + r1.height/2 - rect.top };
+    const p2 = { x: r2.left + r2.width/2 - rect.left, y: r2.top + r2.height/2 - rect.top };
+
+    ctx.strokeStyle = `rgba(${focused && (focused!==f.from && focused!==f.to)?'255,255,255,0.05':'0,255,255,0.7'})`;
+    ctx.lineWidth = 2 + f.amount/2;
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+  });
+}
+
+function updateHUD() {
+  document.getElementById('pool').textContent = `Pool: ${QuantumEnergyTracker.energyPool.toFixed(1)}`;
+  const last = QuantumEnergyTracker.flowLog.at(-1);
+  if (last) document.getElementById('flow').textContent = `Flow: ${last.from} → ${last.to} (${last.amount.toFixed(2)})`;
+
+  if (focused) {
+    const energy = QuantumEnergyTracker.agentLevels.get(focused).toFixed(2);
+    const links = QuantumEnergyTracker.flowLog.filter(f => f.from === focused || f.to === focused).length;
+    focusHUD.classList.add('active');
+    document.getElementById('focus-name').textContent = focused.toUpperCase();
+    document.getElementById('focus-energy').textContent = `Energy: ${energy}`;
+    document.getElementById('focus-links').textContent = `Active Links: ${links}`;
+  } else focusHUD.classList.remove('active');
+}
+
+function animate() {
+  drawBeams();
+  updateHUD();
+  requestAnimationFrame(animate);
+}
+
+nodes.forEach(node => {
+  node.addEventListener('click', () => {
+    if (focused === node.dataset.agent) focused = null;
+    else focused = node.dataset.agent;
+  });
+});
+
+QuantumEnergyTracker.start();
+animate();
+</script>
+</body>
+</html>

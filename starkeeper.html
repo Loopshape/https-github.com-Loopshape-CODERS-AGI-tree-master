@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama Agent System | Core Loop 2244 Coin Code</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- Base & Terminal-Inspired CSS --- */
+        :root {
+            --background-color: #0A0A0A;
+            --surface-color: #1A1A1A;
+            --primary-color: #00FF41; /* Hacker Green */
+            --secondary-color: #03A9F4; /* Light Blue for contrast */
+            --on-surface-light: rgba(255, 255, 255, 0.9);
+            --on-surface-medium: rgba(255, 255, 255, 0.6);
+            --on-surface-disabled: rgba(255, 255, 255, 0.4);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--background-color);
+            color: var(--on-surface-light);
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        #three-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* --- Prompt Container (Terminal Style) --- */
+        #prompt-container {
+            position: fixed;
+            z-index: 20;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 600px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        #prompt-container::before {
+            content: '>';
+            font-size: 1.5em;
+            color: var(--primary-color);
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            from, to { color: transparent; }
+            50% { color: var(--primary-color); }
+        }
+
+        #prompt-input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: var(--on-surface-light);
+            font-size: 1.5em;
+            font-family: 'Roboto Mono', monospace;
+            padding: 8px 4px;
+            outline: none;
+            border-bottom: 2px solid transparent;
+        }
+
+        #prompt-submit {
+            flex-shrink: 0;
+            background: var(--surface-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            color: var(--primary-color);
+            font-size: 1em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        #prompt-submit:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        /* --- UI Container for Agents --- */
+        #ui-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2; display: grid; grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: repeat(12, 1fr); gap: 16px; padding: 16px;
+            box-sizing: border-box; pointer-events: none; visibility: hidden;
+        }
+        
+        /* --- Agent Card Styling --- */
+        .agent-card {
+            background-color: var(--surface-color);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .agent-header { display: flex; align-items: center; margin-bottom: 12px; }
+        .agent-icon { width: 32px; height: 32px; margin-right: 12px; fill: var(--primary-color); }
+        .agent-title { font-size: 1.1em; font-weight: 700; margin: 0; color: var(--on-surface-light); }
+        .agent-subtitle { font-size: 0.8em; font-weight: 400; color: var(--on-surface-medium); }
+        .agent-content .status { font-size: 0.9em; color: var(--on-surface-medium); min-height: 20px; }
+        .agent-content .output { margin-top: auto; font-size: 0.9em; background-color: rgba(0,0,0,0.3); border-radius: 2px; padding: 8px; min-height: 40px; color: var(--secondary-color); }
+        .progress-bar { width: 100%; height: 4px; background-color: rgba(0, 255, 65, 0.2); margin-top: 12px; overflow: hidden; }
+        .progress-bar-inner { width: 0%; height: 100%; background-color: var(--primary-color); }
+        
+        /* Thinking Log Styling */
+        .thinking-log {
+            margin-top: 12px;
+            font-size: 0.8em;
+            color: var(--on-surface-medium);
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 2px;
+            padding: 8px;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+        
+        .thinking-log p {
+            margin: 4px 0;
+            border-left: 2px solid var(--primary-color);
+            padding-left: 8px;
+        }
+
+        /* Agent Positioning */
+        #agent-core   { grid-column: 5 / span 4; grid-row: 1 / span 3; }
+        #agent-loop   { grid-column: 1 / span 4; grid-row: 4 / span 6; }
+        #agent-2244   { grid-column: 5 / span 4; grid-row: 5 / span 4; }
+        #agent-coin   { grid-column: 9 / span 4; grid-row: 4 / span 6; }
+        #agent-code   { grid-column: 4 / span 6; grid-row: 10 / span 3; }
+
+        /* Data Packet */
+        .data-packet {
+            position: fixed; width: 12px; height: 12px; background-color: var(--primary-color);
+            border-radius: 2px; box-shadow: 0 0 10px var(--primary-color); z-index: 5; opacity: 0;
+        }
+        
+        /* Responsive */
+        @media (max-width: 900px) {
+            #ui-container { grid-template-columns: 1fr; grid-template-rows: auto; position: absolute; height: auto; }
+            .agent-card { grid-column: 1 / -1 !important; grid-row: auto !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="three-canvas"></canvas>
+    
+    <div id="prompt-container">
+        <input type="text" id="prompt-input" autocomplete="off" autofocus>
+        <button id="prompt-submit">RUN</button>
+    </div>
+
+    <div id="ui-container">
+        <!-- Agent 1: Core -->
+        <div id="agent-core" class="agent-card">
+            <div class="agent-header">
+                <svg class="agent-icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4z" fill-opacity="0"/><path d="M8 8v8h8V8H8zm2 2h4v4h-4v-4zM4 4v4H2V4c0-1.1.9-2 2-2h4v2H4zm0 12v4h4v2H4c-1.1 0-2-.9-2-2v-4h2zm16 4h-4v-2h4v-4h2v4c0 1.1-.9 2-2 2zM20 4h-4V2h4c1.1 0 2 .9 2 2v4h-2V4z"/></svg>
+                <div><h2 class="agent-title">Core</h2><p class="agent-subtitle">System Kernel</p></div>
+            </div>
+            <div class="agent-content">
+                <p class="status">AWAITING_COMMAND</p>
+                <div class="progress-bar"><div class="progress-bar-inner"></div></div>
+                <div class="thinking-log"></div>
+            </div>
+        </div>
+        <!-- Agent 2: Loop -->
+        <div id="agent-loop" class="agent-card">
+            <div class="agent-header">
+                <svg class="agent-icon" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+                <div><h2 class="agent-title">Loop</h2><p class="agent-subtitle">Processor</p></div>
+            </div>
+            <div class="agent-content">
+                <p class="status">STANDBY</p>
+                <div class="progress-bar"><div class="progress-bar-inner"></div></div>
+                <div class="output"></div>
+                <div class="thinking-log"></div>
+            </div>
+        </div>
+        <!-- Agent 3: 2244 -->
+        <div id="agent-2244" class="agent-card">
+            <div class="agent-header">
+                <svg class="agent-icon" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
+                <div><h2 class="agent-title">2244</h2><p class="agent-subtitle">Data Bus</p></div>
+            </div>
+            <div class="agent-content">
+                <p class="status">STANDBY</p>
+                <div class="progress-bar"><div class="progress-bar-inner"></div></div>
+                <div class="thinking-log"></div>
+            </div>
+        </div>
+        <!-- Agent 4: Coin -->
+        <div id="agent-coin" class="agent-card">
+             <div class="agent-header">
+                <svg class="agent-icon" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.1-3.28 7.76-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                <div><h2 class="agent-title">Coin</h2><p class="agent-subtitle">Validator</p></div>
+            </div>
+            <div class="agent-content">
+                <p class="status">STANDBY</p>
+                <div class="progress-bar"><div class="progress-bar-inner"></div></div>
+                <div class="output"></div>
+                <div class="thinking-log"></div>
+            </div>
+        </div>
+        <!-- Agent 5: Code -->
+        <div id="agent-code" class="agent-card">
+            <div class="agent-header">
+                <svg class="agent-icon" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+                <div><h2 class="agent-title">Code</h2><p class="agent-subtitle">Compiler</p></div>
+            </div>
+            <div class="agent-content">
+                <p class="status">AWAITING_PAYLOAD</p>
+                <div class="output"></div>
+                <div class="thinking-log"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Core Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+
+    <script>
+    $(document).ready(function() {
+        // --- THREE.JS PARTICLE BACKGROUND ---
+        let scene, camera, renderer, particles, particleSystem;
+        function initThree() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 500;
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas'), alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+            const particleCount = 5000;
+            particles = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const color = new THREE.Color();
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 2000;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 2000;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 1000;
+                const randomColor = Math.random() > 0.5 ? 0x00FF41 : 0x03A9F4;
+                color.setHex(randomColor);
+                colors[i * 3] = color.r; colors[i * 3 + 1] = color.g; colors[i * 3 + 2] = color.b;
+            }
+            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            const particleMaterial = new THREE.PointsMaterial({ size: 1.5, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.7 });
+            particleSystem = new THREE.Points(particles, particleMaterial);
+            scene.add(particleSystem);
+            animate();
+        }
+        function animate() { requestAnimationFrame(animate); particleSystem.rotation.y = Date.now() * 0.0001; renderer.render(scene, camera); }
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+        initThree();
+
+        // --- AGENT SYSTEM & GSAP ANIMATION ---
+        const agents = {
+            core: { 
+                el: $('#agent-core'), 
+                status: $('.status', '#agent-core'), 
+                progress: $('.progress-bar-inner', '#agent-core'),
+                thinking: $('.thinking-log', '#agent-core')
+            },
+            loop: { 
+                el: $('#agent-loop'), 
+                status: $('.status', '#agent-loop'), 
+                progress: $('.progress-bar-inner', '#agent-loop'), 
+                output: $('.output', '#agent-loop'),
+                thinking: $('.thinking-log', '#agent-loop')
+            },
+            agent2244: { 
+                el: $('#agent-2244'), 
+                status: $('.status', '#agent-2244'), 
+                progress: $('.progress-bar-inner', '#agent-2244'),
+                thinking: $('.thinking-log', '#agent-2244')
+            },
+            coin: { 
+                el: $('#agent-coin'), 
+                status: $('.status', '#agent-coin'), 
+                progress: $('.progress-bar-inner', '#agent-coin'), 
+                output: $('.output', '#agent-coin'),
+                thinking: $('.thinking-log', '#agent-coin')
+            },
+            code: { 
+                el: $('#agent-code'), 
+                status: $('.status', '#agent-code'), 
+                output: $('.output', '#agent-code'),
+                thinking: $('.thinking-log', '#agent-code')
+            }
+        };
+        let isSimulating = false;
+
+        // Voice synthesis function
+        function speak(text, agentName, rate = 1.0) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = rate;
+                utterance.pitch = 1.0;
+                utterance.volume = 0.8;
+                
+                // Try to find appropriate voice
+                const voices = speechSynthesis.getVoices();
+                const englishVoice = voices.find(voice => 
+                    voice.lang.startsWith('en') && 
+                    (voice.name.includes('Female') || voice.name.includes('Male'))
+                );
+                
+                if (englishVoice) {
+                    utterance.voice = englishVoice;
+                }
+                
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Add thinking log entry
+        function addThinkingLog(agent, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            agent.thinking.append(`<p>[${timestamp}] ${message}</p>`);
+            agent.thinking.scrollTop(agent.thinking[0].scrollHeight);
+        }
+
+        function resetSystem() {
+            gsap.set('.progress-bar-inner', { width: '0%' });
+            agents.core.status.text('AWAITING_COMMAND');
+            agents.loop.status.text('STANDBY').output.text('');
+            agents.agent2244.status.text('STANDBY');
+            agents.coin.status.text('STANDBY').output.text('');
+            agents.code.status.text('AWAITING_PAYLOAD').output.text('');
+            gsap.to('.agent-card', { boxShadow: 'none', borderColor: 'rgba(255, 255, 255, 0.1)', duration: 0.5 });
+            
+            // Clear thinking logs
+            $('.thinking-log').empty();
+        }
+
+        function resetToPrompt() {
+            const tl = gsap.timeline({ onComplete: () => { $('#prompt-input').val('').focus(); isSimulating = false; }});
+            tl.to('.agent-card', { autoAlpha: 0, y: 50, stagger: 0.1, duration: 0.4, ease: 'power2.in' })
+              .set('#ui-container', { visibility: 'hidden' })
+              .to('#prompt-container', { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power2.out' }, '-=0.2');
+        }
+
+        function getElementCenter(el) { const rect = el[0].getBoundingClientRect(); return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }; }
+        function createDataPacket(fromEl, toEl) {
+            const packet = $('<div class="data-packet"></div>'); $('body').append(packet);
+            gsap.set(packet, { x: getElementCenter(fromEl).x, y: getElementCenter(fromEl).y });
+            const tl = gsap.timeline({ onComplete: () => packet.remove() });
+            tl.to(packet, { autoAlpha: 1, scale: 1.2, duration: 0.2 }).to(packet, { x: getElementCenter(toEl).x, y: getElementCenter(toEl).y, duration: 0.8, ease: "power1.inOut" }).to(packet, { autoAlpha: 0, scale: 0.5, duration: 0.2 });
+            return tl;
+        }
+        
+        function setActive(agent, text, thinkingMessage = null) { 
+            gsap.to(agent.el, { boxShadow: `0 0 15px ${getComputedStyle(document.documentElement).getPropertyValue('--primary-color')}`, borderColor: 'var(--primary-color)', repeat: -1, yoyo: true, duration: 0.7 }); 
+            agent.status.text(text);
+            
+            if (thinkingMessage) {
+                addThinkingLog(agent, thinkingMessage);
+                speak(thinkingMessage, agent.el.attr('id').replace('agent-', ''), 0.9);
+            }
+        }
+        
+        function setComplete(agent, text, thinkingMessage = null) { 
+            gsap.killTweensOf(agent.el); 
+            gsap.to(agent.el, { boxShadow: 'none', borderColor: 'var(--secondary-color)', duration: 0.5 }); 
+            agent.status.text(text);
+            
+            if (thinkingMessage) {
+                addThinkingLog(agent, thinkingMessage);
+                speak(thinkingMessage, agent.el.attr('id').replace('agent-', ''), 0.9);
+            }
+        }
+
+        function startSimulation(promptText) {
+            resetSystem();
+            
+            const masterTimeline = gsap.timeline({ onComplete: resetToPrompt });
+            masterTimeline
+                // 1. Core
+                .add(() => setActive(
+                    agents.core, 
+                    `PARSING: "${promptText}"`, 
+                    `Initializing system kernel. Parsing user command: "${promptText}". Analyzing semantic structure and intent.`
+                ))
+                .to(agents.core.progress, { width: '100%', duration: 1, ease: 'power1.out' })
+                .add(() => setComplete(
+                    agents.core, 
+                    'TASK_DELEGATED',
+                    `Command parsed successfully. Identified ${promptText.split(' ').length} semantic units. Delegating processing tasks to Loop agent.`
+                ))
+                // 2. Loop
+                .add(createDataPacket(agents.core.el, agents.loop.el), "-=0.5")
+                .add(() => setActive(
+                    agents.loop, 
+                    'EXECUTING_ITERATION...', 
+                    `Received processing task from Core. Initializing iterative execution protocol. Processing command through multiple reasoning layers.`
+                ))
+                .to(agents.loop.progress, { width: '100%', duration: 2.5, ease: 'none' })
+                .add(() => { 
+                    setComplete(
+                        agents.loop, 
+                        'THREAD_COMPLETE', 
+                        `Iterative processing complete. Generated ${Math.floor(Math.random() * 5) + 3} reasoning paths. Selected optimal execution thread. Signature: 0xFA14`
+                    ); 
+                    agents.loop.output.text('SIG: 0xFA14'); 
+                }, "-=0.2")
+                // 3. 2244 & Coin
+                .add(() => { 
+                    createDataPacket(agents.loop.el, agents.agent2244.el); 
+                    createDataPacket(agents.loop.el, agents.coin.el); 
+                    setActive(
+                        agents.agent2244, 
+                        'ROUTING_PACKET...', 
+                        `Receiving data packet from Loop. Establishing secure routing protocol. Preparing transmission to Code agent via encrypted channels.`
+                    ); 
+                    setActive(
+                        agents.coin, 
+                        'VALIDATING_HASH...', 
+                        `Initiating cryptographic validation. Calculating SHA-256 hash of processed data. Verifying data integrity and authenticity.`
+                    ); 
+                }, "-=0.5")
+                .to([agents.agent2244.progress, agents.coin.progress], { width: '100%', duration: 2, ease: 'power2.out' })
+                .add(() => { 
+                    setComplete(
+                        agents.agent2244, 
+                        'TRANSMISSION_OK', 
+                        `Data packet successfully routed. Transmission integrity verified. All encryption protocols active. Ready for final compilation.`
+                    ); 
+                    setComplete(
+                        agents.coin, 
+                        'HASH_OK', 
+                        `Cryptographic validation complete. Checksum verified: 9A4F. Data integrity confirmed at 100%. No tampering detected.`
+                    ); 
+                    agents.coin.output.text('CHECKSUM: 9A4F'); 
+                })
+                // 4. Code
+                .add(createDataPacket(agents.agent2244.el, agents.code.el), "-=0.5")
+                .add(createDataPacket(agents.coin.el, agents.code.el), "-=0.5")
+                .add(() => setActive(
+                    agents.code, 
+                    'COMPILING_OUTPUT...', 
+                    `Receiving validated data streams from 2244 and Coin. Synthesizing final output. Applying optimization algorithms and formatting protocols.`
+                ))
+                .to({}, {duration: 1.5})
+                .add(() => { 
+                    setComplete(
+                        agents.code, 
+                        'BUILD_SUCCESS', 
+                        `Compilation successful. All system checks passed. Output generated and formatted. Task execution complete and ready for user delivery.`
+                    ); 
+                    agents.code.output.html(`STATUS: OK<br>JOB_ID: ${Date.now()}<br>PROMPT: "${promptText}"`); 
+                    
+                    // Final system announcement
+                    setTimeout(() => {
+                        speak(`System execution complete. All agents report successful operation. Your command has been processed.`, 'system', 0.8);
+                    }, 500);
+                });
+        }
+        
+        // --- Prompt Handling ---
+        function initiateFromPrompt() {
+            if (isSimulating) return;
+            const promptText = $('#prompt-input').val().trim();
+            if (promptText === "") {
+                gsap.fromTo('#prompt-container', { x: 0 }, { x: -10, duration: 0.05, repeat: 3, yoyo: true, ease: 'power2.inOut' }); 
+                return;
+            }
+            isSimulating = true;
+            const tl = gsap.timeline({ onComplete: () => startSimulation(promptText) });
+            tl.to('#prompt-container', { autoAlpha: 0, y: -50, duration: 0.5, ease: 'power2.in' })
+              .set('#ui-container', { visibility: 'visible' })
+              .from('.agent-card', { autoAlpha: 0, y: 50, stagger: 0.1, duration: 0.5, ease: 'power2.out' });
+        }
+
+        $('#prompt-submit').on('click', initiateFromPrompt);
+        $('#prompt-input').on('keypress', (e) => { if (e.which === 13) { initiateFromPrompt(); } });
+        
+        // Initialize speech synthesis voices
+        if ('speechSynthesis' in window) {
+            speechSynthesis.getVoices(); // Preload voices
+        }
+    });
+    </script>
+
+</body>
+</html>
+

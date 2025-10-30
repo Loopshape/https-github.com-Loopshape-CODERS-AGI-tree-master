@@ -1,249 +1,1803 @@
-#!/bin/bash
-# Autonomic Synthesis Platform (ASP) - Editor Back-end Logic
-# Multi-model reasoning framework with parallel execution and memory
-# Version 4.1.0 - Dedicated Web-Editor/API Backend Refinement Logic
-#
-# NEW: Adds a specialized 'ai process-editor' command to handle JSON payloads 
-# from the Nemodian 2244-1 AI Code Editor.
+#!/usr/bin/env bash
 
-set -euo pipefail
+# WebDev Code-Engine with Dynamic Math Logic and MAX PARALLELISM
+# Version: 8.3.5 (Dynamic Slower Model Control: Token & History Modulo)
 
-#--- Core Configuration: The Agent Manifest (Holistic Verbosity Focus) ---
-VERSION="4.1.0"
-AUTHOR="Nemodian 2244-1"
+# --- Enhanced Environment & Configuration ---
+export AI_HOME="${AI_HOME:-$HOME/.webdev-ai}"
+export ENV_HOME="${ENV_HOME:-$HOME/.webdev_ai_env}"
+export NODE_MODULES="$AI_HOME/node_modules"
+export PLUGIN_DIR="$AI_HOME/plugins"
+export LOG_DIR="$AI_HOME/ollama_logs"
+export ORCHESTRATOR_FILE="$AI_HOME/orchestrator.mjs"
+export TASKS_DIR="$AI_HOME/tasks"
+export PROJECTS_DIR="$AI_HOME/projects"
+export DB_DIR="$AI_HOME/db"
+export SSH_DIR="$AI_HOME/ssh"
+export TEMPLATES_DIR="$AI_HOME/templates"
+export SCRIPTS_DIR="$AI_HOME/scripts"
+export AI_DATA_DB="$DB_DIR/ai_data.db"
+export WEB_CONFIG_DB="$DB_DIR/web_config.db"
+export SESSION_FILE="$AI_HOME/.session"
+export OLLAMA_BIN="$(command -v ollama || true)" # Dynamically find ollama
+export NODE_PATH="${NODE_PATH:-}:$NODE_MODULES"
+export CODE_PROCESSOR_PY="$SCRIPTS_DIR/code_processor.py"
 
-# Agent Manifest: Defines the 5 core reasoning agents and their specializations.
-declare -A AGENT_MANIFEST=(
-    ["code"]="ALGORITHMICAL: Provide expressive, fully detailed analysis with comprehensive code examples and deep technical background."
-    ["coin"]="BIOLOGICAL: Offer extensive, emotionally and contextually rich analysis, detailing mood shifts and historical significance."
-    ["2244"]="CHEMICAL: Deliver exhaustive multilingual responses, deeply exploring cultural and linguistic nuances in both German and English."
-    ["core"]="PHYSICAL: Present an in-depth, structured decomposition of the problem, detailing every logical step and counter-argument considered."
-    ["loop"]="LOGICAL: Generate lengthy, refined answers that fully articulate the synthesis process and justify every decision through exhaustive feedback integration."
-)
+# Verbose thinking configuration
+export VERBOSE_THINKING="${VERBOSE_THINKING:-true}"
+export THINKING_DELAY="${THINKING_DELAY:-0.5}"
+export SHOW_REASONING="${SHOW_REASONING:-true}"
 
-# Database paths (The Collective Memory)
-DB_DIR="${HOME}/_/.ai_platform"
-CORE_DB="${DB_DIR}/core.db"
-SWAP_DIR="${DB_DIR}/swap"
-LOG_FILE="${DB_DIR}/ai.log"
-mkdir -p "$DB_DIR" "$SWAP_DIR"
+# --- ANSI Colors (Re-defined for Bash functions) ---
+COLOR_RESET='\x1b[0m'
+COLOR_BRIGHT='\x1b[1m'
+COLOR_RED='\x1b[31m'
+COLOR_GREEN='\x1b[32m'
+COLOR_YELLOW='\x1b[33m'
+COLOR_BLUE='\x1b[34m'
+COLOR_MAGENTA='\x1b[35m'
+COLOR_CYAN='\x1b[36m'
+COLOR_GRAY='\x1b[90m'
+COLOR_PURPLE='\x1b[35m' # Added for consistency with log_event
 
-# OLLAMA configuration (The Inference Engine)
-OLLAMA_BASE="http://localhost:11434"
-DEFAULT_MODEL="deepseek-v3.1:671b-cloud"
-
-# Genesis Hash Storage (Stores the successful convergence hash for future learning)
-GENESIS_HASH_FILE="${DB_DIR}/genesis.hash"
-
-# --- Utility Functions (Omitted for brevity in this output) ---
-log_event(){ local level="$1" local message="$2" local timestamp=$(date '+%Y-%m-%d %H:%M:%S') echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE" }
-hash_string(){ echo -n "$1" | sha256sum | cut -d ' ' -f1 }
-hash_file(){ if [[ -f "$1" ]]; then sha256sum "$1" | cut -d ' ' -f1; else echo "File not found: $1" >& 2; return 1; fi }
-hash_directory(){ local dir="$1"; find "$dir" -type f -exec sha256sum {} + 2>/dev/null | sort -k2 | sha256sum | cut -d ' ' -f1; }
-cleanup_swap_dir(){ local days="${1:-30}"; log_event "INFO" "Cleaning up swap directory older than $days days..."; find "$SWAP_DIR" -type f -mtime +"$days" -exec rm -f {} \; 2>/dev/null; }
-compress_store(){ local content="$1" local hash=$(hash_string "$content") local swap_file="${SWAP_DIR}/${hash}.gz"; echo "$content" | gzip -c > "$swap_file"; echo "$hash"; }
-retrieve_swap(){ local hash="$1" local swap_file="${SWAP_DIR}/${hash}.gz"; if [[ -f "$swap_file" ]]; then zcat "$swap_file" 2>/dev/null; else return 1; fi }
-get_mood_context(){ local hour=$(date +%H) local mood="" case "$hour" in 06|07|08|09|10|11) mood="morning_fresh";; 12|13|14|15|16|17) mood="day_productive";; 18|19|20|21|22) mood="evening_reflective";; *) mood="night_creative";; esac local emotions=("focused" "curious" "analytical" "creative" "empathetic") local random_emotion="${emotions[$RANDOM % ${#emotions[@]}]}"; echo "${mood}_${random_emotion}" }
-get_time_context(){ local timestamp=$(date '+%Y-%m-%d %H:%M:%S') local day_of_week=$(date '+%A'); echo "${day_of_week}_${timestamp}" }
-detect_preferred_language(){ local prompt="$1"; if [[ "$prompt" =~ [äöüÄÖÜß] ]]; then echo "German"; elif [[ "$prompt" =~ [a-zA-Z] ]]; then echo "English"; else echo "English"; fi }
-assemble_prompt(){ local prompt="$1" local context="$2" local model_type="$3"; cat <<EOF
-Original Prompt: $prompt
-Context from previous iterations: $context
-Model Role: ${AGENT_MANIFEST[$model_type]}
-Please provide your analysis and reasoning.
-If you reach a definitive conclusion, mark it with [FINAL_ANSWER].
-EOF
-}
-generate_fallback_response(){ local prompt="$1" local model_type="$2" local fallback_msg=""; case "$model_type" in "code") fallback_msg="Technical analysis: Code Agent offline. The problem requires a systematic approach to algorithm design.";; "coin") fallback_msg="Contextual analysis: Current systems offline. In such moments, reflection often reveals alternative perspectives worth exploring.";; "2244") fallback_msg="Sprachanalyse derzeit nicht verfügbar. Fallback: Die Fragestellung erfordert weitere Betrachtung aus verschiedenen Blickwinkeln.";; "core") fallback_msg="Core reasoning temporarily unavailable. Logical fallback: decompose problem into smaller subproblems and address each systematically.";; "loop") fallback_msg="Iterative synthesis paused. Consider previous outputs and identify convergence patterns for optimal solution integration.";; *) fallback_msg="Analysis unavailable. Please try again when AI systems are fully operational.";; esac; echo "[FALLBACK]$fallback_msg" }
-get_genesis_hash(){ if [[ -f "$GENESIS_HASH_FILE" ]]; then cat "$GENESIS_HASH_FILE"; else hash_file "$0"; fi }
-store_genesis_hash(){ local successful_hash="$1"; echo "$successful_hash" > "$GENESIS_HASH_FILE"; log_event "SUCCESS" "New Common Origin Hash (Origin-H) stored: ${successful_hash:0:10}..." }
-sqlite3_escape(){ local str="$1"; echo "$str" | sed "s/'/''/g"; }
-
-#--- Unrestricted File/CRUD Operations (For ai crud, rest, soap) ---
-file_create(){ local path="$1" local content="${2:-}"; log_event "SECURITY" "ATTENTION: Creating file at unrestricted path: $path"; echo -n "$content" > "$path" || return 1; echo "File created/overwritten at $path."; }
-file_read(){ local path="$1"; log_event "SECURITY" "ATTENTION: Reading file from unrestricted path: $path"; if [[ -f "$path" ]]; then cat "$path"; else echo "Error: File not found at $path" >&2; return 1; fi }
-file_update(){ local path="$1" local content="$2"; log_event "SECURITY" "ATTENTION: Appending content to unrestricted path: $path"; echo "$content" >> "$path" || return 1; echo "Content appended to $path."; }
-file_delete(){ local path="$1"; log_event "SECURITY" "ATTENTION: Deleting file from unrestricted path: $path"; if [[ -f "$path" ]]; then rm "$path" || return 1; echo "File deleted at $path."; else echo "Error: File not found at $path" >&2; return 1; fi }
-ai_rest_sim(){ local action="$1" local path="$2" local data="$3"; log_event "INFO" "Simulating REST $action on $path"; case "$action" in "GET") file_read "$path";; "POST") file_create "$path" "$data";; "PUT") file_create "$path" "$data";; "DELETE") file_delete "$path";; *) echo "Error: Invalid REST action: $action" >&2; return 1;; esac }
-ai_soap_sim(){ local method="$1" local endpoint="$2" local xml_body="$3"; log_event "INFO" "Simulating SOAP $method on $endpoint"; echo "SOAP Simulation for Method: $method"; echo "Endpoint: $endpoint"; echo "Request Body:"; echo "$xml_body" | head -n 5; if [[ "$method" == "GetData" ]]; then echo "<soap:Envelope><soap:Body><ns:GetDataResponse><ns:Result>Simulated SOAP Data</ns:Result></ns:GetDataResponse></soap:Body></soap:Envelope>"; else echo "<soap:Envelope><soap:Body><ns:Result>Simulated SOAP Success</ns:Result></soap:Body></soap:Envelope>"; fi }
-
-
-#--- NEW: AI Editor API Processing Logic ---
-# Handles JSON payload from the web client. Input is piped to stdin.
-ai_process_editor(){
-    local json_input
-    # Read the entire piped JSON payload from stdin
-    json_input=$(cat /dev/stdin)
+# --- Enhanced Status Function ---
+enhanced_status() {
+    printf "\n${COLOR_BRIGHT}${COLOR_CYAN}🌐 WEBDEV AI CODE ENGINE STATUS${COLOR_RESET}\n"
+    printf "${COLOR_GRAY}==========================================${COLOR_RESET}\n"
+    printf "AI_HOME: %s\n" "$AI_HOME"
+    printf "Projects: %s created\n" "$(ls -1 "$PROJECTS_DIR" 2>/dev/null | wc -l)"
+    printf "Active Session: %s\n" "$([ -f "$SESSION_FILE" ] && cat "$SESSION_FILE" || echo "None")"
+    printf "Verbose Thinking: %s\n" "$VERBOSE_THINKING"
+    printf "Show Reasoning: %s\n" "$SHOW_REASONING"
     
-    # Extract data using jq
-    local prompt
-    local code_context
-    
-    prompt=$(echo "$json_input" | jq -r '.prompt // ""')
-    code_context=$(echo "$json_input" | jq -r '.context // ""')
-    
-    if [[ -z "$prompt" ]]; then
-        echo '{"error": "Missing prompt in payload."}'
-        return 1
-    fi
-
-    log_event "API" "Processing Editor Payload. Prompt: ${prompt:0:50}..."
-
-    # Check if this is a Code Refinement request (based on common editor/refine prompts)
-    if [[ "$prompt" == *"[FINAL_ANSWER]CODE_START"* ]] || [[ "$prompt" == *fix\ the\ syntax\ error* ]] || [[ "$prompt" == *Critique\ and\ fix* ]]; then
-        # This is a refinement task. Set the full context as the problem to be solved.
-        local full_refine_prompt="${prompt}\n\nCODE TO BE REFINED:\n\n---\n${code_context}"
-        
-        local result
-        result=$(autonomic_reasoning "$full_refine_prompt")
-        
-        local suggested_code=$(echo "$result" | sed -n '/\[FINAL_ANSWER\]CODE_START/,/CODE_END/p')
-        local clean_code=$(echo "$suggested_code" | sed -e '1d' -e '$d' -e 's/\[FINAL_ANSWER\]CODE_START//' -e 's/CODE_END//')
-        
-        # Output JSON response for the web editor
-        echo "{\"suggested_code\": $(jq -Rs . <<< "$clean_code"), \"analysis_output\": $(jq -Rs . <<< "$result")}"
-        
-    else
-        # This is a general synthesis/reasoning request
-        local result
-        result=$(autonomic_reasoning "$prompt")
-        
-        # Output JSON response for the web editor
-        echo "{\"final_output\": $(jq -Rs . <<< "$result")}"
-    fi
-}
-
-
-#--- Agent Execution, Scoring, Fusion logic remains the same (omitted for output brevity) ---
-# ...
-#--- Main Reasoning Loop (Enhanced for Verbosity) ---
-autonomic_reasoning(){ local prompt="$1" local max_loops=5 local prompt_hash=$(hash_string "$prompt"); local current_genesis_hash=$(get_genesis_hash); local initial_context="System Origin Hash (Origin-H): ${current_genesis_hash:0:10}..." log_event "INFO" "Starting 5-Agent Assembly for prompt: ${prompt:0:50}..." local context="${initial_context}" local final_answer_detected=false local final_output_hash=""; for ((loop = 1; loop <= max_loops; loop++)); do echo -e "\n🔄 ASP Cycle $loop/$max_loops (Origin-H: ${current_genesis_hash:0:10}...)" echo "========================================"; if [[ $loop -eq 1 ]]; then local cached=$(check_cached_response "$prompt_hash"); if [[ -n "$cached" ]]; then echo "📚 Using cached reasoning results from Collective Memory"; echo "$cached"; return 0; fi; fi; declare -A model_outputs; execute_model_race "$prompt" "$context" model_outputs; for model in "${!model_outputs[@]}"; do echo -e "\n🧠 Agent ${model^^}: ${AGENT_MANIFEST[$model]}"; echo "----------------------------------------"; local display_output="${model_outputs[$model]#[FALLBACK]}"; echo "${display_output:0:200}..."; done; local fused_output=$(rank_and_fuse_outputs model_outputs "$loop" "$prompt_hash"); context=$(build_context model_outputs "$loop"); local display_fused_output="${fused_output#[FALLBACK]}"; echo -e "\n💡 Orchestrator Consensus (Cycle $loop):"; echo "----------------------------------------"; echo "${display_fused_output:0:500}..."; if [[ "$fused_output" == *"[FINAL_ANSWER]"* ]]; then final_answer_detected=true; final_output_hash=$(hash_string "$fused_output"); echo -e "\n🎯 Final Answer Protocol detected!"; break; fi; if [[ $(echo "$fused_output" | wc -w) -lt 300 ]] && [[ $loop -lt $max_loops ]]; then echo -e "\n📈 Output is not yet exhaustive (word count < 300), extending max cycles..."; ((max_loops++)); fi; done; local final_output="${fused_output#[FALLBACK]}"; if [[ "$final_answer_detected" = true ]]; then store_genesis_hash "$final_output_hash"; fi; store_task_log "reasoning" "$prompt" "$final_output" "loops=$loop,final=$final_answer_detected"; echo -e "\n✅ Autonomic Synthesis Complete"; echo "========================================"; echo "$final_output" }
-check_cached_response(){ local prompt_hash="$1"; sqlite3 "$CORE_DB" <<-'EOF'
-SELECT output_text FROM mindflow WHERE prompt_hash = '$prompt_hash' ORDER BY loop_number DESC,ranking_score DESC LIMIT 1;
-EOF
-}
-build_context(){ local -n outputs="$1" local loop_number="$2" local context="Previous loop $loop_number outputs (Full Verbose Context):\n"; for model in "${!outputs[@]}"; do local output="${outputs[$model]}" local clean_output="${output#[FALLBACK]}"; context="${context}\n${model^^}: ${clean_output:0:300}..."; done; echo -e "$context" }
-store_task_log(){ local task_type="$1" local input="$2" local output="$3" local metadata="$4"; if [[ ${#output} -gt 2000 ]]; then local compressed_hash=$(compress_store "$output"); output="COMPRESSED:$compressed_hash"; fi; sqlite3 "$CORE_DB" <<'EOF'
-INSERT INTO task_logs(task_type,task_input,task_output,metadata)
-VALUES('$task_type','$(sqlite3_escape "$input")','$(sqlite3_escape "$output")','$(sqlite3_escape "$metadata")');
-EOF
-}
-ai_refine_file(){ local file="$1"; if [[ ! -f "$file" ]]; then echo "Error: File not found: $file" >&2; return 1; fi; local file_content=$(cat "$file") local file_type=$(file -b --mime-type "$file") local prompt="Analyze the following ${file_type} content from file '$file'. Provide a fully detailed critique focusing on best practices, efficiency, and robustness. Present the suggested, improved code block marked with [FINAL_ANSWER]CODE_START...CODE_END. Original Content:\n\n---\n\n${file_content}"; echo -e "💡 Starting Autonomous Code Refinement on $file (using CORE/CODE agents)..."; log_event "INFO" "Refining code file: $file"; local result=$(autonomic_reasoning "$prompt"); echo -e "\n========================================"; echo -e "✅ Refinement Analysis Complete"; echo -e "========================================"; local suggested_code=$(echo "$result" | sed -n '/\[FINAL_ANSWER\]CODE_START/,/CODE_END/p'); if [[ -n "$suggested_code" ]]; then echo -e "\nSuggested Refinement:"; echo -e "----------------------------------------"; echo "$suggested_code" | sed -e '1d' -e '$d' -e 's/\[FINAL_ANSWER\]CODE_START//' -e 's/CODE_END//'; else echo -e "\nFull Analysis Output:"; echo -e "----------------------------------------"; echo "$result"; fi }
-ai_synthesize_topic(){ local topic="$1"; if [[ -z "$topic" ]]; then echo "Error: Please specify a topic for synthesis." >&2; return 1; } local prompt="Perform an exhaustive, holistic synthesis on the topic: '$topic'. Ensure the final response is deeply contextual, culturally aware (incorporate a German perspective), and logically robust. Provide the full synthesized report marked with [FINAL_ANSWER]."; echo -e "💡 Starting Contextual Topic Synthesis on '$topic' (using CORE/COIN/2244 agents)..."; log_event "INFO" "Synthesizing topic: $topic"; local result=$(autonomic_reasoning "$prompt"); echo -e "\n========================================"; echo -e "✅ Synthesis Report Complete"; echo -e "========================================"; echo "$result" | sed 's/\[FINAL_ANSWER\]//g'; }
-ai_editor_file(){ local file="$1"; if [[ -z "$file" ]]; then echo "Error: Please specify a file to edit." >&2; return 1; } if [[ ! -f "$file" ]]; then echo "Warning: File '$file' does not exist. Creating it."; fi; log_event "INFO" "Opening '$file' with editor..."; "${EDITOR:-vi}" "$file"; }
-download_and_unzip(){ local url="$1" local destination="${2:-./}" log_event "INFO" "Downloading: $url"; local temp_file=$(mktemp); if curl -L -s "$url" -o "$temp_file"; then if file "$temp_file" | grep -q "Zip archive"; then unzip -q "$temp_file" -d "$destination"; log_event "SUCCESS" "Downloaded and extracted to $destination"; else mv "$temp_file" "$destination"; log_event "SUCCESS" "Downloaded to "$destination""; fi; else log_event "ERROR" "Download failed: $url"; return 1; fi }
-file_search(){ local pattern="$1" local path="${2:-.}" log_event "INFO" "Searching for: $pattern in $path"; if command -v rg >/dev/null 2>&1; then rg --color=always -n "$pattern" "$path"; else grep -r --color=always -n "$pattern" "$path" 2>/dev/null || true; fi }
-lint_code(){ local file="$1" local linter="${2:-auto}"; if [[ "$linter" == "auto" ]]; then case "$file" in *.js|*.ts)linter="eslint";; *.py)linter="pylint";; *.sh)linter="shellcheck";; *)echo "No linter configured for $file" && return 1;; esac; fi; case "$linter" in "eslint")npx eslint "$file";; "pylint")pylint "$file";; "shellcheck")shellcheck "$file";; *)echo "Unknown linter: $linter" && return 1;; esac }
-
-
-#--- Main CLI Interface (Updated Help) ---
-show_help(){
-cat <<-'EOF'
-Autonomic Intelligence Platform v$VERSION - 5-Agent Assembly (Data Service)
-
-USAGE:
-ai "prompt"                 # Execute the full 5-Agent parallel reasoning pipeline
-ai process-editor           # PROCESS: Read JSON payload from STDIN (API/Web Editor Backend)
-ai crud <action> <path> [data] # Direct File CRUD (DANGER: Unrestricted access!)
-ai rest <action> <path> [data] # Simulates REST CRUD (GET, POST, PUT, DELETE)
-ai soap <method> <endpoint> [xml] # Simulates SOAP call
-ai logs                     # Show recent activity logs
-ai status                   # Show system status
-# ... (Other commands omitted for brevity)
-
-EOF
-}
-show_status(){
-    echo "🤖 Autonomic Intelligence Platform Status"
-    echo "========================================"
-    echo "Version: $VERSION"
-    echo "Database: $CORE_DB"
-    echo "Swap Directory: $SWAP_DIR"
-    echo "Log File: $LOG_FILE"
-    
-    if curl -s "${OLLAMA_BASE}/api/tags" >/dev/null; then
-        echo "OLLAMA: ✅ Connected"
-    else
-        echo "OLLAMA: ❌ Offline (using fallbacks)"
-    fi
-    
-    local mindflow_count=$(sqlite3 "$CORE_DB" "SELECT COUNT(*) FROM mindflow;" 2>/dev/null || echo "0")
-    local task_count=$(sqlite3 "$CORE_DB" "SELECT COUNT(*) FROM task_logs;" 2>/dev/null || echo "0")
-    echo "Mindflow Records: $mindflow_count"
-    echo "Task Logs: $task_count"
-    echo "Active Models: ${#AGENT_MANIFEST[@]}"
-}
-show_logs(){
-    local limit="${1:-10}"
-    echo "📋 Recent Activity Logs"
-    echo "========================================"
-    if [[ -f "$LOG_FILE" ]]; then
-        tail -n "$limit" "$LOG_FILE"
-    else
-        echo "No logs found."
-    fi
-}
-
-#--- Main Execution ---
-main(){
-    # Ensure database is initialized
-    if [[ ! -f "$CORE_DB" ]]; then
-        init_database
-        log_event "SYSTEM" "Database initialized at $CORE_DB"
-    fi
-    
-    cleanup_swap_dir 30
-    
-    case "${1:-}" in
-        "process-editor")
-            ai_process_editor
-            ;;
-        "crud")
-            log_event "SECURITY" "WARNING: Running Unrestricted CRUD. Input arguments must be sanitized."
-            case "$2" in
-                "create") file_create "$3" "$4";;
-                "read") file_read "$3";;
-                "update") file_update "$3" "$4";;
-                "delete") file_delete "$3";;
-                *) echo "Error: Invalid CRUD action. Use: create, read, update, delete" >&2; return 1;;
-            esac
-            ;;
-        "rest")
-            ai_rest_sim "$2" "$3" "$4";;
-        "soap")
-            ai_soap_sim "$2" "$3" "$4";;
-        "hash")
-            if [[ -f "$2" ]]; then hash_file "$2"; else hash_string "${2:-}"; fi;;
-        "download")download_and_unzip "$2" "${3:-}";;
-        "search")file_search "$2" "${3:-}";;
-        "lint")lint_code "$2" "${3:-auto}";;
-        "edit")ai_editor_file "$2";;
-        "refine")ai_refine_file "$2";;
-        "synthesize")ai_synthesize_topic "$2";;
-        "logs")show_logs "$2";;
-        "status")show_status;;
-        "--help"|"-h"|"help")show_help;;
-        "")show_help;;
-        *)
-        autonomic_reasoning "$*";;
-    esac
-}
-
-check_dependencies(){
-    local deps=("sqlite3" "curl" "jq" "gzip" "file" "shellcheck") 
-    local missing=()
+    # Check if dependencies are available
+    printf "\n${COLOR_BRIGHT}${COLOR_BLUE}🔧 DEPENDENCIES:${COLOR_RESET}\n"
+    local deps=("sqlite3" "node" "python3" "git" "$OLLAMA_BIN" "pylint" "black" "autopep8" "shfmt" "ping" "curl")
     for dep in "${deps[@]}"; do
-        if ! command -v "$dep" >/dev/null 2>&1; then
-            missing+=("$dep")
+        if command -v "$dep" &> /dev/null; then
+            printf "  ${COLOR_GREEN}✅ %s${COLOR_RESET}\n" "$dep"
+        else
+            printf "  ${COLOR_RED}❌ %s${COLOR_RESET}\n" "$dep"
         fi
     done
     
-    if [[ ${#missing[@]} -gt 0 ]]; then
-        echo "Missing dependencies: ${missing[*]}" >&2
-        echo "Please install them to use the AI platform." >&2
-        exit 1
+    # Check Node modules
+    printf "\n${COLOR_BRIGHT}${COLOR_MAGENTA}📦 NODE MODULES:${COLOR_RESET}\n"
+    local node_modules=("sqlite3")
+    for module in "${node_modules[@]}"; do
+        if [ -d "$NODE_MODULES/$module" ]; then
+            printf "  ${COLOR_GREEN}✅ %s${COLOR_RESET}\n" "$module"
+        else
+            printf "  ${COLOR_RED}❌ %s${COLOR_RESET}\n" "$module"
+        fi
+    done
+    
+    # Show recent projects
+    printf "\n${COLOR_BRIGHT}${COLOR_MAGENTA}📁 RECENT PROJECTS:${COLOR_RESET}\n"
+    if [ -f "$WEB_CONFIG_DB" ]; then
+        sqlite3 "$WEB_CONFIG_DB" "SELECT name, framework, status, datetime(ts) FROM projects ORDER BY ts DESC LIMIT 5;" 2>/dev/null | while IFS='|' read name framework status timestamp; do
+            printf "  🗂️  %s (%s) - %s\n" "$name" "$framework" "$status"
+        done || printf "  No projects yet\n"
+    else
+        printf "  No projects database found\n"
+    fi
+    
+    # Show system stats
+    printf "\n${COLOR_BRIGHT}${COLOR_GREEN}📊 SYSTEM STATS:${COLOR_RESET}\n"
+    if [ -f "$AI_DATA_DB" ]; then
+        local total_tasks=$(sqlite3 "$AI_DATA_DB" "SELECT COUNT(*) FROM memories;" 2>/dev/null || echo "0")
+        local total_events=$(sqlite3 "$AI_DATA_DB" "SELECT COUNT(*) FROM events;" 2>/dev/null || echo "0")
+        printf "  Total Tasks: %s\n" "$total_tasks"
+        printf "  Total Events: %s\n" "$total_events"
+    fi
+    
+    # Show disk usage
+    if [ -d "$AI_HOME" ]; then
+        local disk_usage=$(du -sh "$AI_HOME" 2>/dev/null | cut -f1)
+        printf "  Disk Usage: %s\n" "$disk_usage"
+    fi
+    
+    printf "\n${COLOR_BRIGHT}${COLOR_YELLOW}💡 TIP: Use '--verbose' to toggle thinking mode, '--quiet' for silent mode${COLOR_RESET}\n"
+}
+
+# --- Enhanced Logging with Verbose Support ---
+log_event() {
+    local level="$1" message="$2" metadata="${3:-}" color="$COLOR_CYAN"
+    case "$level" in
+        "ERROR") color="$COLOR_RED" ;; "WARN") color="$COLOR_YELLOW" ;;
+        "SUCCESS") color="$COLOR_GREEN" ;; "INFO") color="$COLOR_BLUE" ;;
+        "DEBUG") color="$COLOR_MAGENTA" ;; "THINKING") color="$COLOR_CYAN" ;;
+        "ANALYSIS") color="$COLOR_PURPLE" ;; "PLAN") color="$COLOR_CYAN" ;;
+        "EXECUTE") color="$COLOR_GREEN" ;; "MEMORY") color="$COLOR_YELLOW" ;;
+    esac
+    
+    echo -e "[${color}${level}${COLOR_RESET}] $(date +%H:%M:%S): $message"
+    
+    local message_esc=$(sed "s/'/''/g" <<< "$message")
+    local metadata_esc=$(sed "s/'/''/g" <<< "$metadata")
+    sqlite3 "$AI_DATA_DB" <<EOF || true
+INSERT INTO events (event_type, message, metadata) VALUES ('$level', '$message_esc', '$metadata_esc');
+EOF
+}
+
+# --- Thinking Animation and Verbose Output ---
+thinking() {
+    local message="$1" depth="${2:-0}" indent=""
+    for ((i=0; i<depth; i++)); do indent+="  "; done
+    
+    if [ "$VERBOSE_THINKING" = "true" ]; then
+        echo -e "${indent}🤔 ${COLOR_CYAN}THINKING${COLOR_RESET}: $message"
+        sleep "$THINKING_DELAY"
     fi
 }
 
-check_dependencies
-main "$@"
+show_reasoning() {
+    local reasoning="$1" context="$2"
+    
+    if [ "$SHOW_REASONING" = "true" ] && [ -n "$reasoning" ]; then
+        echo -e "\n${COLOR_YELLOW}💭 REASONING [$context]:${COLOR_RESET}"
+        echo -e "${COLOR_GRAY}$reasoning${COLOR_RESET}"
+        echo -e "${COLOR_YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    fi
+}
+
+# --- SQLITE UTILITIES WITH ERROR HANDLING ---
+sqlite_escape() {
+    echo "$1" | sed "s/'/''/g"
+}
+
+# --- USER CONFIRMATION ---
+confirm_action() {
+    local action="$1"
+    local response
+
+    echo -e "${COLOR_YELLOW}CONFIRM: $action${COLOR_RESET}" >&2
+    read -p "Type 'yes' to confirm: " -r response
+
+    if [[ "$response" == "yes" ]]; then
+        log_event "DEBUG" "User confirmed action: $action"
+        return 0
+    else
+        log_event "WARN" "User cancelled action: $action"
+        return 1
+    fi
+}
+
+# --- Code Processing and Highlighting ---
+_process_code_file() {
+    local file_path="$1"
+    local file_extension="${file_path##*.}"
+    
+    thinking "Processing code file: $file_path (ext: $file_extension)" 1
+    
+    if [ ! -f "$CODE_PROCESSOR_PY" ]; then
+        log_event "ERROR" "Code processor script not found: $CODE_PROCESSOR_PY"
+        cat "$file_path" # Fallback to plain output
+        return
+    fi
+
+    # Call the Python script to handle formatting, analysis, and highlighting
+    python3 "$CODE_PROCESSOR_PY" "$file_path" "$file_extension"
+    
+    if [ $? -ne 0 ]; then
+        log_event "WARN" "Code processing failed for $file_path. Displaying raw content."
+        cat "$file_path"
+    fi
+}
+
+# --- Fixed Dependency Installation (Node.js Modules) ---
+install_node_modules() {
+    thinking "Installing Node.js modules..." 1
+    
+    if [ ! -f "$AI_HOME/package.json" ]; then
+        cat > "$AI_HOME/package.json" << 'PKG_JSON'
+{
+  "name": "webdev-ai-orchestrator",
+  "version": "1.0.0",
+  "description": "WebDev AI Code Engine Orchestrator",
+  "type": "module",
+  "dependencies": {
+    "sqlite3": "^5.1.6"
+  }
+}
+PKG_JSON
+    fi
+    
+    thinking "Running npm install in "$AI_HOME"..." 2
+    cd "$AI_HOME"
+    
+    if [ ! -d "$NODE_MODULES/sqlite3" ]; then
+        thinking "Installing sqlite3..." 3
+        npm install sqlite3 --save --loglevel=error
+        if [ $? -eq 0 ]; then
+            log_event "SUCCESS" "Installed sqlite3"
+        else
+            log_event "ERROR" "Failed to install sqlite3"
+        fi
+    fi
+    
+    thinking "Verifying module installation..." 2
+    if [ -d "$NODE_MODULES/sqlite3" ]; then
+        thinking "✅ sqlite3 installed successfully" 3
+    else
+        thinking "❌ sqlite3 failed to install" 3
+        log_event "ERROR" "Module sqlite3 not found after installation"
+    fi
+    
+    cd - > /dev/null
+}
+
+check_node_modules() {
+    thinking "Checking Node.js modules..." 1
+    
+    if [ ! -d "$NODE_MODULES/sqlite3" ]; then
+        thinking "sqlite3 module missing, installing..." 2
+        install_node_modules
+    else
+        thinking "All Node.js modules are installed" 2
+    fi
+}
+
+# --- MODIFIED: check_dependencies with active installation ---
+check_dependencies() {
+    thinking "Checking and installing system and Python dependencies..." 1
+    
+    # Check and install core system dependencies
+    local system_deps=("sqlite3" "node" "python3" "git" "ping" "curl")
+    for dep in "${system_deps[@]}"; do
+        if ! command -v "$dep" &> /dev/null; then
+            log_event "ERROR" "Missing critical system dependency: $dep"
+            echo "${COLOR_RED}❌ Missing critical system dependency: $dep. Please install manually to proceed.${COLOR_RESET}"
+            exit 1 # Exit for critical missing dependencies
+        else
+            printf "  ${COLOR_GREEN}✅ %s${COLOR_RESET}\n" "$dep"
+        fi
+    done
+
+    # Check Ollama separately as it's not a standard system dependency
+    if ! command -v "$OLLAMA_BIN" &> /dev/null; then
+        log_event "WARN" "Ollama binary not found: $OLLAMA_BIN"
+        echo "${COLOR_YELLOW}⚠️ Ollama binary not found. Please install Ollama from ollama.com if you intend to use AI models.${COLOR_RESET}"
+    else
+        printf "  ${COLOR_GREEN}✅ %s${COLOR_RESET}\n" "$OLLAMA_BIN"
+    fi
+
+    # Install Python tools
+    local python_tools=("black" "autopep8" "pylint")
+    for tool in "${python_tools[@]}"; do
+        if ! command -v "$tool" &> /dev/null; then
+            echo "Installing Python tool: $tool..."
+            if command -v pip3 &> /dev/null; then
+                pip3 install --user "$tool" &> /dev/null # Redirect output to /dev/null
+                if [ $? -eq 0 ]; then
+                    printf "  ${COLOR_GREEN}✅ %s${COLOR_RESET} (installed via pip3)\n" "$tool"
+                else
+                    printf "  ${COLOR_RED}❌ Failed to install Python tool: %s${COLOR_RESET}\n" "$tool"
+                fi
+            else
+                printf "  ${COLOR_RED}❌ pip3 not found. Cannot install %s. Please install pip3 and try again.${COLOR_RESET}\n" "$tool"
+            fi
+        else
+            printf "  ${COLOR_GREEN}✅ %s${COLOR_RESET}\n" "$tool"
+        fi
+    done
+    
+    # Install shfmt (Go tool)
+    if ! command -v shfmt &> /dev/null; then
+        echo "Installing shfmt (shell formatter)..."
+        local OS=$(uname -s)
+        local ARCH=$(uname -m)
+        local SHFMT_URL=""
+        
+        if [[ "$OS" == "Linux" ]]; then
+            if [[ "$ARCH" == "x86_64" ]]; then
+                SHFMT_URL="https://github.com/mvdan/sh/releases/latest/download/shfmt_linux_amd64"
+            elif [[ "$ARCH" == "aarch64" ]]; then
+                SHFMT_URL="https://github.com/mvdan/sh/releases/latest/download/shfmt_linux_arm64"
+            fi
+        elif [[ "$OS" == "Darwin" ]]; then # macOS
+            if [[ "$ARCH" == "x86_64" ]]; then
+                SHFMT_URL="https://github.com/mvdan/sh/releases/latest/download/shfmt_darwin_amd64"
+            elif [[ "$ARCH" == "arm64" ]]; then
+                SHFMT_URL="https://github.com/mvdan/sh/releases/latest/download/shfmt_darwin_arm64"
+            fi
+        fi
+
+        if [ -n "$SHFMT_URL" ]; then
+            if command -v curl &> /dev/null; then
+                if curl -sSLo /usr/local/bin/shfmt "$SHFMT_URL"; then
+                    chmod +x /usr/local/bin/shfmt
+                    printf "  ${COLOR_GREEN}✅ shfmt${COLOR_RESET} (installed)\n"
+                else
+                    printf "  ${COLOR_RED}❌ Failed to download shfmt from %s${COLOR_RESET}\n" "$SHFMT_URL"
+                fi
+            else
+                printf "  ${COLOR_RED}❌ curl not found. Cannot install shfmt. Please install curl and try again.${COLOR_RESET}\n"
+            fi
+        else
+            printf "  ${COLOR_RED}❌ shfmt installation not supported for your OS/Arch: %s/%s${COLOR_RESET}\n" "$OS" "$ARCH"
+        fi
+    else
+        printf "  ${COLOR_GREEN}✅ shfmt${COLOR_RESET}\n"
+    fi
+
+    # Check and install Node.js modules (specifically sqlite3)
+    check_node_modules
+    
+    log_event "SUCCESS" "All dependencies satisfied (or warnings/installations issued)"
+}
+
+# Web Development Framework Detection (Simplified for Bash)
+detect_frameworks() {
+    local project_path="${1:-$PWD}"
+    local frameworks=()
+    
+    frameworks+=("node" "react")
+    
+    show_reasoning "Detected frameworks: ${frameworks[*]}" "Framework Detection"
+    echo "${frameworks[@]}"
+}
+
+# --- MODIFIED: Enhanced Database Initialization with simplified schema ---
+init_databases() {
+    thinking "Initializing databases with simplified schema..." 1
+    mkdir -p "$DB_DIR" "$TEMPLATES_DIR" "$SCRIPTS_DIR" # Ensure necessary directories exist
+
+    # ai_data.db (simplified to match new script)
+    sqlite3 "$AI_DATA_DB" <<SQL 2>/dev/null
+CREATE TABLE IF NOT EXISTS memories (id INTEGER PRIMARY KEY, task_id TEXT, prompt TEXT, response TEXT, proof_state TEXT, framework TEXT, complexity INTEGER, reasoning_log TEXT, ts DATETIME DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, event_type TEXT, message TEXT, metadata TEXT, ts DATETIME DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS model_usage (task_id TEXT NOT NULL, model_name TEXT NOT NULL, PRIMARY KEY (task_id, model_name));
+SQL
+
+    # web_config.db (matches new script's definition)
+    sqlite3 "$WEB_CONFIG_DB" <<SQL 2>/dev/null
+CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY, name TEXT UNIQUE, framework TEXT, port INTEGER, domain TEXT, status TEXT DEFAULT 'inactive', ts DATETIME DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS deployments (id INTEGER PRIMARY KEY, project_name TEXT, environment TEXT, status TEXT, url TEXT, logs TEXT, ts DATETIME DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS api_endpoints (id INTEGER PRIMARY KEY, project_name TEXT, method TEXT, path TEXT, handler TEXT, middleware TEXT, ts DATETIME DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT); -- Added config table
+CREATE TABLE IF NOT EXISTS hashes (type TEXT, target TEXT, hash TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP); -- Added hashes table
+SQL
+    # blobs.db and wallet.db are no longer initialized as per the new script's schema.
+
+    log_event "SUCCESS" "Databases initialized with simplified schema"
+}
+
+# --- Configuration Management ---
+set_config() {
+    local k="$1" v="$2"
+    log_event "DEBUG" "Setting config: $k = [REDACTED]"
+
+    if sqlite3 "$WEB_CONFIG_DB" "INSERT OR REPLACE INTO config (key, value) VALUES ('$(sqlite_escape "$k")', '$(sqlite_escape "$v")');" 2>/dev/null; then
+        log_event "SUCCESS" "Config set: $k"
+    else
+        log_event "ERROR" "Failed to set config: $k"
+        return 1
+    fi
+}
+
+get_config() {
+    local k="$1"
+    local result
+    result=$(sqlite3 "$WEB_CONFIG_DB" "SELECT value FROM config WHERE key = '$(sqlite_escape "$k")';" 2>/dev/null)
+    log_event "DEBUG" "Retrieved config: $k = $result"
+    echo "$result"
+}
+
+view_config() {
+    log_event "DEBUG" "Viewing all configuration"
+    sqlite3 -header -column "$WEB_CONFIG_DB" "SELECT * FROM config;" 2>/dev/null || echo "No configuration set."
+}
+
+# --- Hashing Functions ---
+hash_string() {
+    echo -n "$1" | sha256sum | cut -d' ' -f1
+}
+
+hash_file_content() {
+    if [[ -f "$1" ]]; then
+        local hash
+        hash=$(sha256sum "$1" | cut -d' ' -f1)
+        log_event "DEBUG" "Hashed file: $1 -> $hash"
+        echo "$hash"
+    else
+        log_event "ERROR" "File not found: $1"
+        return 1
+    fi
+}
+
+record_hash() {
+    local type="$1" target="$2" hash="$3"
+    log_event "DEBUG" "Recording hash: $type:$target -> $hash"
+
+    if sqlite3 "$WEB_CONFIG_DB" "INSERT OR REPLACE INTO hashes (type, target, hash) VALUES ('$(sqlite_escape "$type")', '$(sqlite_escape "$target")', '$(sqlite_escape "$hash")');" 2>/dev/null; then
+        log_event "INFO" "Recorded hash for $type: $target"
+    else
+        log_event "WARN" "Failed to record hash for $type: $target"
+    fi
+}
+
+get_hash() {
+    local type="$1" target="$2"
+    local result
+    result=$(sqlite3 "$WEB_CONFIG_DB" "SELECT hash FROM hashes WHERE type='$(sqlite_escape "$type")' AND target='$(sqlite_escape "$target")';" 2>/dev/null)
+    log_event "DEBUG" "Retrieved hash for $type:$target -> $result"
+    echo "$result"
+}
+
+view_hash_index() {
+    log_event "DEBUG" "Viewing hash index"
+    sqlite3 -header -column "$WEB_CONFIG_DB" "SELECT * FROM hashes ORDER BY timestamp DESC;" 2>/dev/null || echo "No hashes recorded."
+}
+
+# --- Fixed Orchestrator with Working Colors (FULL CONTENT, with minor fixes) ---
+setup_orchestrator() {
+    log_event "INFO" "Setting up enhanced orchestrator with dynamic math logic and max parallelism..."
+    mkdir -p "$AI_HOME"
+    cat > "$ORCHESTRATOR_FILE" <<'EOF_JS'
+// Enhanced WebDev Code-Engine with Dynamic Math Logic and MAX PARALLELISM
+import { exec } from 'child_process';
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import sqlite3 from 'sqlite3';
+
+// Enhanced Environment
+const AI_HOME = process.env.AI_HOME;
+const PROJECTS_DIR = process.env.PROJECTS_DIR;
+const OLLAMA_BIN = process.env.OLLAMA_BIN || 'ollama';
+const VERBOSE_THINKING = process.env.VERBOSE_THINKING !== 'false';
+const SHOW_REASONING = process.env.SHOW_REASONING !== 'false';
+const AI_DATA_DB = process.env.AI_DATA_DB;
+const SLOWER_MODELS_ENV = process.env.SLOWER_MODELS || "llama3:70b,mixtral:8x7b"; // Default slower models
+
+// Enhanced Model Pool for Web Development (Default/Fallback)
+const WEB_DEV_MODELS = ["2244:latest", "core:latest", "loop:latest", "coin:latest", "code:latest"];
+const SLOWER_MODELS = SLOWER_MODELS_ENV.split(',');
+const BASE_SLOWER_MODEL_ACTIVATION_CHANCE = 0.3; // 30% base chance
+
+// Working color implementation using template literals
+const colors = {
+    reset: '\x1b[0m',
+    bright: '\x1b[1m',
+    dim: '\x1b[2m',
+    red: '\x1b[31m',
+    green: '\x1b[32m',
+    yellow: '\x1b[33m',
+    blue: '\x1b[34m',
+    magenta: '\x1b[35m',
+    cyan: '\x1b[36m',
+    gray: '\x1b[90m',
+    
+    // Combined styles
+    boldCyan: (text) => `\x1b[1;36m${text}\x1b[0m`,
+    boldGreen: (text) => `\x1b[1;32m${text}\x1b[0m`,
+    boldMagenta: (text) => `\x1b[1;35m${text}\x1b[0m`,
+    blueText: (text) => `\x1b[34m${text}\x1b[0m`,
+    yellowText: (text) => `\x1b[33m${text}\x1b[0m`,
+    greenText: (text) => `\x1b[32m${text}\x1b[0m`,
+    redText: (text) => `\x1b[31m${text}\x1b[0m`,
+    cyanText: (text) => `\x1b[36m${text}\x1b[0m`,
+    grayText: (text) => `\x1b[90m${text}\x1b[0m`,
+    magentaText: (text) => `\x1b[35m${text}\x1b[0m`
+};
+
+// --- Database Helpers ---
+const getDb = () => new sqlite3.Database(AI_DATA_DB);
+
+const logEvent = (level, message, metadata = '') => {
+    const db = getDb();
+    const sql = `INSERT INTO events (event_type, message, metadata) VALUES (?, ?, ?)`;
+    db.run(sql, [level, message, metadata], (err) => {
+        if (err) console.error(colors.redText(`[DB ERROR] Failed to log event: ${err.message}`));
+        db.close();
+    });
+};
+
+// --- Verbose thinking functions ---
+const think = (message, depth = 0) => {
+    if (VERBOSE_THINKING) {
+        const indent = '  '.repeat(depth);
+        console.log(colors.cyanText(`${indent}🤔 THINKING: ${message}`));
+    }
+};
+
+const showReasoning = (reasoning, context = 'Reasoning') => {
+    if (SHOW_REASONING && reasoning) {
+        console.log(colors.yellowText(`\n💭 ${context.toUpperCase()}:\n`));
+        console.log(colors.grayText(reasoning));
+        console.log(colors.yellowText('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'));
+    }
+};
+
+// --- Math/Hashing Helpers (Ported to Node.js) ---
+const genCircularIndex = () => {
+    const secondsInDay = 86400;
+    const now = new Date();
+    const secondsOfDay = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    
+    const scaledPi2 = 6283185; 
+    const scaledIndex = Math.floor((secondsOfDay / secondsInDay) * scaledPi2);
+    
+    return scaledIndex.toString().padStart(7, '0');
+};
+
+const genRecursiveHash = (prompt) => {
+    const promptHash = crypto.createHash('sha256').update(prompt).digest('hex').substring(0, 8);
+    const circularIndex = genCircularIndex();
+    const baseString = `${promptHash}.${circularIndex}`;
+
+    const hash1 = crypto.createHash('sha256').update(baseString).digest('hex').substring(0, 4);
+    const hash2 = crypto.createHash('sha256').update(hash1 + baseString).digest('hex').substring(4, 8);
+    const hash3 = crypto.createHash('sha256').update(hash2 + hash1 + baseString).digest('hex').substring(8, 12);
+    const hash4 = crypto.createHash('sha256').update(hash3 + hash2 + hash1 + baseString).digest('hex').substring(12, 16);
+    const hash5 = crypto.createHash('sha256').update(hash4 + hash3 + hash2 + hash1 + baseString).digest('hex').substring(16, 20);
+
+    return `${hash1}.${hash2}.${hash3}.${hash4}.${hash5}.${circularIndex}`;
+};
+
+// --- NEW: Deterministic Random Integer from Hash ---
+const getDeterministicRandomInt = (seedString, min, max) => {
+    const hash = crypto.createHash('sha256').update(seedString).digest('hex');
+    // Take a portion of the hash and convert to integer
+    const intValue = parseInt(hash.substring(0, 8), 16); 
+    return min + (intValue % (max - min + 1));
+};
+
+// --- NEW: Get Google Ping Entropy ---
+const getGooglePingEntropy = async () => {
+    try {
+        think("Pinging google.com for external entropy...", 2);
+        // Use 'ping -c 1' for a single packet on Linux/macOS, '-n 1' on Windows
+        const command = process.platform === 'win32' ? 'ping -n 1 google.com' : 'ping -c 1 google.com';
+        const { stdout } = await new Promise((resolve, reject) => {
+            exec(command, (error, stdout, stderr) => {
+                if (error) {
+                    // Log error but don't reject, return 0 for graceful fallback
+                    console.error(colors.redText(`[PING ERROR] Failed to ping google.com: ${error.message}`));
+                    return resolve({ stdout: '', stderr: error.message });
+                }
+                resolve({ stdout, stderr });
+            });
+        });
+
+        // Extract average RTT (example for Linux/macOS, might need adjustment for Windows)
+        let rttMatch;
+        if (process.platform === 'win32') {
+            rttMatch = stdout.match(/Average = (\d+)ms/);
+        } else {
+            rttMatch = stdout.match(/rtt min\/avg\/max\/mdev = [0-9.]+\/([0-9.]+)/);
+        }
+        
+        if (rttMatch && rttMatch[1]) {
+            const avgRtt = parseFloat(rttMatch[1]);
+            think(`Google Ping RTT: ${avgRtt}ms`, 2);
+            return avgRtt;
+        } else {
+            think("Could not parse ping RTT from output.", 2);
+            return 0; // Default to 0 if parsing fails
+        }
+    } catch (e) {
+        console.error(colors.redText(`[PING EXCEPTION] ${e.message}`));
+        return 0; // Default to 0 on error
+    }
+};
+
+
+// --- Dynamic Model Selection (Ported to Node.js) ---
+const selectDynamicModels = (framework, complexity) => {
+    return new Promise((resolve, reject) => {
+        think("Selecting dynamic model pool for task...", 1);
+        const db = getDb();
+        const POOL_SIZE = 3;
+        
+        const availableModels = WEB_DEV_MODELS; 
+        
+        if (availableModels.length === 0) {
+            logEvent("ERROR", "No Ollama models found. Falling back to defaults.");
+            db.close();
+            return resolve(WEB_DEV_MODELS);
+        }
+
+        let modelScores = {};
+        let promises = [];
+
+        availableModels.forEach(model => {
+            const query = `
+                SELECT SUM(
+                    CASE T1.proof_state
+                        WHEN 'CONVERGED' THEN 3 * T1.complexity
+                        ELSE -1 * T1.complexity
+                    END
+                ) AS score
+                FROM memories AS T1
+                JOIN model_usage AS T2 ON T1.task_id = T2.task_id
+                WHERE T2.model_name = ? AND T1.framework LIKE ?;
+            `;
+            
+            promises.push(new Promise((res, rej) => {
+                db.get(query, [model, `%${framework}%`], (err, row) => {
+                    if (err) {
+                        console.error(colors.redText(`[DB ERROR] Scoring model ${model}: ${err.message}`));
+                        modelScores[model] = 0;
+                    } else {
+                        modelScores[model] = row.score || 0;
+                    }
+                    res();
+                });
+            }));
+        });
+
+        Promise.all(promises).then(() => {
+            db.close();
+            
+            const sortedModels = Object.entries(modelScores)
+                .sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
+                .map(([model]) => model);
+
+            let dynamicPool = sortedModels.slice(0, POOL_SIZE);
+            
+            if (dynamicPool.length < POOL_SIZE) {
+                availableModels.forEach(model => {
+                    if (!dynamicPool.includes(model)) {
+                        dynamicPool.push(model);
+                    }
+                });
+                dynamicPool = dynamicPool.slice(0, POOL_SIZE);
+            }
+
+            const reasoningText = `Scores: ${JSON.stringify(modelScores)}\nSelected dynamic pool: ${dynamicPool.join(', ')}`;
+            showReasoning(reasoningText, "Dynamic Model Selection");
+            resolve(dynamicPool);
+        });
+    });
+};
+
+const updateModelUsage = (taskId, modelPool) => {
+    return new Promise((resolve, reject) => {
+        think("Logging model usage for this task...", 2);
+        const db = getDb();
+        db.serialize(() => {
+            modelPool.forEach(model => {
+                const sql = `INSERT OR IGNORE INTO model_usage (task_id, model_name) VALUES (?, ?)`;
+                db.run(sql, [taskId, model], (err) => {
+                    if (err) console.error(colors.redText(`[DB ERROR] Failed to log model usage: ${err.message}`));
+                });
+            });
+            db.close(resolve);
+        });
+    });
+};
+
+// --- WebDevProofTracker (Modified for 2π Modulo Logic) ---
+class WebDevProofTracker {
+    constructor(initialPrompt, detectedFrameworks = [], taskId) {
+        this.taskId = taskId;
+        this.cycleIndex = 0; 
+        this.netWorthIndex = 0;
+        this.entropyRatio = (initialPrompt.length ^ Date.now()) / 1000;
+        this.frameworks = detectedFrameworks;
+        this.complexityScore = this.calculateComplexity(initialPrompt);
+        this.reasoningChain = [];
+    }
+
+    calculateComplexity(prompt) {
+        think("Calculating task complexity...", 1);
+        let score = 0;
+        const complexityKeywords = [
+            'authentication', 'database', 'api', 'middleware', 'component', 
+            'responsive', 'ssr', 'state management', 'deployment', 'docker'
+        ];
+        complexityKeywords.forEach(keyword => {
+            if (prompt.toLowerCase().includes(keyword)) score += 2;
+        });
+        
+        showReasoning(`Complexity score: ${score} (based on keywords: ${complexityKeywords.filter(k => prompt.toLowerCase().includes(k)).join(', ')})`, 'Complexity Analysis');
+        return Math.min(score, 10);
+    }
+
+    async crosslineEntropy(data) { // Made async
+        think("Analyzing output entropy and incorporating external factors...", 1);
+        const hash = crypto.createHash('sha256').update(data).digest('hex');
+        this.entropyRatio += parseInt(hash.substring(0, 8), 16);
+        
+        // Incorporate Google Ping RTT for external entropy
+        const pingRtt = await getGooglePingEntropy();
+        this.entropyRatio += pingRtt; // Add RTT to entropy ratio
+
+        showReasoning(`Entropy updated: ${this.entropyRatio} (hash: ${hash.substring(0, 16)}..., ping: ${pingRtt}ms)`, 'Entropy Analysis');
+    }
+
+    proofCycle(converged, frameworkUsed = '', reasoning = '') {
+        think(`Processing proof cycle: converged=${converged}, framework=${frameworkUsed}`, 1);
+        this.cycleIndex += 1;
+        this.netWorthIndex += converged ? 1 : -1;
+        if (frameworkUsed && !this.frameworks.includes(frameworkUsed)) {
+            this.frameworks.push(frameworkUsed);
+        }
+        
+        let finalConverged = converged;
+        
+        // ## 2π Modulo Logical Algorithm ##
+        const circularIndex = parseInt(genCircularIndex());
+        const dynamicThreshold = (circularIndex % 3) + 1; 
+
+        if (this.netWorthIndex >= dynamicThreshold) {
+            reasoning += ` Dynamic threshold (${dynamicThreshold}) met. Accelerating convergence.`;
+            finalConverged = true; 
+        }
+        
+        if (reasoning) {
+            this.reasoningChain.push({
+                cycle: this.cycleIndex,
+                converged: finalConverged,
+                framework: frameworkUsed,
+                reasoning,
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        showReasoning(`Cycle ${this.cycleIndex}: ${finalConverged ? 'CONVERGED' : 'DIVERGED'}, Net Worth: ${this.netWorthIndex}. Dynamic Threshold: ${dynamicThreshold}.`, 'Proof Cycle');
+        
+        return finalConverged;
+    }
+
+    getState() {
+        return {
+            cycleIndex: this.cycleIndex,
+            netWorthIndex: this.netWorthIndex,
+            entropyRatio: this.entropyRatio,
+            frameworks: this.frameworks,
+            complexityScore: this.complexityScore,
+            reasoningChain: this.reasoningChain
+        };
+    }
+}
+
+class WebDevOrchestrator {
+    constructor(prompt, options) {
+        this.initialPrompt = prompt;
+        this.options = options;
+        this.taskId = genRecursiveHash(prompt); 
+        this.detectedFrameworks = this.detectFrameworksFromPrompt(prompt);
+        this.proofTracker = new WebDevProofTracker(prompt, this.detectedFrameworks, this.taskId);
+        this.modelPool = WEB_DEV_MODELS; 
+        
+        think(`Initialized orchestrator for task: ${prompt.substring(0, 100)}...`, 0);
+        showReasoning(`Task ID (2π-indexed): ${this.taskId}`, 'Task ID Generation');
+    }
+
+    detectFrameworksFromPrompt(prompt) {
+        think("Analyzing prompt for framework indicators...", 1);
+        const frameworkKeywords = {
+            react: ['react', 'jsx', 'component', 'hook'],
+            vue: ['vue', 'composition api', 'vuex'],
+            angular: ['angular', 'typescript', 'rxjs'],
+            node: ['node', 'express', 'backend', 'api'],
+            nextjs: ['next.js', 'nextjs', 'ssr'],
+            python: ['python', 'flask', 'django', 'fastapi']
+        };
+
+        const detected = [];
+        for (const [framework, keywords] of Object.entries(frameworkKeywords)) {
+            if (keywords.some(keyword => prompt.toLowerCase().includes(keyword))) {
+                detected.push(framework);
+            }
+        }
+        
+        const result = detected.length > 0 ? detected : ['node', 'react'];
+        showReasoning(`Keywords found: ${Object.entries(frameworkKeywords).filter(([fw, keys]) => keys.some(k => prompt.toLowerCase().includes(k))).map(([fw]) => fw).join(', ')}`, 'Framework Detection');
+        return result;
+    }
+
+    getEnhancedSystemPrompt(framework) {
+        think(`Generating system prompt for ${framework}...`, 1);
+        const basePrompt = `You are a ${framework} expert. Create production-ready code with best practices.`;
+        
+        const enhancedPrompt = `${basePrompt}
+        
+CRITICAL REQUIREMENTS:
+- Generate COMPLETE, WORKING code - no placeholders or TODOs
+- Include all necessary imports and dependencies
+- Add proper error handling and validation
+- Use modern ES6+ syntax and latest framework features
+- Include responsive design considerations
+- Add security best practices
+
+User Task: `;
+
+        showReasoning(`Framework: ${framework}\nPrompt length: ${enhancedPrompt.length} chars`, 'System Prompt');
+        return enhancedPrompt;
+    }
+
+    async readProjectFile(filePath) {
+        try {
+            const content = fs.readFileSync(filePath, 'utf8');
+            think(`Successfully read file: ${filePath}`, 1);
+            return `--- START FILE: ${filePath} ---\n${content}\n--- END FILE: ${filePath} ---\n\n`;
+        } catch (error) {
+            console.error(colors.redText(`[FILE ERROR] Could not read file ${filePath}: ${error.message}`));
+            return `--- FILE READ ERROR: ${filePath} ---\n`;
+        }
+    }
+
+    async runOllama(model, currentPrompt, framework, iteration) {
+        return new Promise((resolve, reject) => {
+            const enhancedPrompt = this.getEnhancedSystemPrompt(framework) + currentPrompt;
+            
+            // Log the start of the model's thinking process
+            console.log(colors.blueText(`\n[${framework.toUpperCase()}-ITERATION-${iteration}]`), colors.yellowText(`${model} thinking...`));
+            
+            const command = `${OLLAMA_BIN} run ${model} "${enhancedPrompt.replace(/"/g, '\\"')}"`;
+            const child = exec(command);
+            let output = '';
+            
+            child.on('error', (err) => {
+                think(`Model ${model} encountered error: ${err.message}`, 2);
+                reject(`OLLAMA EXECUTION ERROR: ${err.message}`);
+            });
+            
+            child.stdout.on('data', data => {
+                // Token Streaming Verbose Output
+                if (VERBOSE_THINKING) {
+                    process.stdout.write(colors.grayText(`  ${data}`));
+                } else {
+                    process.stdout.write(colors.grayText(data));
+                }
+                output += data;
+            });
+            
+            child.stderr.on('data', data => {
+                if (VERBOSE_THINKING) {
+                    process.stderr.write(colors.redText(`  ERROR: ${data}`));
+                } else {
+                    process.stderr.write(colors.redText(data));
+                }
+            });
+            
+            child.on('close', code => {
+                if (code !== 0) {
+                    think(`Model ${model} exited with code ${code}`, 2);
+                    return reject(`Model ${model} exited with code ${code}`);
+                }
+                
+                think(`Model ${model} completed successfully`, 2);
+                resolve(output.trim());
+            });
+        });
+    }
+
+    async recursiveConsensus() {
+        think("Starting recursive consensus process (MAX PARALLELISM)...", 1);
+        
+        this.modelPool = await selectDynamicModels(this.detectedFrameworks[0] || 'node', this.proofTracker.complexityScore);
+        
+        let currentPrompt = this.initialPrompt;
+        let lastFusedOutput = "";
+        let converged = false;
+        let bestFramework = this.detectedFrameworks[0] || 'node';
+
+        for (let i = 0; i < 3 && !converged; i++) {
+            think(`Consensus iteration ${i + 1}/3...`, 2);
+            
+            // MAX PARALLELISM: Launch all models simultaneously using Promise.all
+            const promises = this.modelPool.map((model, index) => {
+                return this.runOllama(model, currentPrompt, bestFramework, i + 1).catch(e => {
+                    return e; // Capture error but don't stop Promise.all
+                });
+            });
+            
+            think("Waiting for all models to complete asynchronously...", 2);
+            const results = await Promise.all(promises);
+            const validResults = results.filter(r => 
+                typeof r === 'string' && r.length > 0 && !r.startsWith('OLLAMA EXECUTION ERROR')
+            );
+
+            if (validResults.length === 0) {
+                think("All models failed to produce valid output", 2);
+                return "Error: All models failed. Please check Ollama installation and model availability.";
+            }
+
+            think(`Fusing ${validResults.length} valid outputs...`, 2);
+            await this.proofTracker.crosslineEntropy(validResults.join('')); // AWAIT here
+            const fusedOutput = this.fuseWebOutputs(validResults);
+            
+            const convergenceReasoning = `Iteration ${i + 1}: ${fusedOutput === lastFusedOutput ? 'Outputs converged' : 'Outputs still diverging'}`;
+            const initialConverged = fusedOutput === lastFusedOutput;
+            
+            // Proof Cycle with Dynamic Math Logic
+            converged = this.proofTracker.proofCycle(initialConverged, bestFramework, convergenceReasoning);
+            
+            // --- NEW: Dynamic Slower Model Control Step ---
+            const currentProofState = this.proofTracker.getState();
+            let dynamicChanceMultiplier = 1.0;
+
+            // Influence by history (net worth) - if netWorthIndex is negative, increase chance.
+            // Clamp between -3 and 3 for reasonable influence
+            const netWorthInfluence = Math.max(-3, Math.min(3, currentProofState.netWorthIndex)); 
+            dynamicChanceMultiplier += (netWorthInfluence * -0.15); // -0.45 to +0.45 adjustment
+
+            // Influence by output length (token modulo) - longer output, slightly higher chance of review
+            const outputLength = fusedOutput.length;
+            dynamicChanceMultiplier += Math.min(0.3, outputLength / 3000); // Max 30% increase for very long outputs (e.g., 3000 chars)
+
+            // Influence by cycle (history modulo) - increase chance with more cycles
+            dynamicChanceMultiplier += (currentProofState.cycleIndex * 0.1); // 10% increase per cycle
+
+            // Clamp multiplier to a reasonable range, e.g., 0.1 to 2.5
+            dynamicChanceMultiplier = Math.max(0.1, Math.min(2.5, dynamicChanceMultiplier));
+
+            const effectiveSlowerModelChance = BASE_SLOWER_MODEL_ACTIVATION_CHANCE * dynamicChanceMultiplier;
+            const randomChance = getDeterministicRandomInt(this.taskId + String(i) + fusedOutput.length + currentProofState.netWorthIndex, 0, 100);
+
+            if (SLOWER_MODELS.length > 0 && randomChance < (effectiveSlowerModelChance * 100)) {
+                think(`Dynamic slower model chance (${effectiveSlowerModelChance.toFixed(2)}% based on history/token) triggered review (random: ${randomChance}%).`, 2);
+                
+                // Select slower model deterministically based on current state
+                const slowerModelSeed = this.taskId + String(i) + fusedOutput.length + currentProofState.netWorthIndex + currentProofState.entropyRatio;
+                const slowerModelIndex = getDeterministicRandomInt(slowerModelSeed, 0, SLOWER_MODELS.length - 1);
+                const selectedSlowerModel = SLOWER_MODELS[slowerModelIndex];
+                
+                const reviewPrompt = `Review and refine the following output based on the original task: "${this.initialPrompt}". Focus on accuracy, completeness, and best practices. Return ONLY the refined output.
+
+Output to review:
+\`\`\`
+${fusedOutput}
+\`\`\`
+
+Your refined output:`;
+                
+                think(`Engaging slower model (${selectedSlowerModel}) for review...`, 2);
+                const refinedOutput = await this.runOllama(selectedSlowerModel, reviewPrompt, bestFramework, i + 1 + "_review").catch(e => {
+                    console.error(colors.redText(`[SLOWER MODEL ERROR] ${e}`));
+                    return fusedOutput; // Fallback to original if slower model fails
+                });
+                
+                showReasoning(`Slower model (${selectedSlowerModel}) refined output.`, 'Slower Model Control');
+                currentPrompt = this.initialPrompt + `\n\nPrevious iteration (refined) output for improvement:\n${refinedOutput}`;
+                lastFusedOutput = refinedOutput; // Update lastFusedOutput with refined version
+            } else {
+                if (SLOWER_MODELS.length > 0) {
+                    think(`Slower model review skipped this iteration (dynamic chance: ${effectiveSlowerModelChance.toFixed(2)}%, random: ${randomChance}%).`, 2);
+                }
+                currentPrompt = this.initialPrompt + `\n\nPrevious iteration output for improvement:\n${fusedOutput}`;
+                lastFusedOutput = fusedOutput;
+            }
+            // --- END Dynamic Slower Model Control Step ---
+
+            if (converged) {
+                think("Consensus achieved! Dynamic threshold met or outputs converged.", 2);
+            } else {
+                think("No consensus yet, continuing to next iteration...", 2);
+            }
+        }
+
+        think("Consensus process completed", 1);
+        await updateModelUsage(this.taskId, this.modelPool); 
+        return lastFusedOutput;
+    }
+
+    fuseWebOutputs(results) {
+        think(`Fusing ${results.length} model outputs...`, 2);
+        
+        const scoredResults = results.map(output => {
+            let score = 0;
+            const codeBlocks = (output.match(/```/g) || []).length / 2;
+            score += codeBlocks * 10;
+            score += Math.min(output.length / 100, 50);
+            return { output, score };
+        });
+        
+        scoredResults.sort((a, b) => b.score - a.score);
+        const bestOutput = scoredResults.output; // FIX: Access 'output' property of the first element
+        
+        showReasoning(`Selected output with score ${scoredResults[0].score}`, 'Output Fusion');
+        return bestOutput;
+    }
+
+    parseEnhancedCodeBlocks(content) {
+        // CRITICAL FIX: Ensure content is a string before attempting to use it.
+        if (typeof content !== 'string' || content.length === 0) {
+            return [];
+        }
+        
+        const regex = /```(\w+)\s*([\s\S]*?)```/g;
+        const blocks = [];
+        let match;
+        
+        while ((match = regex.exec(content)) !== null) {
+            const language = match; // FIX: Capture group 1 is language
+            let code = match.trim(); // FIX: Capture group 2 is code
+            
+            blocks.push({ 
+                language: language, 
+                code: code,
+                framework: this.detectedFrameworks || 'node' // Use first detected framework
+            });
+        }
+        
+        if (blocks.length === 0 && content.trim().length > 0) {
+            blocks.push({
+                language: 'javascript', // Default to JS if no language specified but content exists
+                code: content.trim(),
+                framework: this.detectedFrameworks || 'node'
+            });
+        }
+        
+        return blocks;
+    }
+
+    async handleFileModification(filePath, newContent) {
+        think(`Applying modification to file: ${filePath}`, 1);
+        try {
+            fs.writeFileSync(filePath, newContent);
+            console.log(colors.boldGreen(`[SUCCESS] MODIFIED FILE: ${filePath}`));
+        } catch (error) {
+            console.error(colors.redText(`[ERROR] Failed to modify file ${filePath}: ${error.message}`));
+        }
+    }
+
+    async handleEnhancedCodeGeneration(content) {
+        const blocks = this.parseEnhancedCodeBlocks(content);
+        if (!blocks.length) {
+            think("No code blocks found in output", 1);
+            return;
+        }
+
+        // 1. Check for MODIFY_FILE directive
+        const modifyRegex = /^\s*MODIFY_FILE:\s*([^\s]+)\s*$/m;
+        const modifyMatch = content.match(modifyRegex);
+
+        if (modifyMatch) {
+            const targetPath = modifyMatch; // FIX: Capture group 1 for the path
+            const project = this.options.project || `webapp_${this.taskId.substring(0, 8)}`;
+            const projectPath = path.join(PROJECTS_DIR, project);
+            const fullPath = path.join(projectPath, targetPath);
+
+            if (blocks.length === 1) {
+                await this.handleFileModification(fullPath, blocks.code); // FIX: Access code from the first block
+            } else {
+                console.error(colors.redText(`[ERROR] MODIFY_FILE directive found, but output contains ${blocks.length} code blocks. Only one block is supported for modification.`));
+            }
+            return;
+        }
+
+        // 2. Default to NEW FILE generation
+        const project = this.options.project || `webapp_${this.taskId.substring(0, 8)}`;
+        const projectPath = path.join(PROJECTS_DIR, project);
+        
+        think(`Creating project directory: ${projectPath}`, 1);
+        fs.mkdirSync(projectPath, { recursive: true });
+
+        for (const [i, block] of blocks.entries()) {
+            const ext = block.language === 'javascript' ? 'js' : 
+                       block.language === 'typescript' ? 'ts' : 
+                       block.language === 'python' ? 'py' : 
+                       block.language === 'html' ? 'html' : 
+                       block.language === 'css' ? 'css' : 'txt';
+            
+            const fileName = `file_${i}.${ext}`;
+            const filePath = path.join(projectPath, fileName);
+            
+            fs.writeFileSync(filePath, block.code);
+            console.log(colors.greenText(`[SUCCESS] Generated: ${filePath}`));
+        }
+
+        console.log(colors.cyanText(`\n🎉 Project ${project} created successfully!`));
+        console.log(colors.cyanText(`📁 Location: ${projectPath}`));
+    }
+
+    async execute() {
+        think("Starting WebDev AI execution...", 0);
+        
+        // 1. Read file content if --file option is present
+        if (this.options.file && this.options.file.length > 0) { // Handle multiple files
+            let fileContents = "";
+            for (const filePath of this.options.file) {
+                fileContents += await this.readProjectFile(filePath);
+            }
+            this.initialPrompt = fileContents + this.initialPrompt;
+            showReasoning(`Injected file content from: ${this.options.file.join(', ')}`, 'File Context');
+        }
+
+        console.log(colors.boldCyan("\n🚀 WEBDEV AI CODE ENGINE STARTING..."));
+        console.log(colors.cyanText("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
+        
+        const finalOutput = await this.recursiveConsensus();
+        
+        console.log(colors.boldGreen("\n✅ TASK COMPLETED SUCCESSFULLY"));
+        console.log(colors.boldCyan("\n--- Final Web Development Output ---\n"));
+        console.log(finalOutput);
+        
+        think("Saving results and generating code...", 1);
+        await this.handleEnhancedCodeGeneration(finalOutput);
+        
+        console.log(colors.boldGreen("\n🎉 WEBDEV AI EXECUTION COMPLETED!"));
+        console.log(colors.cyanText("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
+    }
+}
+
+// Enhanced CLI with verbose thinking
+(async () => {
+    const args = process.argv.slice(2);
+    
+    // Parse options and collect positional arguments
+    const options = {};
+    const positionalArgs = [];
+    
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        if (arg.startsWith('--')) {
+            const parts = arg.slice(2).split('=');
+            const key = parts; // FIX: key is the first part
+            const value = parts.length > 1 ? parts.slice(1).join('=') : true;
+            
+            // Special handling for --file (can be multiple)
+            if (key === 'file') {
+                if (!options[key]) options[key] = [];
+                options[key].push(value === true ? args[i + 1] : value); // If no '=', next arg is value
+                if (value === true) i++; // Skip next argument if it was the value
+            } else {
+                options[key] = value;
+            }
+        } else {
+            positionalArgs.push(arg);
+        }
+    }
+    
+    const prompt = positionalArgs.join(' ');
+
+    if (!prompt) {
+        console.log(colors.redText('Error: No prompt provided. Usage: webdev-ai "create a react component for user dashboard"'));
+        process.exit(1);
+    }
+
+    console.log(colors.boldMagenta("\n🧠 WEBDEV AI - VERBOSE THINKING MODE"));
+    console.log(colors.magentaText("========================================\n"));
+    
+    const orchestrator = new WebDevOrchestrator(prompt, options);
+    await orchestrator.execute();
+})();
+EOF_JS
+
+    log_event "SUCCESS" "Enhanced orchestrator with dynamic math logic and max parallelism created"
+}
+
+# --- Code Processor Python Script (FULL CONTENT, with minor fixes) ---
+setup_code_processor() {
+    thinking "Setting up Python code processor..." 1
+    cat > "$CODE_PROCESSOR_PY" <<'EOF_PY'
+#!/usr/bin/env python3
+import sys
+import os
+import subprocess
+from pygments import highlight
+from pygments.lexers import get_lexer_by_name, guess_lexer
+from pygments.formatters import Terminal256Formatter
+
+def run_formatter(tool, code):
+    """Runs an external formatting tool on the code."""
+    try:
+        if tool == 'black':
+            # Black is for Python
+            process = subprocess.run(['black', '-'], input=code.encode('utf-8'), capture_output=True, check=True)
+            return process.stdout.decode('utf-8'), None
+        elif tool == 'autopep8':
+            # autopep8 is for Python
+            process = subprocess.run(['autopep8', '-'], input=code.encode('utf-8'), capture_output=True, check=True)
+            return process.stdout.decode('utf-8'), None
+        elif tool == 'shfmt':
+            # shfmt is for shell scripts
+            process = subprocess.run(['shfmt', '-i', '4', '-ci', '-'], input=code.encode('utf-8'), capture_output=True, check=True)
+            return process.stdout.decode('utf-8'), None
+        # Add other formatters here (e.g., prettier for JS/TS/CSS)
+        return code, None
+    except subprocess.CalledProcessError as e:
+        return code, f"Formatter {tool} failed: {e.stderr.decode('utf-8').strip()}"
+    except FileNotFoundError:
+        return code, f"Formatter {tool} not found. Skipping."
+    except Exception as e:
+        return code, f"Formatter {tool} error: {str(e)}"
+
+def run_analysis(tool, file_path):
+    """Runs a static analysis tool (like pylint) on the file."""
+    try:
+        if tool == 'pylint':
+            # Pylint is for Python
+            process = subprocess.run(['pylint', file_path], capture_output=True, check=False)
+            # Filter out the summary and keep only the errors/warnings
+            output = process.stdout.decode('utf-8')
+            analysis_output = "\n".join([line for line in output.splitlines() if not line.startswith('---') and not line.startswith('Your code has been rated')])
+            return analysis_output
+        # Add other analyzers here (e.g., eslint)
+        return ""
+    except FileNotFoundError:
+        return f"Analyzer {tool} not found. Skipping."
+    except Exception as e:
+        return f"Analyzer {tool} error: {str(e)}"
+
+def process_code_file(file_path, file_extension):
+    """Reads, formats, analyzes, and highlights a code file."""
+    try:
+        with open(file_path, 'r') as f:
+            code = f.read()
+    except Exception as e:
+        print(f"\x1b[31m[ERROR] Could not read file: {file_path}. {str(e)}\x1b[0m", file=sys.stderr)
+        return
+
+    # 1. Determine Language and Lexer
+    if file_extension == 'py':
+        lang = 'python'
+        formatter_tools = ['black', 'autopep8']
+        analyzer_tools = ['pylint']
+    elif file_extension == 'sh':
+        lang = 'bash'
+        formatter_tools = ['shfmt']
+        analyzer_tools = []
+    elif file_extension in ['js', 'ts', 'jsx', 'tsx', 'css', 'html']:
+        lang = file_extension
+        formatter_tools = [] # Prettier/ESLint would go here
+        analyzer_tools = []
+    else:
+        lang = 'text'
+        formatter_tools = []
+        analyzer_tools = []
+
+    # 2. Formatting
+    formatted_code = code
+    format_log = []
+    for tool in formatter_tools:
+        formatted_code, error = run_formatter(tool, formatted_code)
+        if error:
+            format_log.append(error)
+        else:
+            format_log.append(f"Formatter {tool} applied successfully.")
+
+    # 3. Analysis
+    analysis_log = []
+    for tool in analyzer_tools:
+        analysis_output = run_analysis(tool, file_path)
+        if analysis_output:
+            analysis_log.append(f"\x1b[1;33m--- {tool.upper()} ANALYSIS ---\x1b[0m\n{analysis_output}")
+
+    # 4. Syntax Highlighting
+    try:
+        lexer = get_lexer_by_name(lang, stripall=True)
+    except:
+        lexer = guess_lexer(formatted_code)
+        
+    formatter = Terminal256Formatter(style='monokai')
+    highlighted_code = highlight(formatted_code, lexer, formatter)
+
+    # 5. Output Results
+    print(f"\n\x1b[1;36m--- CODE ANALYSIS & FORMATTING REPORT ---\x1b[0m")
+    print(f"\x1b[34mFile:\x1b[0m {file_path}")
+    print(f"\x1b[34mLanguage:\x1b[0m {lang}")
+    print(f"\x1b[34mFormatting Log:\x1b[0m {'; '.join(format_log)}")
+    
+    if analysis_log:
+        print(f"\n\x1b[1;31m--- STATIC ANALYSIS FINDINGS ---\x1b[0m")
+        print('\n'.join(analysis_log))
+    
+    print(f"\n\x1b[1;32m--- SYNTAX HIGHLIGHTED CODE ---\x1b[0m")
+    print(highlighted_code)
+    print(f"\x1b[1;36m-------------------------------------------\x1b[0m")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: code_processor.py <file_path> <file_extension>", file=sys.stderr)
+        sys.exit(1)
+    
+    file_path = sys.argv # FIX: Get the first argument
+    file_extension = sys.argv # FIX: Get the second argument
+    
+    process_code_file(file_path, file_extension)
+EOF_PY
+    chmod +x "$CODE_PROCESSOR_PY"
+    log_event "SUCCESS" "Python code processor script created: $CODE_PROCESSOR_PY"
+}
+
+# --- NEW CODE REPAIR TOOL ---
+tool_code_repair() {
+    local file_pattern="$1" # Now accepts a pattern
+    local base_dir="${PROJECTS_DIR}/$(cat "$SESSION_FILE" 2>/dev/null || echo ".")" # Use current project dir if session active
+    base_dir="${base_dir%/.}"; # Remove trailing /. if present
+
+    log_event "ANALYSIS" "Starting Code Repair Agent for pattern: '$file_pattern' in '$base_dir'"
+    
+    local matched_files=()
+    # Use find_files_by_regex to get a list of files
+    IFS=$'\n' read -r -d '' -a matched_files < <(find_files_by_regex "$base_dir" "$file_pattern" 10 && printf '\0')
+
+    if [ ${#matched_files[@]} -eq 0 ]; then
+        log_event "ERROR" "No files found matching pattern: '$file_pattern' in '$base_dir'"
+        echo "${COLOR_RED}ERROR: No files found matching pattern: '$file_pattern' in '$base_dir'${COLOR_RESET}"
+        return 1
+    fi
+
+    log_event "INFO" "Found ${#matched_files[@]} files for repair: ${matched_files[*]}"
+    echo "${COLOR_YELLOW}Found ${#matched_files[@]} files for repair:${COLOR_RESET}"
+    for f in "${matched_files[@]}"; do
+        echo "  - $f"
+    done
+
+    if ! confirm_action "Proceed with AI-powered repair for these ${#matched_files[@]} files?"; then
+        log_event "WARN" "AI repair cancelled by user."
+        echo "${COLOR_YELLOW}AI repair cancelled.${COLOR_RESET}"
+        return 1
+    fi
+
+    for file_path in "${matched_files[@]}"; do
+        local file_extension="${file_path##*.}"
+        log_event "ANALYSIS" "Processing file for repair: $file_path"
+
+        # 1. Run Static Analysis and Formatting
+        thinking "Running static analysis and formatting pipeline for $file_path..."
+        local analysis_output
+        
+        local temp_report_file
+        temp_report_file=$(mktemp)
+        
+        if ! python3 "$CODE_PROCESSOR_PY" "$file_path" "$file_extension" > "$temp_report_file" 2>&1; then
+            log_event "ERROR" "Python code processor failed for $file_path. Check dependencies."
+            cat "$temp_report_file" >&2
+            rm "$temp_report_file"
+            continue # Continue to next file
+        fi
+
+        analysis_output=$(cat "$temp_report_file")
+        rm "$temp_report_file"
+
+        local formatted_code
+        local analysis_findings
+        
+        formatted_code=$(echo "$analysis_output" | sed -n '/--- SYNTAX HIGHLIGHTED CODE ---/,$p' | sed '1,2d' | sed '$d' | sed '/^$/d' || true)
+        analysis_findings=$(echo "$analysis_output" | sed -n '/--- STATIC ANALYSIS FINDINGS ---/,/--- SYNTAX HIGHLIGHTED CODE ---/p' | sed '1d;$d' || true)
+
+        if [[ -z "$analysis_findings" ]]; then
+            log_event "SUCCESS" "File $file_path is clean! Only formatting applied."
+            if confirm_action "Apply formatting changes to $file_path?"; then
+                echo "$formatted_code" > "$file_path"
+                log_event "SUCCESS" "File $file_path formatted successfully."
+            fi
+            continue # Continue to next file
+        fi
+
+        # 2. Construct AI Repair Prompt
+        log_event "WARN" "Analysis found issues in $file_path. Delegating to Ollama for intelligent repair."
+        local repair_prompt="The following code has been formatted and analyzed by static tools. Your task is to intelligently fix the issues and return ONLY the corrected code block.
+
+File: $file_path
+Language: $file_extension
+
+--- STATIC ANALYSIS REPORT ---
+$analysis_findings
+--- END REPORT ---
+
+--- CODE TO REPAIR ---
+\`\`\`$file_extension
+$formatted_code
+\`\`\`
+
+Your corrected code (start with \`\`\`$file_extension):"
+
+        # 3. Call Ollama directly for Repair
+        log_event "EXECUTE" "Calling Ollama for intelligent code repair for $file_path..."
+        local repaired_response
+        local code_repair_model=$(get_config code_repair_model || echo "code:latest") 
+        repaired_response=$(ollama run "$code_repair_model" "$repair_prompt" 2>&1 || true)
+        
+        local repaired_code
+        repaired_code=$(echo "$repaired_response" | sed -n '/```/,$p' | sed '1d;$d' | sed '/^$/d' || true)
+
+        if [[ -z "$repaired_code" ]]; then
+            log_event "ERROR" "AI failed to return a valid code block for repair for $file_path."
+            echo "${COLOR_RED}ERROR: AI failed to return a valid code block for repair for $file_path.${COLOR_RESET}" >&2
+            echo "AI Response: $repaired_response" >&2
+            continue # Continue to next file
+        fi
+
+        # 4. Apply Final Repair
+        log_event "ANALYSIS" "AI Repair complete for $file_path. Reviewing final code."
+        echo -e "${COLOR_GREEN}--- AI REPAIRED CODE (Review for $file_path) ---${COLOR_RESET}" >&2
+        echo "$repaired_code" > "$file_path.repaired.tmp"
+        _process_code_file "$file_path.repaired.tmp" "$file_extension" # Re-run processor for final highlight
+
+        if confirm_action "Apply AI-repaired code to $file_path?"; then
+            echo "$repaired_code" > "$file_path"
+            log_event "SUCCESS" "File $file_path repaired and updated successfully."
+        else
+            log_event "WARN" "AI repair cancelled for $file_path. Repaired code saved to $file_path.repaired.tmp"
+            echo "${COLOR_YELLOW}AI repair cancelled for $file_path. Repaired code saved to $file_path.repaired.tmp${COLOR_RESET}"
+        fi
+        
+        rm -f "$file_path.repaired.tmp"
+    done
+    log_event "SUCCESS" "Code repair process completed for all matched files."
+    return 0
+}
+
+# --- Installation Function (MODIFIED) ---
+install_webdev_ai() {
+    echo -e "\n${COLOR_BRIGHT}${COLOR_CYAN}🚀 INSTALLING WEBDEV AI CODE ENGINE${COLOR_RESET}"
+    echo -e "${COLOR_GRAY}=========================================${COLOR_RESET}"
+    
+    # Ensure all base directories exist (aligned with new script's mkdir -p for essential dirs)
+    mkdir -p "$AI_HOME" "$PROJECTS_DIR" "$DB_DIR" "$TEMPLATES_DIR" "$SCRIPTS_DIR" "$LOG_DIR"
+    
+    # Check and install system dependencies (updated function)
+    check_dependencies
+    
+    # Initialize databases (updated function with simplified schema)
+    init_databases
+    
+    # Setup orchestrator (retains full content)
+    setup_orchestrator
+    
+    # Setup code processor (retains full content)
+    setup_code_processor
+
+    # Set default config values if not present
+    local default_configs=(
+        "code_repair_model:code:latest"
+        "slower_models:llama3:70b,mixtral:8x7b" # Default slower models
+        "temperature:0.7"
+        "top_p:0.9"
+    )
+
+    for config in "${default_configs[@]}"; do
+        local key="${config%:*}"
+        local value="${config#*:}"
+        if [[ -z "$(get_config "$key")" ]]; then
+            set_config "$key" "$value"
+        fi
+    done
+    
+    echo -e "\n${COLOR_BRIGHT}${COLOR_GREEN}✅ INSTALLATION COMPLETED SUCCESSFULLY!${COLOR_RESET}"
+    echo -e "${COLOR_BRIGHT}${COLOR_YELLOW}💡 Usage examples:${COLOR_RESET}"
+    echo "  webdev-ai 'create a React component for user dashboard'"
+    echo "  webdev-ai --start my-project"
+    echo "  webdev-ai status"
+    echo "  webdev-ai --verbose  # Toggle thinking mode"
+    echo "  webdev-ai repair ./src/broken_script.py"
+}
+
+# --- NEW HELPER: Find files by regex ---
+find_files_by_regex() {
+    local base_dir="$1"
+    local pattern="$2"
+    local max_depth="${3:-10}" # Default max depth to 10 to prevent excessive searching
+    
+    if [[ ! -d "$base_dir" ]]; then
+        log_event "ERROR" "Base directory not found for regex search: $base_dir"
+        return 1
+    fi
+
+    log_event "DEBUG" "Searching for files matching regex '$pattern' in '$base_dir' (max depth $max_depth)"
+    # Use -regextype posix-extended for broader regex support
+    # -maxdepth to prevent searching entire file system
+    # -print0 for null-separated output to handle filenames with spaces/special chars
+    find "$base_dir" -maxdepth "$max_depth" -type f -regextype posix-extended -regex "$pattern" -print0 2>/dev/null || true
+}
+
+# --- AI Task Runner (Fusion of Triumvirate and WebDev-AI) ---
+run_webdev_task() {
+    local full_prompt="$1"
+    shift # Remove the full_prompt from arguments
+    local file_patterns=() # Now an array for multiple patterns
+    local project_name_for_orchestrator=""
+    local orchestrator_args=()
+
+    # Parse remaining arguments for --file and --project (for the orchestrator)
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --file)
+                if [[ -z "${2:-}" ]]; then log_event "ERROR" "Error: --file requires a path or regex pattern."; return 1; fi
+                file_patterns+=("$2") # Collect all file patterns
+                shift 2
+                ;;
+            --project)
+                if [[ -z "${2:-}" ]]; then log_event "ERROR" "Error: --project requires a name."; return 1; fi
+                project_name_for_orchestrator="$2"
+                orchestrator_args+=("--project=$project_name_for_orchestrator")
+                shift 2
+                ;;
+            *) # Unknown args, just pass them through if any
+                orchestrator_args+=("$1")
+                shift
+                ;;
+        esac
+    done
+    
+    # --- NEW: Resolve file patterns to actual file paths ---
+    local resolved_file_paths=()
+    local base_search_dir="${PROJECTS_DIR}/$(cat "$SESSION_FILE" 2>/dev/null || echo ".")"
+    base_search_dir="${base_search_dir%/.}"; # Remove trailing /. if present
+
+    if [ ${#file_patterns[@]} -gt 0 ]; then
+        log_event "INFO" "Resolving file patterns: ${file_patterns[*]} in $base_search_dir"
+        for pattern in "${file_patterns[@]}"; do
+            local matched_by_pattern=()
+            IFS=$'\n' read -r -d '' -a matched_by_pattern < <(find_files_by_regex "$base_search_dir" "$pattern" 10 && printf '\0')
+            if [ ${#matched_by_pattern[@]} -eq 0 ]; then
+                log_event "WARN" "No files found for pattern: '$pattern' in '$base_search_dir'"
+                echo "${COLOR_YELLOW}WARNING: No files found for pattern: '$pattern' in '$base_search_dir'${COLOR_RESET}"
+            else
+                log_event "DEBUG" "Pattern '$pattern' matched ${#matched_by_pattern[@]} files."
+                resolved_file_paths+=("${matched_by_pattern[@]}")
+            fi
+        done
+    fi
+
+    # Add resolved file paths to orchestrator arguments
+    for f_path in "${resolved_file_paths[@]}"; do
+        orchestrator_args+=("--file=$f_path")
+    done
+    # --- END NEW: Resolve file patterns ---
+
+    # --- NEW: Prompt Length Warning ---
+    local prompt_length=${#full_prompt}
+    local max_prompt_length=1000 # Define a reasonable max length
+    if (( prompt_length > max_prompt_length )); then
+        log_event "WARN" "Prompt is very long (${prompt_length} characters). This may cause AI models to hang or produce poor results. Consider shortening it."
+        echo "${COLOR_YELLOW}⚠️ WARNING: Your prompt is very long (${prompt_length} characters). This may cause AI models to hang or produce poor results. Consider shortening it.${COLOR_RESET}"
+        # Optionally, you could exit here or truncate the prompt, but for now, just warn.
+    fi
+    # --- END NEW: Prompt Length Warning ---
+
+    log_event "ANALYSIS" "User request: $full_prompt"
+
+    # If a session was started via --start, ensure the project name is passed to the orchestrator
+    if [ -f "$SESSION_FILE" ] && [[ -z "$project_name_for_orchestrator" ]]; then
+        local session_proj=$(cat "$SESSION_FILE")
+        thinking "Active session detected: $session_proj. Passing to orchestrator."
+        orchestrator_args+=("--project=$session_proj")
+    fi
+
+    log_event "EXECUTE" "Delegating to Node.js Orchestrator for parallel execution..."
+    
+    # Set environment variables for Node.js
+    export AI_DATA_DB="$AI_DATA_DB"
+    export PROJECTS_DIR
+    export CODE_PROCESSOR_PY
+    export VERBOSE_THINKING
+    export SHOW_REASONING
+    export OLLAMA_BIN # Ensure ollama path is passed
+    export SLOWER_MODELS=$(get_config slower_models || echo "llama3:70b,mixtral:8x7b") # Export slower models config
+
+    local final_response
+    # The Node.js orchestrator handles the full Triumvirate-style loop internally
+    final_response=$(node "$ORCHESTRATOR_FILE" "$full_prompt" "${orchestrator_args[@]}" 2>&1)
+    local exit_code=$?
+
+    if [[ $exit_code -ne 0 ]]; then
+        log_event "ERROR" "Node.js Orchestrator failed with exit code $exit_code"
+        echo "$final_response" >&2
+        return 1
+    fi
+    
+    # Extract task_id from orchestrator output for logging
+    local task_id_match
+    task_id_match=$(echo "$final_response" | grep 'Task ID (2π-indexed):' | awk '{print $NF}' || true)
+    local task_id="${task_id_match:-$(hash_string "$full_prompt" | cut -c1-16)}"
+    local project_dir="$PROJECTS_DIR/task_$task_id"
+    
+    if ! mkdir -p "$project_dir"; then
+        log_event "ERROR" "Failed to create project directory: $project_dir"
+        return 1
+    fi
+    
+    echo "User Prompt: $full_prompt" > "$project_dir/summary.txt"
+    echo -e "\\n--- Final Agent Response ---\\n" >> "$project_dir/summary.txt"
+    echo "$final_response" >> "$project_dir/summary.txt"
+    log_event "SUCCESS" "Full task log and summary saved in: $project_dir"
+
+    echo -e "\\n${COLOR_GREEN}✅ === AI TASK COMPLETE ===${COLOR_RESET}" >&2
+    echo -e "${COLOR_GREEN}📝 Final Response:${COLOR_RESET}" >&2
+    # The orchestrator already prints the final output, so no need to re-parse here.
+    # Just ensure the full output is visible.
+    echo "$final_response"
+}
+
+# --- MAIN CLI DISPATCHER ---
+main() {
+    local start_time=$(date +%s)
+    log_event "DEBUG" "Script started: WebDev Code-Engine v8.3.5"
+
+    # Initial directory setup (covers essential directories as per new script)
+    mkdir -p "$AI_HOME" "$PROJECTS_DIR" "$DB_DIR" "$TEMPLATES_DIR" "$SCRIPTS_DIR" "$LOG_DIR"
+    
+    # Always perform dependency check and DB/orchestrator setup if not installed
+    # This ensures a runnable state even without explicit --install
+    check_dependencies
+    init_databases
+    setup_orchestrator
+    setup_code_processor
+
+    local command_found=false
+    local prompt_args=()
+    local file_patterns_for_orchestrator=() # Collects all --file patterns
+    local project_name_for_session="" # To capture --start project_name
+
+    # First pass: Parse all flags and special commands
+    local args_copy=("$@") # Create a copy to iterate and shift
+    set -- "${args_copy[@]}" # Reset positional parameters for iteration
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --start)
+                if [[ -n "${2:-}" && ! "$2" =~ ^-- ]]; then
+                    project_name_for_session="$2"
+                    shift 2
+                else
+                    read -p "Project/Repo name: " project_name_for_session
+                    shift
+                fi
+                echo "$project_name_for_session" > "$SESSION_FILE"
+                log_event "SESSION" "Started web development session for $project_name_for_session"
+                thinking "Session started for project: $project_name_for_session" 0
+                command_found=true
+                ;;
+            --stop)
+                [ -f "$SESSION_FILE" ] && local proj=$(cat "$SESSION_FILE") && log_event "SESSION" "Stopped session for $proj"
+                rm -f "$SESSION_FILE"
+                thinking "Session stopped" 0
+                command_found=true
+                shift
+                ;;
+            --verbose|--think)
+                export VERBOSE_THINKING="true"
+                export SHOW_REASONING="true"
+                echo "Verbose thinking: ENABLED"
+                command_found=true
+                shift
+                ;;
+            --quiet)
+                export VERBOSE_THINKING="false"
+                export SHOW_REASONING="false"
+                echo "Verbose thinking: DISABLED"
+                command_found=true
+                shift
+                ;;
+            --install|--setup)
+                install_webdev_ai
+                command_found=true
+                shift
+                ;;
+            --config)
+                local config_subcommand="$2"
+                shift 2
+                case "$config_subcommand" in
+                    "set")
+                        if [[ -z "${1:-}" || -z "${2:-}" ]]; then log_event "ERROR" "Usage: webdev-ai --config set <key> <value>"; return 1; fi
+                        set_config "$1" "$2"
+                        shift 2
+                        ;;
+                    "get")
+                        if [[ -z "${1:-}" ]]; then log_event "ERROR" "Usage: webdev-ai --config get <key>"; return 1; fi
+                        get_config "$1"
+                        shift
+                        ;;
+                    "view") view_config; shift ;;
+                    *) log_event "ERROR" "Usage: webdev-ai --config [set|get|view] [key] [value]"; return 1 ;;
+                esac
+                command_found=true
+                ;;
+            --hash)
+                local hash_subcommand="$2"
+                shift 2
+                case "$hash_subcommand" in
+                    "file")
+                        if [[ -z "${1:-}" ]]; then log_event "ERROR" "Usage: webdev-ai --hash file <path>"; return 1; fi
+                        local file_hash=$(hash_file_content "$1")
+                        record_hash "file" "$1" "$file_hash"
+                        shift
+                        ;;
+                    "prompt")
+                        if [[ -z "${1:-}" ]]; then log_event "ERROR" "Usage: webdev-ai --hash prompt \"<text>\""; return 1; fi
+                        local prompt_hash=$(hash_string "$1")
+                        record_hash "prompt" "$1" "$prompt_hash"
+                        shift
+                        ;;
+                    "view") view_hash_index; shift ;;
+                    *) log_event "ERROR" "Usage: webdev-ai --hash [file|prompt|view] [target]"; return 1 ;;
+                esac
+                command_found=true
+                ;;
+            repair)
+                if [[ -z "${2:-}" ]]; then log_event "ERROR" "Usage: webdev-ai repair <file_pattern>"; return 1; fi
+                tool_code_repair "$2" # Pass the pattern directly
+                command_found=true
+                shift 2
+                ;;
+            status)
+                enhanced_status
+                command_found=true
+                shift
+                ;;
+            --file) # This is a context file for the AI, collect its pattern
+                if [[ -z "${2:-}" ]]; then log_event "ERROR" "Error: --file requires a path or regex pattern."; return 1; fi
+                file_patterns_for_orchestrator+=("$2")
+                shift 2
+                ;;
+            --help|-h)
+                show_help
+                command_found=true
+                shift
+                ;;
+            *) # Collect remaining arguments as prompt
+                prompt_args+=("$1")
+                shift
+                ;;
+        esac
+    done
+
+    # If no specific command was found, and there are prompt arguments, run as a task
+    if ! $command_found && [ ${#prompt_args[@]} -gt 0 ]; then
+        local full_prompt=$(echo "${prompt_args[*]}" | xargs)
+        run_webdev_task "$full_prompt" "${file_patterns_for_orchestrator[@]/#/--file=}" # Pass file patterns as --file args
+    elif ! $command_found; then
+        show_help # If no command and no prompt, show help
+    fi
+
+    local end_time=$(date +%s)
+    local duration=$((end_time - start_time))
+    log_event "DEBUG" "Script completed in ${duration}s"
+}
+
+show_help() {
+    cat << EOF
+${COLOR_GREEN}WebDev Code-Engine v8.3.5 - Unified Hybrid Agent${COLOR_RESET}
+
+${COLOR_CYAN}Description:${COLOR_RESET} Advanced AI agent system with hybrid execution (Node.js/Python), dynamic model selection, and comprehensive logging. Now with deterministic randomness, dynamic slower AI control (modulated by token length and history), external "double entropy" from Google ping RTT, robust CLI argument parsing, and regex file access for repair and context.
+
+${COLOR_CYAN}Usage:${COLOR_RESET}
+  webdev-ai [OPTIONS] "<your prompt>"      - Run AI Task (NOTE: Always quote your prompt!)
+  webdev-ai repair <file_pattern>          - Run static analysis and AI-powered code repair on files matching pattern
+  webdev-ai --verbose                      - Enable verbose debugging
+  webdev-ai --quiet                        - Disable verbose debugging
+  webdev-ai --install                      - Install dependencies and orchestrator
+  webdev-ai --setup                        - Alias for --install
+  webdev-ai --config [set|get|view]        - Configuration management
+  webdev-ai --hash [file|prompt|view]      - Content hashing utilities
+  webdev-ai status                         - View system status
+  webdev-ai --start [project]              - Start a project session (project name is optional)
+  webdev-ai --stop                         - Stop the current session
+  webdev-ai --file <file_pattern>          - Provide file(s) matching pattern as context for the AI task
+  webdev-ai --help                         - Show this help
+
+${COLOR_CYAN}Configuration Options (via --config set <key> <value>):${COLOR_RESET}
+  code_repair_model: The Ollama model to use for code repair (default: code:latest)
+  slower_models: Comma-separated list of Ollama models for review/control (default: llama3:70b,mixtral:8x7b)
+  temperature: AI model temperature (default: 0.7)
+  top_p: AI model top_p (default: 0.9)
+
+${COLOR_CYAN}Examples:${COLOR_RESET}
+  webdev-ai "Create a Python Flask API with a /status endpoint"
+  webdev-ai repair "src/.*\.py$"
+  webdev-ai --start my-new-app "Create a simple React component for a user profile."
+  webdev-ai --config set slower_models "llama3:70b,gemma:7b"
+  webdev-ai --hash file "./src/main.js"
+  webdev-ai --file "src/components/.*\.jsx$" "Refactor these React components to use hooks."
+
+${COLOR_CYAN}Log File:${COLOR_RESET} (Events logged to database: $AI_DATA_DB)
+${COLOR_CYAN}Data Directory:${COLOR_RESET} $AI_HOME
+EOF
+}
+
+# --- ENTRY POINT WITH COMPREHENSIVE ERROR HANDLING ---
+if [[ "${BASH_SOURCE}" == "${0}" ]]; then
+    if [[ -z "$HOME" ]]; then
+        echo "ERROR: HOME environment variable not set" >&2
+        exit 1
+    fi
+
+    # Ensure AI_HOME exists before logging
+    mkdir -p "$AI_HOME" "$DB_DIR" "$SCRIPTS_DIR"
+
+    if main "$@"; then
+        exit 0
+    else
+        exit 1
+    fi
+fi
