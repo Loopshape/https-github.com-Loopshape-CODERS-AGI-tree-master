@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nemodian 2244-1 :: AI Code Editor with HTML Render</title>
+
+
+
+<!-- Prism & js-beautify via CDN 
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify-css.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify-html.js"></script>
+<!-- jQuery + GSAP 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+-->
+<link href="/storage/emulated/0/.nemodian/libs/prism-tomorrow.min.css" rel="stylesheet"/>
+<script src="/storage/emulated/0/.nemodian/libs/prism.min.js"></script>
+<script src="/storage/emulated/0/.nemodian/libs/prism-clike.min.js"></script>
+<script src="/storage/emulated/0/.nemodian/libs/prism-javascript.min.js"></script>
+<script src="/storage/emulated/0/.nemodian/libs/prism-markup.min.js"></script>
+<script src="/storage/emulated/0/.nemodian/libs/prism-css.min.js"></script>
+<script src="/storage/emulated/0/.nemodian/libs/prism-json.min.js"></script>
+
+<script src="/storage/emulated/0/.nemodian/libs/beautify.js"></script>
+<script src="/storage/emulated/0/.nemodian/libs/beautify-css.js"></script>
+<script src="/storage/emulated/0/.nemodian/libs/beautify-html.js"></script>
+
+<script src="/storage/emulated/0/.nemodian/libs/jquery.min.js"></script>
+<script src="/storage/emulated/0/.nemodian/libs/gsap.min.js"></script>
+
+<style>
+:root{
+  --baseline: 1.5em;
+  --header-h: calc(var(--baseline) * 1.6);
+  --status-h: var(--baseline);
+  --footer-h: calc(var(--baseline) * 2);
+  --font-size: 13px;
+  --ln-width: 50px;
+  --theme-bg: #3a3c31;
+  --panel: #313328;
+  --header-bg: #2e3026;
+  --status-bg: #22241e;
+  --accent: #4ac94a;
+  --muted: #999966;
+  --err: #a03333;
+  --warn: #f0ad4e;
+  --hover-blue: #3366a0;
+  --info: #5bc0de;
+}
+
+/* Base */
+html, body {height:100%; margin:0; padding:0; font-family:'Fira Code', monospace; font-size:var(--font-size); line-height:var(--baseline); background:var(--theme-bg); color:#f0f0e0;}
+body {display:grid; grid-template-rows: var(--header-h) var(--status-h) 1fr var(--footer-h); overflow:hidden;}
+
+/* Header */
+header{grid-row:1; grid-column:1/-1; background:var(--header-bg); border-bottom:1px solid #22241e; display:flex; align-items:center; justify-content:space-between; padding:6px 12px;}
+header .left {display:flex; gap:12px; align-items:center;}
+header .right {display:flex; gap:8px; align-items:center;}
+button{background:var(--err); border:1px solid var(--err); color:#f0f0e0; padding:6px 8px; cursor:pointer; font-size:12px; transition:all .2s; border-radius:3px;}
+button:hover{background:var(--hover-blue); border-color:var(--hover-blue);}
+button.success{background:var(--accent); border-color:var(--accent);}
+button.info{background:var(--info); border-color:var(--info);}
+button.warn{background:var(--warn); border-color:var(--warn); color:#3a3c31;}
+
+/* Status */
+#status-bar{grid-row:2; grid-column:1/-1; background:var(--status-bg); display:flex; justify-content:space-between; align-items:center; padding:4px 12px; font-size:12px;}
+#status-bar.error{background:var(--err); color:#f0f0e0;}
+#status-bar.warn{background:var(--warn); color:#3a3c31;}
+#status-bar.success{background:var(--accent); color:#3a3c31;}
+#status-bar.info{background:var(--info); color:#3a3c31;}
+
+/* Editor stage */
+#editor-stage{grid-row:3; grid-column:1/-1; display:grid; grid-template-columns:240px 1fr; background:var(--theme-bg); overflow:hidden;}
+#left-panel{width:240px; background:var(--panel); border-right:1px solid #22241e; padding:10px; box-sizing:border-box; display:flex; flex-direction:column; gap:8px; transform:translateX(0);}
+#left-panel.open{transform:translateX(0);}
+#editor-outer{position:relative; overflow:hidden; background:transparent;}
+#line-gutter{position:absolute; left:0; top:0; bottom:0; width:var(--ln-width); background:var(--panel); color:var(--muted); padding:10px 8px; box-sizing:border-box; overflow:auto; font-variant-numeric:tabular-nums;}
+.highlighting{position:absolute; left:0; right:0; top:0; bottom:0; pointer-events:none; overflow:auto; padding:10px; box-sizing:border-box; white-space:pre-wrap; word-break:break-word; line-height:var(--baseline); padding-left: calc(var(--ln-width)+12px);}
+.highlighting pre{margin:0;}
+#editor{position:absolute; left:var(--ln-width); right:12px; top:0; bottom:0; padding:10px; margin:0; box-sizing:border-box; overflow:auto; background:transparent; color:transparent; caret-color:var(--accent); font-family:inherit; font-size:var(--font-size); line-height:var(--baseline); border:0; outline:0; resize:none; white-space:pre-wrap; word-break:break-word; z-index:20; padding-left:calc(var(--ln-width)+12px);}
+
+/* Footer */
+footer{grid-row:4; grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; padding:6px 12px; background:var(--header-bg); border-top:1px solid #22241e;}
+#prompt-input{flex:1; margin-right:8px; padding:8px; background:var(--status-bg); border:1px solid var(--accent); color:#f0f0e0; font-family:inherit; border-radius:3px;}
+.small{font-size:12px; padding:6px 8px;}
+
+/* Preview Panel */
+#preview-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 80%;
+  background: white;
+  border: 2px solid var(--accent);
+  border-radius: 5px;
+  z-index: 1000;
+  display: none;
+  box-shadow: 0 0 30px rgba(0,0,0,0.7);
+}
+
+#preview-header {
+  background: var(--header-bg);
+  color: #f0f0e0;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--accent);
+}
+
+#preview-content {
+  width: 100%;
+  height: calc(100% - 40px);
+  border: none;
+  background: white;
+}
+
+#close-preview {
+  background: transparent;
+  border: none;
+  color: #f0f0e0;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* AI Response Panel */
+#ai-response-panel {
+  position: fixed;
+  bottom: 60px;
+  right: 20px;
+  width: 400px;
+  max-height: 300px;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  padding: 10px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+#ai-response-content {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+#close-ai-panel {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* File Input */
+#file-input {
+  display: none;
+}
+
+/* AI Indicator */
+.ai-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ai-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--err);
+  animation: pulse 2s infinite;
+}
+
+.ai-dot.connected {
+  background: var(--accent);
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #editor-stage {
+    grid-template-columns: 1fr;
+  }
+  
+  #left-panel {
+    position: absolute;
+    height: 100%;
+    z-index: 30;
+    transform: translateX(-240px);
+  }
+  
+  #left-panel.open {
+    transform: translateX(0);
+  }
+  
+  #ai-response-panel {
+    width: calc(100% - 40px);
+    right: 20px;
+    left: 20px;
+  }
+  
+  #preview-panel {
+    width: 95%;
+    height: 85%;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+<div class="left">
+  <button id="left-toggle" class="small">☰</button>
+  <div style="font-weight:800;">Nemodian 2244-1 :: AI Editor</div>
+</div>
+<div class="right">
+  <div class="ai-status">
+    <div class="ai-dot"></div>
+    <div id="ai-indicator" style="font-size:12px;color:#cfcfbd;">Local AI: probing…</div>
+  </div>
+  <button id="open-file" class="small">Open</button>
+  <button id="save-file" class="small">Save</button>
+  <button id="save-as" class="small">Save As</button>
+  <button id="render-html" class="small warn">Render HTML</button>
+  <button id="run-local-ai" class="small info">Run AI</button>
+</div>
+</header>
+
+<div id="status-bar" class="info">
+  <div id="file-meta">No File Loaded</div>
+  <div id="editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>
+</div>
+
+<div id="editor-stage">
+<aside id="left-panel">
+  <button id="btn-undo" class="small">UNDO</button>
+  <button id="btn-redo" class="small">REDO</button>
+  <button id="btn-beautify" class="small">Beautify</button>
+  <button id="btn-render" class="small warn">Render HTML</button>
+  <div style="margin-top: 20px; font-size: 11px; color: var(--muted);">
+    <p><strong>AI Commands:</strong></p>
+    <ul style="padding-left: 15px;">
+      <li>Explain this code</li>
+      <li>Optimize this function</li>
+      <li>Add comments</li>
+      <li>Fix bugs</li>
+    </ul>
+  </div>
+  <div style="margin-top: 20px; font-size: 11px; color: var(--muted);">
+    <p><strong>HTML Render:</strong></p>
+    <p>Click "Render HTML" to preview your HTML code in a live browser view.</p>
+  </div>
+</aside>
+
+<div id="editor-outer">
+  <div id="line-gutter"></div>
+  <div class="highlighting"><pre><code id="highlighted" class="language-html"></code></pre></div>
+  <textarea id="editor">&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;Nemodian 2244-1 Demo&lt;/title&gt;
+  &lt;style&gt;
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      color: white;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      max-width: 600px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #4ac94a, #5bc0de);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      font-size: 1.2rem;
+      line-height: 1.6;
+    }
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .feature {
+      background: rgba(74, 201, 74, 0.2);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid #4ac94a;
+    }
+    button {
+      background: #4ac94a;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: #3aa83a;
+      transform: translateY(-2px);
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class="container"&gt;
+    &lt;h1&gt;Nemodian 2244-1&lt;/h1&gt;
+    &lt;p&gt;Advanced AI-Powered Code Editor with HTML Rendering&lt;/p&gt;
+    
+    &lt;div class="features"&gt;
+      &lt;div class="feature"&gt;AI Integration&lt;/div&gt;
+      &lt;div class="feature"&gt;Live Preview&lt;/div&gt;
+      &lt;div class="feature"&gt;Syntax Highlighting&lt;/div&gt;
+      &lt;div class="feature"&gt;Code Beautification&lt;/div&gt;
+    &lt;/div&gt;
+    
+    &lt;p&gt;This HTML is rendered live from the editor code. Try modifying it and click "Render HTML" again to see changes!&lt;/p&gt;
+    
+    &lt;button onclick="showMessage()"&gt;Click Me!&lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;script&gt;
+    function showMessage() {
+      alert('Hello from Nemodian 2244-1! This JavaScript is executed in the preview.');
+    }
+    
+    // Dynamic element creation demo
+    setTimeout(() => {
+      const dynamicElement = document.createElement('div');
+      dynamicElement.innerHTML = '&lt;p&gt;This element was added dynamically via JavaScript!&lt;/p&gt;';
+      dynamicElement.style.marginTop = '20px';
+      dynamicElement.style.padding = '10px';
+      dynamicElement.style.background = 'rgba(255,255,255,0.1)';
+      dynamicElement.style.borderRadius = '5px';
+      document.querySelector('.container').appendChild(dynamicElement);
+    }, 2000);
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</textarea>
+</div>
+</div>
+
+<footer>
+<input id="prompt-input" placeholder="AI Prompt (Ctrl+Enter to run)">
+<button id="send-button" class="success">SEND</button>
+</footer>
+
+<!-- Hidden file input -->
+<input type="file" id="file-input" accept=".js,.html,.css,.txt,.json">
+
+<!-- Preview Panel -->
+<div id="preview-panel">
+  <div id="preview-header">
+    <span>HTML Preview</span>
+    <button id="close-preview">×</button>
+  </div>
+  <iframe id="preview-content"></iframe>
+</div>
+
+<!-- AI Response Panel -->
+<div id="ai-response-panel">
+  <button id="close-ai-panel">×</button>
+  <div id="ai-response-content"></div>
+</div>
+
+<script>
+const NEMODIAN_DIR = '/storage/emulated/0/.nemodian';
+
+// List of libraries to ensure exist
+const libraries = [
+  {url:'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js', file:'libs/prism.min.js'},
+  {url:'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js', file:'libs/prism-javascript.min.js'},
+  {url:'https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify.js', file:'libs/beautify.js'},
+  {url:'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js', file:'libs/jquery.min.js'},
+  {url:'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js', file:'libs/gsap.min.js'}
+];
+
+async function ensureLibraries() {
+  const fs = require('fs');
+  const path = require('path');
+
+  for (const lib of libraries) {
+    const destPath = path.join(NEMODIAN_DIR, lib.file);
+    if (!fs.existsSync(destPath)) {
+      console.log(`Downloading ${lib.file}...`);
+      const res = await fetch(lib.url);
+      const blob = await res.blob();
+      const buffer = Buffer.from(await blob.arrayBuffer());
+      fs.mkdirSync(path.dirname(destPath), {recursive:true});
+      fs.writeFileSync(destPath, buffer);
+      console.log(`${lib.file} saved.`);
+    } else {
+      console.log(`${lib.file} exists, skipping download.`);
+    }
+  }
+}
+
+// Run on startup
+ensureLibraries().then(() => console.log('All libraries are ready.'));
+
+const EDITOR_STATE_FILE = `${NEMODIAN_DIR}/editor-state/editor-state.json`;
+
+function saveEditorState() {
+  const fs = require('fs');
+  fs.mkdirSync(`${NEMODIAN_DIR}/editor-state`, {recursive:true});
+  const state = {
+    code: editor.value,
+    history: historyStack,
+    redo: redoStack,
+    fileName: currentFileName
+  };
+  fs.writeFileSync(EDITOR_STATE_FILE, JSON.stringify(state));
+}
+
+function loadEditorState() {
+  const fs = require('fs');
+  if (fs.existsSync(EDITOR_STATE_FILE)) {
+    const state = JSON.parse(fs.readFileSync(EDITOR_STATE_FILE));
+    editor.value = state.code || '';
+    historyStack = state.history || [];
+    redoStack = state.redo || [];
+    currentFileName = state.fileName || null;
+    renderEditor(editor.value);
+  }
+}
+
+// Auto-save every 5 seconds
+setInterval(saveEditorState, 5000);
+
+// Load on startup
+loadEditorState();
+
+// --- Core ---
+const editor = $('#editor')[0];
+const highlighted = $('#highlighted')[0];
+const lineGutter = $('#line-gutter')[0];
+const statusEditor = $('#editor-meta')[0];
+const statusFile = $('#file-meta')[0];
+const leftPanel = $('#left-panel');
+const aiIndicator = $('#ai-indicator')[0];
+const aiDot = $('.ai-dot')[0];
+const statusBar = $('#status-bar')[0];
+const fileInput = $('#file-input')[0];
+const aiResponsePanel = $('#ai-response-panel')[0];
+const aiResponseContent = $('#ai-response-content')[0];
+const previewPanel = $('#preview-panel')[0];
+const previewContent = $('#preview-content')[0];
+
+let currentFileName = null;
+let currentFileType = 'html';
+
+// Detect language based on file extension
+function detectLanguage(filename) {
+  if (!filename) return 'html';
+  
+  const ext = filename.split('.').pop().toLowerCase();
+  const languageMap = {
+    'js': 'javascript',
+    'html': 'html',
+    'htm': 'html',
+    'css': 'css',
+    'json': 'json'
+  };
+  
+  return languageMap[ext] || 'html';
+}
+
+function highlightAndRender(code){
+  try{
+    highlighted.innerHTML = Prism.highlight(code, Prism.languages[currentFileType], currentFileType);
+    highlighted.className = `language-${currentFileType}`;
+  }catch(e){ 
+    highlighted.textContent = code; 
+    highlighted.className = '';
+  }
+}
+
+function generateLineNumbers(){
+  const lines = editor.value.split('\n').length;
+  lineGutter.textContent = Array.from({length:lines},(_,i)=>i+1).join('\n');
+}
+
+function renderEditor(code){
+  editor.value = code;
+  highlightAndRender(code);
+  generateLineNumbers();
+  updateStatus();
+}
+
+function updateStatus(){
+  const pos = editor.selectionStart;
+  const code = editor.value;
+  const linesArr = code.substr(0,pos).split('\n');
+  statusEditor.textContent = `Cursor: ${linesArr.length}:${linesArr[linesArr.length-1].length} | Lines: ${code.split('\n').length} | Chars: ${code.length} | History: ${historyStack.length}`;
+}
+
+function syncScroll(){
+  $('.highlighting')[0].scrollTop = editor.scrollTop;
+  $('.highlighting')[0].scrollLeft = editor.scrollLeft;
+  lineGutter.scrollTop = editor.scrollTop;
+}
+
+// History
+let historyStack=[], redoStack=[], MAX_HISTORY=400;
+function pushHistory(){
+  const code=editor.value;
+  if(historyStack.length && historyStack[historyStack.length-1]===code) return;
+  historyStack.push(code);
+  if(historyStack.length>MAX_HISTORY) historyStack.shift();
+  redoStack=[];
+  updateStatus();
+}
+
+function undo(){ 
+  if(historyStack.length){ 
+    redoStack.push(editor.value); 
+    renderEditor(historyStack.pop()); 
+  } 
+}
+
+function redo(){ 
+  if(redoStack.length){ 
+    historyStack.push(editor.value); 
+    renderEditor(redoStack.pop()); 
+  } 
+}
+
+// File Operations
+function openFile(){
+  fileInput.click();
+}
+
+function saveFile(){
+  if (!currentFileName) {
+    saveAsFile();
+    return;
+  }
+  
+  const blob = new Blob([editor.value], {type: 'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = currentFileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  setStatus(`Saved: ${currentFileName}`, 'success');
+}
+
+function saveAsFile(){
+  const fileName = prompt('Enter file name:', currentFileName || 'code.html');
+  if (fileName) {
+    currentFileName = fileName;
+    currentFileType = detectLanguage(fileName);
+    saveFile();
+  }
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    currentFileName = file.name;
+    currentFileType = detectLanguage(file.name);
+    renderEditor(e.target.result);
+    setStatus(`Opened: ${file.name}`, 'success');
+    updateFileMeta();
+  };
+  reader.readAsText(file);
+}
+
+function updateFileMeta() {
+  statusFile.textContent = currentFileName ? `File: ${currentFileName}` : 'No File Loaded';
+}
+
+// Status Management
+function setStatus(message, type = 'info') {
+  statusBar.textContent = message;
+  statusBar.className = type;
+  
+  // Auto-clear status after 5 seconds for non-error messages
+  if (type !== 'error') {
+    setTimeout(() => {
+      statusBar.className = 'info';
+      updateStatusDisplay();
+    }, 5000);
+  }
+}
+
+function updateStatusDisplay() {
+  if (currentFileName) {
+    statusFile.textContent = `File: ${currentFileName}`;
+  } else {
+    statusFile.textContent = 'No File Loaded';
+  }
+  
+  const pos = editor.selectionStart;
+  const code = editor.value;
+  const linesArr = code.substr(0,pos).split('\n');
+  statusEditor.textContent = `Cursor: ${linesArr.length}:${linesArr[linesArr.length-1].length} | Lines: ${code.split('\n').length} | Chars: ${code.length} | History: ${historyStack.length}`;
+}
+
+// HTML Rendering
+function renderHTML() {
+  if (currentFileType !== 'html') {
+    setStatus('HTML rendering only works with HTML files', 'warn');
+    return;
+  }
+  
+  const htmlContent = editor.value;
+  const blob = new Blob([htmlContent], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  
+  previewContent.src = url;
+  previewPanel.style.display = 'block';
+  
+  setStatus('HTML rendered in preview panel', 'success');
+}
+
+// AI Integration
+function simulateAIResponse(prompt) {
+  // This is a mock implementation - in a real app, you'd call an AI API
+  const code = editor.value;
+  let response = '';
+  
+  if (prompt.toLowerCase().includes('explain')) {
+    response = `I'll explain the code:\n\nThis is ${currentFileType} code. It contains ${code.split('\n').length} lines.`;
+    
+    if (currentFileType === 'html') {
+      response += '\n\nThis HTML document appears to be a web page with styling and JavaScript functionality.';
+      if (code.includes('<style>')) {
+        response += '\n- Contains embedded CSS styles';
+      }
+      if (code.includes('<script>')) {
+        response += '\n- Contains JavaScript code';
+      }
+    }
+  } else if (prompt.toLowerCase().includes('optimize')) {
+    response = 'Based on my analysis, I suggest the following optimizations:\n\n1. Consider minifying the code for production use.\n2. Ensure all external resources are properly linked.';
+  } else if (prompt.toLowerCase().includes('comment')) {
+    response = 'I can help add comments to make the code more understandable.';
+  } else if (prompt.toLowerCase().includes('bug')) {
+    response = 'I don\'t see any obvious bugs, but you should test the functionality thoroughly.';
+  } else if (prompt.toLowerCase().includes('render')) {
+    response = 'Click the "Render HTML" button to see a live preview of your HTML code.';
+  } else {
+    response = `I received your request: "${prompt}". In a real implementation, I would analyze your code and provide helpful suggestions.`;
+  }
+  
+  return response;
+}
+
+function showAIResponse(response) {
+  aiResponseContent.textContent = response;
+  aiResponsePanel.style.display = 'block';
+}
+
+function runAI() {
+  const prompt = $('#prompt-input').val().trim();
+  if (!prompt) {
+    setStatus('Please enter a prompt for the AI', 'warn');
+    return;
+  }
+  
+  setStatus('AI processing...', 'info');
+  
+  // Simulate AI processing delay
+  setTimeout(() => {
+    const response = simulateAIResponse(prompt);
+    showAIResponse(response);
+    setStatus('AI response ready', 'success');
+  }, 1500);
+}
+
+// Events
+$('#editor').on('input propertychange',()=>{
+  pushHistory(); 
+  highlightAndRender(editor.value); 
+  generateLineNumbers(); 
+  updateStatus();
+});
+
+$('#editor').on('scroll', syncScroll);
+$('#editor').on('keyup click', updateStatus);
+
+$('#btn-undo').click(undo);
+$('#btn-redo').click(redo);
+$('#btn-beautify').click(()=>{ 
+  try {
+    let beautified = editor.value;
+    
+    if (currentFileType === 'javascript') {
+      beautified = js_beautify(editor.value, {indent_size: 2});
+    } else if (currentFileType === 'html') {
+      beautified = html_beautify(editor.value, {indent_size: 2});
+    } else if (currentFileType === 'css') {
+      beautified = css_beautify(editor.value, {indent_size: 2});
+    }
+    
+    editor.value = beautified; 
+    renderEditor(editor.value); 
+    setStatus('Code beautified', 'success');
+  } catch(e) {
+    setStatus('Error beautifying code', 'error');
+  }
+});
+
+$('#btn-render').click(renderHTML);
+$('#render-html').click(renderHTML);
+
+$('#left-toggle').click(()=>{ 
+  gsap.to(leftPanel,{x:leftPanel.hasClass('open')?'-240px':'0px', duration:0.3}); 
+  leftPanel.toggleClass('open'); 
+});
+
+// File operation events
+$('#open-file').click(openFile);
+$('#save-file').click(saveFile);
+$('#save-as').click(saveAsFile);
+$('#file-input').change(handleFileSelect);
+
+// AI events
+$('#send-button').click(runAI);
+$('#run-local-ai').click(runAI);
+$('#prompt-input').keydown(e=>{ 
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ 
+    runAI(); 
+  } 
+});
+
+$('#close-ai-panel').click(() => {
+  aiResponsePanel.style.display = 'none';
+});
+
+$('#close-preview').click(() => {
+  previewPanel.style.display = 'none';
+  // Revoke the object URL to free memory
+  if (previewContent.src && previewContent.src.startsWith('blob:')) {
+    URL.revokeObjectURL(previewContent.src);
+  }
+});
+
+// Simulate AI connection
+setTimeout(() => {
+  aiIndicator.textContent = 'Local AI: Connected';
+  aiDot.classList.add('connected');
+}, 2000);
+
+// Init
+renderEditor(editor.value);
+pushHistory();
+updateFileMeta();
+
+function renderHTML() {
+  const htmlContent = editor.value;
+  const blob = new Blob([htmlContent], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  previewContent.src = url;
+  previewPanel.style.display = 'block';
+}
+</script>
+</body>
+</html>
+
