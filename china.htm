@@ -1,0 +1,155 @@
+/**
+ * Quantum-Optimized Love Poem Generator (Q-Poem)
+ *
+ * This JavaScript module simulates quantum computation patterns (superposition,
+ * entanglement, and amplitude amplification) to select and assemble the most
+ * resonant lines of a classical Chinese love poem.
+ *
+ * The 'qubits' represent binary states of emotional concepts (e.g., Near/Far, Spoken/Unspoken).
+ */
+
+class Qubit {
+    /**
+     * Initializes a conceptual qubit representing a superposition of two states.
+     * @param {string} state0 - The base state (e.g., distance).
+     * @param {string} state1 - The alternate state (e.g., closeness).
+     */
+    constructor(state0, state1) {
+        // Represents the probability amplitudes [|0>, |1>]
+        // Initial state is usually uniform superposition (Hadamard applied).
+        this.amplitudes = [Math.SQRT1_2, Math.SQRT1_2];
+        this.states = [state0, state1];
+    }
+
+    /**
+     * Simulates the measurement (collapse) of the qubit state.
+     * In the context of the poem, this selects the final chosen word/concept.
+     * @returns {string} The measured state.
+     */
+    measure() {
+        const p0 = this.amplitudes[0] ** 2;
+        // Simple probabilistic measurement based on current amplitudes
+        if (Math.random() < p0) {
+            return this.states[0];
+        } else {
+            return this.states[1];
+        }
+    }
+}
+
+// --- QUANTUM GATE SIMULATIONS ---
+
+/**
+ * Simulates a Hadamard Gate (H): Creates perfect superposition.
+ * In poetry, this means all emotional paths are equally viable initially.
+ * @param {Qubit} q - The target qubit.
+ */
+function HadamardTransform(q) {
+    // A simplified simulation: resets amplitudes to uniform probability.
+    q.amplitudes = [Math.SQRT1_2, Math.SQRT1_2];
+}
+
+/**
+ * Simulates a Controlled-NOT Gate (CNOT): Entangles two qubits.
+ * In poetry, this means the state of concept A (e.g., 'Stars') dictates the
+ * state of concept B (e.g., 'Yearning').
+ * @param {Qubit} control - The controlling qubit (e.g., Night).
+ * @param {Qubit} target - The qubit whose state is flipped based on control.
+ */
+function CNOT_Entangle(control, target) {
+    // If the control qubit is biased towards state 1 (e.g., deep night),
+    // we increase the target's amplitude for its corresponding state (e.g., deep yearning).
+    const bias = control.amplitudes[1] > 0.6 ? 0.1 : -0.1;
+    target.amplitudes[0] = Math.max(0, Math.min(1, target.amplitudes[0] - bias));
+    target.amplitudes[1] = Math.max(0, Math.min(1, target.amplitudes[1] + bias));
+
+    // Normalize (ensuring sum of probabilities is 1)
+    const norm = Math.sqrt(target.amplitudes[0] ** 2 + target.amplitudes[1] ** 2);
+    target.amplitudes = [target.amplitudes[0] / norm, target.amplitudes[1] / norm];
+}
+
+/**
+ * Simulates Amplitude Amplification (Grover's Algorithm essence).
+ * This operation iteratively boosts the amplitude of the desired 'solution' state
+ * (the line that resonates most strongly with the theme of 'Eternal Love').
+ * @param {Qubit} q - The qubit to amplify.
+ * @param {number} targetIndex - The index (0 or 1) representing the desired outcome.
+ */
+function Grover_Amplify(q, targetIndex) {
+    const nonTargetIndex = 1 - targetIndex;
+
+    // Boost the target amplitude and suppress the non-target amplitude
+    q.amplitudes[targetIndex] *= 1.1; // Amplification
+    q.amplitudes[nonTargetIndex] *= 0.9; // Suppression
+
+    // Re-normalize amplitudes
+    const norm = Math.sqrt(q.amplitudes[0] ** 2 + q.amplitudes[1] ** 2);
+    q.amplitudes = [q.amplitudes[0] / norm, q.amplitudes[1] / norm];
+}
+
+// --- POEM CONSTRUCTION ---
+
+/**
+ * Defines the core concepts and their superposition states (Qubits).
+ */
+const ConceptQubits = {
+    // Qubit 1: Distance vs. Closeness
+    Q1_Distance: new Qubit("星夜迢迢寄相思", "月下輕語訴衷腸"), // Starry night sends yearning vs. Whispering under the moon
+    // Qubit 2: Action vs. Stillness
+    Q2_Action: new Qubit("夢中化蝶追花影", "靜坐窗前等春歸"), // Turning into a butterfly chasing shadows vs. Sitting waiting for spring
+    // Qubit 3: Expression vs. Silence
+    Q3_Expression: new Qubit("兩心迢迢隔千尺", "此情不語勝萬詞") // Two hearts separated by a thousand feet vs. This feeling, silent, surpasses ten thousand words
+};
+
+function generatePoem() {
+    // 1. INITIAL SUPERPOSITION (Hadamard): All lines are possible.
+    HadamardTransform(ConceptQubits.Q1_Distance);
+    HadamardTransform(ConceptQubits.Q2_Action);
+    HadamardTransform(ConceptQubits.Q3_Expression);
+
+    // 2. ENTANGLEMENT (CNOT): Link the state of distance (Q1) to the form of expression (Q3).
+    // If Q1 favors "Distant Yearning" (index 0), then Q3 should favor "Silent Strength" (index 1).
+    // Note: We use the current amplitude bias of Q1 to affect Q3.
+    CNOT_Entangle(ConceptQubits.Q1_Distance, ConceptQubits.Q3_Expression);
+
+    // 3. AMPLITUDE AMPLIFICATION (Grover's): We optimize for the theme of "Endurance and Silent Power."
+    // We boost the desired states (index 0 for Q1, index 1 for Q3).
+    Grover_Amplify(ConceptQubits.Q1_Distance, 0); // Boost "Distant Yearning"
+    Grover_Amplify(ConceptQubits.Q3_Expression, 1); // Boost "Silent Strength"
+
+    // Q2 (Action/Stillness) is left slightly less amplified, allowing it to choose a middle path.
+
+    // 4. MEASUREMENT (Collapse): The poem is finalized by measuring the optimized states.
+    const line1 = ConceptQubits.Q1_Distance.measure();
+    const line2 = ConceptQubits.Q2_Action.measure();
+    const line4 = ConceptQubits.Q3_Expression.measure();
+
+    // Define a mandatory middle line (Line 3) for structure, ensuring poetic flow.
+    const line3 = "相思一縷繫紅塵"; // A thread of yearning tied to the mortal world.
+
+    const poem = [
+        line1,
+        line2,
+        line3,
+        line4
+    ];
+
+    return poem;
+}
+
+// --- EXECUTION ---
+
+const finalPoem = generatePoem();
+
+console.log("--- Quantum Optimized Chinese Love Poem (七言絕句) ---");
+finalPoem.forEach(line => {
+    console.log(line);
+});
+
+// Example of potential resulting poem (based on probabilistic measurement):
+/*
+星夜迢迢寄相思 (Xīng yè tiáotiáo jì xiāngsī) - The starry night sends distant yearning
+夢中化蝶追花影 (Mèng zhōng huà dié zhuī huāyǐng) - In dreams, transforming into a butterfly chasing flower shadows
+相思一縷繫紅塵 (Xiāngsī yī lǚ jì hóngchén) - A thread of yearning tied to the mortal world
+此情不語勝萬詞 (Cǐ qíng bù yǔ shèng wàn cí) - This feeling, unspoken, surpasses ten thousand words
+*/
