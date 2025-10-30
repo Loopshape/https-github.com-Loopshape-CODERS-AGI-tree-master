@@ -1,0 +1,174 @@
+#!/bin/bash
+set -euo pipefail
+
+# ======= Paths =======
+WORKSPACE="${WORKSPACE:-$HOME/_}"
+mkdir -p "$WORKSPACE"
+
+NEURO_BASE="${NEURO_BASE:-/storage/emulated/0/.nemodian}"
+mkdir -p "$NEURO_BASE"
+
+DB_FILE="$NEURO_BASE/dialog_memory.db"
+
+OUTPUTS_DIR="$WORKSPACE/outputs"
+PATCHES_DIR="$WORKSPACE/patches"
+mkdir -p "$OUTPUTS_DIR" "$PATCHES_DIR"
+
+# ======= SSH keys for signing =======
+PRIVATE_KEY="${HOME}/.ssh/nemodian"   # your private key
+[[ ! -f "$PRIVATE_KEY" ]] && { echo "Error: Private key not found at $PRIVATE_KEY"; exit 1; }
+
+# ======= SQLite setup =======
+sqlite3 "$DB_FILE" <<SQL
+PRAGMA journal_mode=WAL;
+CREATE TABLE IF NOT EXISTS dialog_memory(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT,
+    content TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+SQL
+
+# ======= Configurable history limit =======
+HISTORY_LIMIT=50
+prune_history() {
+    local type="$1"
+    sqlite3 "$DB_FILE" <<SQL
+DELETE FROM dialog_memory
+WHERE id NOT IN (
+    SELECT id FROM dialog_memory
+    WHERE type='$(sqlite3_escape "$type")'
+    ORDER BY id DESC
+    LIMIT $HISTORY_LIMIT
+);
+SQL
+}
+
+# ======= Arguments =======
+ARG1="${1:-}"
+ARG2="${2:-}"
+ARG3="${3:-}"
+
+# ======= Helpers =======
+safe_assign() { local target_var="$1"; local value="$2"; eval "$target_var=\"\$value\""; }
+sqlite3_escape() { echo "$1" | sed "s/'/''/g"; }
+append_dialog() {
+    local type="$1"
+    local content="$2"
+    sqlite3 "$DB_FILE" "INSERT INTO dialog_memory(type, content) VALUES('$(sqlite3_escape "$type")','$(sqlite3_escape "$content")');"
+    prune_history "$type"
+}
+get_memory() { local type="$1"; sqlite3 "$DB_FILE" "SELECT content FROM dialog_memory WHERE type='$(sqlite3_escape "$type")' ORDER BY id ASC;"; }
+
+# ======= Outputs =======
+outputs=""
+safe_assign "outputs" "Initial outputs"
+
+# ======= AI Loop =======
+ai_loop() {
+    local n=1
+    while [ "$n" -le 5 ]; do
+        echo "🔄 AI Loop $n/5"
+        local mem
+        mem="$(get_memory loop)"
+        [[ -n "$mem" ]] && echo "💾 Memory: $mem"
+        append_dialog "loop" "Iteration $n executed"
+        safe_assign "outputs" "Iteration $n complete"
+        echo "$outputs" >> "$OUTPUTS_DIR/outputs.log"
+        echo "outputs = $outputs"
+        n=$((n+1))
+    done
+}
+
+# ======= Interactive patch mode =======
+interactive_patch() {
+    local file="$1"
+    local prompt="$2"
+    [[ ! -f "$file" ]] && { echo "File not found: $file"; return 1; }
+    echo "🔧 Patch mode: $file"
+    append_dialog "patch" "Patch requested on $file: $prompt"
+    local patch_file="$PATCHES_DIR/$(basename "$file").patch"
+    echo "# PATCH applied based on prompt: $prompt" >> "$patch_file"
+    echo "# PATCH applied directly to file" >> "$file"
+    echo "Patch saved to $patch_file and applied to $file"
+}
+
+# ======= Chat mode =======
+chat_mode() {
+    local prompt="$1"
+    echo "💬 Chat mode: $prompt"
+    append_dialog "chat" "$prompt"
+    local mem
+    mem="$(get_memory chat)"
+    [[ -n "$mem" ]] && echo "💾 Previous chat memory: $mem"
+    echo "Response: (placeholder AI response)"
+}
+
+# ======= Mega-entropic backup =======
+dump_db_with_retry() {
+    local dump_file="$1"
+    local retries=5
+    local delay=1
+    for i in $(seq 1 $retries); do
+        if sqlite3 "$DB_FILE" .dump > "$dump_file"; then
+            return 0
+        else
+            echo "DB locked, retrying ($i/$retries)..."
+            sleep $delay
+        fi
+    done
+    echo "❌ Failed to dump DB after $retries retries."
+    return 1
+}
+
+sign_hash() {
+    local hash_file="$1"
+    local sig_file="${hash_file}.sig"
+    openssl pkeyutl -sign -inkey "$PRIVATE_KEY" -in "$hash_file" -out "$sig_file"
+    echo "🔐 Hash signed with private key -> $sig_file"
+}
+
+backup_neuro_base() {
+    local timestamp
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    local dump_file="$NEURO_BASE/dialog_memory_$timestamp.sql"
+    local hash_file="$NEURO_BASE/dialog_memory_$timestamp.hash"
+
+    echo "💾 Creating backup: $dump_file"
+    dump_db_with_retry "$dump_file" || return 1
+
+    # Generate mega-entropic 8K-bit hash
+    local raw
+    raw=$(cat "$dump_file")
+    local hash
+    hash=$(echo -n "$raw" | sha512sum | awk '{print $1}')
+    while [ ${#hash} -lt 2048 ]; do
+        hash=$(echo -n "$hash" | sha512sum | awk '{print $1}')$hash
+    done
+    hash=${hash:0:2048}
+    echo "$hash" > "$hash_file"
+    echo "🔑 Backup hash saved to $hash_file"
+
+    # Sign hash with private key
+    sign_hash "$hash_file"
+}
+
+# ======= Command dispatcher =======
+case "$ARG1" in
+    run) ai_loop ;;
+    do)
+        [[ -z "$ARG2" || -z "$ARG3" ]] && { echo "Usage: ai do <file> <prompt>"; exit 1; }
+        interactive_patch "$ARG2" "$ARG3"
+        ;;
+    chat)
+        [[ -z "$ARG2" ]] && { echo "Usage: ai chat <prompt>"; exit 1; }
+        chat_mode "$ARG2"
+        ;;
+    backup) backup_neuro_base ;;
+    *)
+        echo "Usage: ai run|chat|do|backup <args>"
+        exit 1
+        ;;
+esac
+# PATCH applied directly to file
+# PATCH applied directly to file
