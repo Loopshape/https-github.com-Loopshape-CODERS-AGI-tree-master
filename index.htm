@@ -46,6 +46,7 @@
         body {
             display: grid;
             grid-template-rows: var(--header-h) var(--status-h) 1fr var(--footer-h);
+            zoom: 0.5;
         }
 
         /* ----- Header ----- */
@@ -196,8 +197,7 @@
             overflow: auto;
             padding: 10px;
             box-sizing: border-box;
-            white-space: pre-wrap;
-            word-break: break-word;
+            white-space: pre; /* FIX: Changed from pre-wrap to prevent wrapping */
             line-height: var(--baseline);
             padding-left: calc(var(--ln-width) + 12px);
         }
@@ -225,8 +225,7 @@
             border: 0;
             outline: 0;
             resize: none;
-            white-space: pre-wrap;
-            word-break: break-word;
+            white-space: pre; /* FIX: Changed from pre-wrap to prevent wrapping */
             z-index: 20;
             padding-left: 12px;
         }
@@ -431,7 +430,7 @@
     <div id="editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>
 </div>
 <div id="editor-stage">
-    <aside id="left-panel">
+    <aside id="left-panel" class="closed">
         <button id="btn-undo" class="small">UNDO</button>
         <button id="btn-redo" class="small">REDO</button>
         <button id="btn-beautify" class="small">Beautify</button>
@@ -810,7 +809,7 @@ a.href = URL.createObjectURL(blob);
             aiResponseContent.textContent = simulateAIResponse(prompt);
         }, 500);
     }
-    
+
     // ----- Left Panel Toggle -----
     document.getElementById('left-toggle').onclick = () => {
         leftPanel.classList.toggle('open');
