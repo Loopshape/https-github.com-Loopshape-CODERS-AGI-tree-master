@@ -139,4 +139,4 @@ pm2 resurrect
 export PATH=$PATH:/storage/emulated/0/.nemodian/bin
 cd ~/_
 termux-open-url http://127.0.0.1:8080/index.html
-./agi
+ps2 monit
