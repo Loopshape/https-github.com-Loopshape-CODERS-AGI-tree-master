@@ -2390,6 +2390,124 @@ document.addEventListener("DOMContentLoaded", () => {
   checkOllamaStatus();
 });
 </script>
+<script type="module">
+/* === Quantum Fractal Realtime Syntax Highlighter ===
+   Supports: .sh, .py, .md, .php, .sql, .js, .css, .html, etc.
+   .txt files are dark grey only
+   Works with your existing editor structure, CSS untouched
+*/
+
+class RealtimeHighlighter {
+    constructor(editorSelector) {
+        this.editor = document.querySelector(editorSelector);
+        if (!this.editor) return console.error("Editor element not found");
+
+        this.fileType = 'txt'; // default
+        this.tokenPatterns = {}; // language regexes
+
+        this.setupPatterns();
+        this.observeChanges();
+    }
+
+    setFileType(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        this.fileType = ext;
+    }
+
+    setupPatterns() {
+        // Common patterns per language (basic for realtime speed)
+        this.tokenPatterns = {
+            js: {
+                keyword: /\b(const|let|var|function|return|if|else|for|while|switch|case|break|new|class|extends|import|export|from)\b/g,
+                string: /(["'`])(?:(?=(\\?))\2.)*?\1/g,
+                comment: /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm,
+                number: /\b\d+(\.\d+)?\b/g
+            },
+            py: {
+                keyword: /\b(def|return|if|else|elif|for|while|import|from|as|class|try|except|with|lambda|yield|in|is|not|and|or)\b/g,
+                string: /(["'`])(?:(?=(\\?))\2.)*?\1/g,
+                comment: /#.*$/gm,
+                number: /\b\d+(\.\d+)?\b/g
+            },
+            html: {
+                tag: /(&lt;\/?[\w\s="'-:.#]+&gt;)/g,
+                attr: /\b([\w-]+)(=)/g,
+                string: /(["']).*?\1/g,
+                comment: /<!--[\s\S]*?-->/g
+            },
+            css: {
+                selector: /[.#]?\w[\w-]*\s*(?=\{)/g,
+                property: /(\b[a-z-]+)(?=:)/g,
+                value: /:\s*([^;]+)(?=;)/g,
+                comment: /\/\*[\s\S]*?\*\//g
+            },
+            sql: {
+                keyword: /\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|INNER|LEFT|RIGHT|ON|GROUP|BY|ORDER|LIMIT|AS)\b/gi,
+                string: /(["']).*?\1/g,
+                comment: /(--.*$|\/\*[\s\S]*?\*\/)/gm,
+                number: /\b\d+(\.\d+)?\b/g
+            },
+            php: {
+                keyword: /\b(function|return|if|else|elseif|for|while|foreach|class|public|private|protected|new|echo|require|include)\b/g,
+                string: /(["']).*?\1/g,
+                comment: /(\/\/.*$|\/\*[\s\S]*?\*\/|#.*$)/gm,
+                number: /\b\d+(\.\d+)?\b/g
+            },
+            md: {
+                header: /^#+\s.*$/gm,
+                bold: /\*\*(.*?)\*\*/g,
+                italic: /\*(.*?)\*/g,
+                code: /`(.*?)`/g,
+                link: /\[([^\]]+)\]\(([^)]+)\)/g
+            },
+            sh: {
+                keyword: /\b(if|then|else|fi|for|in|do|done|while|case|esac|function|exit|return)\b/g,
+                string: /(["']).*?\1/g,
+                comment: /#.*/g,
+                number: /\b\d+(\.\d+)?\b/g
+            },
+            txt: {}
+        };
+    }
+
+    highlight(content) {
+        if (this.fileType === 'txt') {
+            return `<span class="txtfile">${content}</span>`;
+        }
+
+        const patterns = this.tokenPatterns[this.fileType] || {};
+        let html = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        for (const [type, regex] of Object.entries(patterns)) {
+            html = html.replace(regex, (match) => `<span class="${type}">${match}</span>`);
+        }
+        return html;
+    }
+
+    observeChanges() {
+        const updateHighlight = () => {
+            const text = this.editor.textContent || this.editor.value || "";
+            const html = this.highlight(text);
+            if (this.editor.innerHTML !== html) {
+                this.editor.innerHTML = html;
+            }
+        };
+
+        // Live updates
+        this.editor.addEventListener('input', updateHighlight);
+        this.editor.addEventListener('paste', () => setTimeout(updateHighlight, 10));
+        // Optional: initial highlight
+        updateHighlight();
+    }
+}
+
+// === USAGE ===
+// Pass your editor's contenteditable container or textarea selector
+const highlighter = new RealtimeHighlighter('#editor');
+
+// Example: detect file type (could be dynamic if you load files)
+highlighter.setFileType('example.py'); 
+</script>
 </body>
 </html>
 
