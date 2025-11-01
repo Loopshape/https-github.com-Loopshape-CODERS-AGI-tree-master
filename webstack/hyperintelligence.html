@@ -179,7 +179,7 @@ pre[class*="language-"] {
         // Firebase / App Config
         window.__app_id = window.__app_id || 'simulation-app-123';
         window.__firebase_config = window.__firebase_config || JSON.stringify({
-            apiKey: 'AIzaSyBtto2pvY2bTO26XwuV1hAB9RbSqYo3Fnw',          // Replace with actual public Firebase API key if needed
+            apiKey: null,          // Replace with actual public Firebase API key if needed
             authDomain: null,
             projectId: null,
             storageBucket: null,
@@ -246,7 +246,7 @@ if (firebaseConfig && Object.keys(firebaseConfig).some(key => firebaseConfig[key
 // 🚨 CRITICAL: The API key is read from the injected global variable (__API_KEY_INJECTION__)
 const injectedApiKey = typeof window.__API_KEY_INJECTION__ !== 'undefined' && window.__API_KEY_INJECTION__ !== null 
     ? window.__API_KEY_INJECTION__ 
-    : "AIzaSyBtto2pvY2bTO26XwuV1hAB9RbSqYo3Fnw";
+    :"AIzaSyBtto2pvY2bTO26XwuV1hAB9RbSqYo3Fnw";
     
 const apiKey = injectedApiKey; 
 const modelName = "gemini-2.5-flash-preview-09-2025";

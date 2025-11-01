@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NEXUS | AI Editor (Quantum Tunneling)</title>
+
+<!-- Tailwind & External Libs -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+:root{--primary:#BB86FC;--secondary:#03DAC6;--danger:#CF6679;--bg:#121212;--surface:#1E1E1E;--text:#FFFFFF;--muted:rgba(255,255,255,.7);}
+*{box-sizing:border-box}
+body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:var(--bg);color:var(--text);margin:0;overflow:hidden;height:100vh;}
+#three-canvas{position:fixed;inset:0;z-index:10;}
+#ui-container{position:absolute;inset:0;z-index:20;padding:16px;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:auto 1fr auto;gap:16px;pointer-events:none;}
+.agent-card{pointer-events:auto;background:rgba(30,30,30,.8);backdrop-filter:blur(8px);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,.06);box-shadow:0 6px 18px rgba(0,0,0,.5);}
+.agent-card.active{border-color:var(--primary);box-shadow:0 0 30px rgba(187,134,252,.25);}
+.agent-card.tunneling{border-color:var(--danger);box-shadow:0 0 30px rgba(207,102,121,.35);}
+.agent-title{color:var(--primary);font-weight:700;}
+.agent-subtitle{color:var(--secondary);font-weight:300;font-size:.85rem;}
+.agent-hash{font-family:monospace;color:var(--secondary);opacity:.7;word-break:break-all;}
+.agent-content{margin-top:8px;color:var(--muted);font-size:.95rem;max-height:140px;overflow:auto;}
+#agent-nexus{grid-column:5/9;grid-row:1;}
+#agent-echo{grid-column:1/13;grid-row:2;display:flex;flex-direction:column;min-height:160px;}
+#agent-cognito{grid-column:1/5;grid-row:3;}
+#agent-relay{grid-column:5/9;grid-row:3;}
+#agent-sentinel{grid-column:9/13;grid-row:3;}
+#prompt-container{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:25;display:flex;gap:12px;width:min(92vw,920px);pointer-events:auto;}
+#prompt-input{flex:1;background:transparent;border:1px solid rgba(255,255,255,.06);padding:12px;border-radius:10px;color:var(--text);outline:none;}
+#prompt-submit{width:48px;height:48px;border-radius:12px;background:var(--secondary);border:none;color:var(--bg);cursor:pointer;}
+.spinner{border:4px solid rgba(255,255,255,.08);border-left-color:var(--secondary);border-radius:50%;width:16px;height:16px;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+pre{background:#0b0b0b;color:var(--muted);padding:12px;border-radius:8px;overflow:auto;font-family:ui-monospace,monospace;}
+.data-packet{position:fixed;width:12px;height:12px;border-radius:50%;background:var(--primary);box-shadow:0 0 10px var(--primary);opacity:0;}
+.connection-good{color:#10B981}.connection-bad{color:#CF6679}
+.copy-btn{background:transparent;border:1px solid rgba(255,255,255,.06);padding:6px;border-radius:6px;cursor:pointer;}
+.footer-note{font-size:.8rem;color:var(--muted);grid-column:1/-1;text-align:center;padding-top:8px;}
+</style>
+</head>
+<body>
+<canvas id="three-canvas" aria-hidden="true"></canvas>
+
+<div id="ui-container">
+  <div id="setup-card" class="agent-card" onclick="document.getElementById('setup-content').classList.toggle('open')">
+    <div class="flex justify-between items-center">
+      <h2 class="text-md font-bold" style="color:#FBBF24">► Ollama Connection Status</h2>
+      <div id="connection-status" class="text-sm font-semibold flex items-center gap-2 mr-4"><div class="spinner"></div><span>Connecting...</span></div>
+    </div>
+    <div id="setup-content" class="setup-content mt-4" style="max-height:0;overflow:hidden;transition:max-height .4s ease-out;color:var(--muted);font-size:.9rem">
+      <p>If status shows <span class="connection-bad" style="font-weight:700">Failed</span>, allow local origins and restart Ollama like:</p>
+      <pre style="margin-top:8px"><code>export OLLAMA_ORIGINS='*' && ollama serve</code></pre>
+      <p style="margin-top:8px">You can also run Ollama with an explicit host flag. Local dev only.</p>
+    </div>
+  </div>
+
+  <div id="agent-nexus" class="agent-card"><div class="agent-title">Nexus</div><div class="agent-subtitle">Model: core</div><div class="agent-hash">origin_hash: inactive</div><div class="agent-content">Idle.</div></div>
+  <div id="agent-echo" class="agent-card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div class="agent-title">Echo</div>
+        <div class="agent-subtitle">Model: code</div>
+        <div class="agent-hash" id="echo-hash">origin_hash: inactive</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="copy-code" class="copy-btn" title="Copy code">Copy</button>
+        <div id="copy-feedback" style="font-size:.85rem;color:var(--muted)"></div>
+      </div>
+    </div>
+    <div class="output-content" style="margin-top:8px;flex:1;display:flex;flex-direction:column">
+      <pre><code id="code-output" class="language-js">// Final AI generated code will appear here...</code></pre>
+    </div>
+  </div>
+  <div id="agent-cognito" class="agent-card"><div class="agent-title">Cognito</div><div class="agent-subtitle">Model: loop</div><div class="agent-hash">origin_hash: inactive</div><div class="agent-content">Idle.</div></div>
+  <div id="agent-relay" class="agent-card"><div class="agent-title">Relay</div><div class="agent-subtitle">Model: 2244</div><div class="agent-hash">origin_hash: inactive</div><div class="agent-content">Idle.</div></div>
+  <div id="agent-sentinel" class="agent-card"><div class="agent-title">Sentinel</div><div class="agent-subtitle">Model: coin</div><div class="agent-hash">origin_hash: inactive</div><div class="agent-content">Idle.</div></div>
+  <div class="footer-note">Quantum Tunneling Protocol · Promise-to-Prove · Local-only by default</div>
+</div>
+
+<div id="prompt-container">
+  <input id="prompt-input" placeholder="Initiate Cooperative Swarm..." aria-label="Prompt input">
+  <button id="prompt-submit" title="Send prompt">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3l18 9-18 9V3z"/></svg>
+  </button>
+</div>
+
+<script type="module">
+// ------------------
+// StreamHighlighter
+// ------------------
+class StreamHighlighter{
+  constructor(lang='js'){ this.lang=StreamHighlighter.langs[lang]||StreamHighlighter.langs.js; }
+  static escape(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+  static langs={js:{rules:[
+    {t:'comment',r:/^(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/},
+    {t:'string',r:/^`(?:\\[\s\S]|[^`])*`|^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/},
+    {t:'number',r:/^\b(?:0x[a-fA-F0-9]+|[0-9]+(?:\.[0-9]+)?(?:e[+-]?\d+)?)\b/},
+    {t:'keyword',r:/^\b(?:if|else|for|while|function|return|const|let|var|class|new|in|of|switch|case|break|continue|try|catch|throw|async|await|import|from|export|default)\b/},
+    {t:'bracket',r:/^[\[\]\{\}\(\)]/},{t:'op',r:/^==|===|!=|!==|<=|>=|=>|->|[-+*/%=<>!&|^~?:.,;]/},
+    {t:'id',r:/^\b[a-zA-Z_$][\w$]*\b/},{t:'ws',r:/^\s+/}]},
+  python:{rules:[
+    {t:'comment',r:/^#.*/},{t:'string',r:/^("""[\s\S]*?"""|'''[\s\S]*?'''|["'](?:\\.|[^\\])*?["'])/},
+    {t:'number',r:/^\b(?:0x[a-fA-F0-9]+|[0-9]+(?:\.[0-9]+)?(?:e[+-]?\d+)?)\b/},
+    {t:'keyword',r:/^\b(def|class|if|else|elif|for|while|return|import|from|in|and|or|not|is|lambda|with|as|try|except|finally|raise|assert|del|global|nonlocal|pass|yield|True|False|None)\b/},
+    {t:'bracket',r:/^[\[\]\{\}\(\)]/},{t:'op',r:/^==|!=|<=|>=|[-+*/%=<>!&|^~@:.,;]/},{t:'id',r:/^\b[a-zA-Z_][\w]*\b/},{t:'ws',r:/^\s+/}]
+  }};
+  tokenize(txt){const o=[];let i=0;while(i<txt.length){let m=null;for(const r of this.lang.rules){r.r.lastIndex=0;const s=txt.slice(i);const mm=r.r.exec(s);if(mm){m={t:r.t,v:mm[0]};break;}}if(!m){o.push({t:'unknown',v:txt[i++]});continue;}o.push(m);i+=m.v.length;}return o;}
+  renderHTML(toks){return toks.map(t=>`<span class="sh-token sh-${t.t}">${StreamHighlighter.escape(t.v)}</span>`).join('');}
+  highlightElement(el){const cL=[...el.classList].find(c=>c.startsWith('language-'));const l=cL?cL.replace('language-',''):'js';this.lang=StreamHighlighter.langs[l]||StreamHighlighter.langs.js;const t=this.tokenize(el.textContent);el.innerHTML=this.renderHTML(t);}
+}
+
+// ------------------
+// QuantumBackground
+// ------------------
+class QuantumBackground{
+  constructor(){this.scene=new THREE.Scene();this.camera=new THREE.Camera();this.renderer=new THREE.WebGLRenderer({canvas:document.getElementById('three-canvas'),alpha:true,antialias:true});this.uniforms={};this.init();}
+  init(){this.camera.position.z=1;this.renderer.setSize(window.innerWidth,window.innerHeight);this.uniforms={time:{value:0.0},resolution:{value:new THREE.Vector2(window.innerWidth,window.innerHeight)}};const material=new THREE.ShaderMaterial({uniforms:this.uniforms,vertexShader:`void main(){ gl_Position = vec4(position,1.0); }`,fragmentShader:`uniform float time;uniform vec2 resolution;float plasma(vec2 p){return sin(p.x*10.0+time)+sin(p.y*10.0+time/2.0)+sin((p.x+p.y)*10.0+time/3.0)+sin(length(p)*10.0+time/4.0);}void main(){vec2 uv = gl_FragCoord.xy / resolution.xy;uv = 2.0*uv-1.0;float p=plasma(uv*0.5);vec3 color=0.5+0.5*cos(3.14159*(uv.xyx+vec3(0.0,0.6,0.9)+p*0.2));color*=vec3(0.1,0.1,0.3)+p*0.15;gl_FragColor=vec4(color,1.0);}`} );const mesh=new THREE.Mesh(new THREE.PlaneGeometry(2,2),material);this.scene.add(mesh);window.addEventListener('resize',()=>this.onResize());this.animate();}
+  animate(){this.uniforms.time.value+=0.02;this.renderer.render(this.scene,this.camera);requestAnimationFrame(()=>this.animate());}
+  onResize(){this.renderer.setSize(window.innerWidth,window.innerHeight);this.uniforms.resolution.value.set(window.innerWidth,window.innerHeight);}
+}
+
+// ------------------
+// NexusSpaceship (safe)
+// ------------------
+class NexusSpaceship{
+  constructor(){this.isGenerating=false;this.ollamaUrl='http://localhost:11434';this.dom={promptInput:document.getElementById('prompt-input'),promptSubmit:document.getElementById('prompt-submit'),codeOutput:document.getElementById('code-output'),connectionStatus:document.getElementById('connection-status'),copyBtn:document.getElementById('copy-code'),copyFeedback:document.getElementById('copy-feedback')};this.agentKeys=['nexus','cognito','relay','sentinel','echo'];this.analystKeys=['nexus','cognito','relay','sentinel'];this.agentConfig={};this.initAgents();this.init();}
+  initAgents(){
+    const keys=this.agentKeys;const dom=this.dom;
+    this.agentConfig.nexus={el:document.getElementById('agent-nexus'),model:'core',hashEl:document.querySelector('#agent-nexus .agent-hash'),content:document.querySelector('#agent-nexus .agent-content'),system:"As Planning Agent with Origin Hash {ORIGIN_HASH} create a plan for '{USER_PROMPT}' with other agents {SWARM_MANIFEST}."};
+    this.agentConfig.cognito={el:document.getElementById('agent-cognito'),model:'loop',hashEl:document.querySelector('#agent-cognito .agent-hash'),content:document.querySelector('#agent-cognito .agent-content'),system:"As Logic Agent with Origin Hash {ORIGIN_HASH}, create pseudo-code outline for '{USER_PROMPT}' with other agents {SWARM_MANIFEST}."};
+    this.agentConfig.relay={el:document.getElementById('agent-relay'),model:'2244',hashEl:document.querySelector('#agent-relay .agent-hash'),content:document.querySelector('#agent-relay .agent-content'),system:"As Details Agent with Origin Hash {ORIGIN_HASH}, suggest names for '{USER_PROMPT}' with other agents {SWARM_MANIFEST}."};
+    this.agentConfig.sentinel={el:document.getElementById('agent-sentinel'),model:'coin',hashEl:document.querySelector('#agent-sentinel .agent-hash'),content:document.querySelector('#agent-sentinel .agent-content'),system:"As Validation Agent with Origin Hash {ORIGIN_HASH}, identify edge cases for '{USER_PROMPT}' with other agents {SWARM_MANIFEST}."};
+    this.agentConfig.echo={el:document.getElementById('agent-echo'),model:'code',hashEl:document.getElementById('echo-hash'),content:document.querySelector('#agent-echo .output-content'),initialSystem:"As Schema Agent with Origin Hash {ORIGIN_HASH}, define final answer shape for '{USER_PROMPT}'",finalSystem:"As Code Synthesis Agent, synthesize analyses into runnable code only."};
+  }
+  init(){this.initEventListeners();this.checkConnection();}
+  initEventListeners(){this.dom.promptSubmit.addEventListener('click',()=>this.startWorkflow());this.dom.promptInput.addEventListener('keypress',(e)=>{if(e.key==='Enter')this.startWorkflow();});this.dom.copyBtn.addEventListener('click',()=>this.copyCode());}
+  async checkConnection(){const candidates=[`${this.ollamaUrl}/api/ping`,`${this.ollamaUrl}/`,`${this.ollamaUrl}/api/models`];let ok=false;for(const url of candidates){try{const r=await fetch(url,{method:'GET',mode:'cors'});if(r.ok){ok=true;break;}}catch(e){}}if(ok)this.dom.connectionStatus.innerHTML='<span class="connection-good">✅ Ollama Connected</span>';else this.dom.connectionStatus.innerHTML='<span class="connection-bad">❌ Connection Failed</span>';}
+  updateAgentStatus(agentKey,status,message=''){const agent=this.agentConfig[agentKey];
+if(!agent) return;
+    if(status==='active'){agent.el.classList.add('active');agent.el.classList.remove('tunneling');}
+    else if(status==='tunneling'){agent.el.classList.add('tunneling');agent.el.classList.remove('active');}
+    else{agent.el.classList.remove('active','tunneling');}
+    if(message){agent.content.textContent=message;}
+  }
+
+  async startWorkflow(){
+    if(this.isGenerating) return;
+    const prompt=this.dom.promptInput.value.trim();
+    if(!prompt) return;
+    this.isGenerating=true;
+    this.dom.codeOutput.textContent='// Generating...';
+    this.updateAgentStatus('nexus','active','Planning workflow...');
+    this.updateAgentStatus('cognito','active','Analyzing logic...');
+    this.updateAgentStatus('relay','active','Detailing elements...');
+    this.updateAgentStatus('sentinel','active','Validating...');
+    this.updateAgentStatus('echo','active','Synthesizing code...');
+    
+    try{
+      // Simulate parallel quantum workflow (non-blocking)
+      const results=await Promise.all(this.agentKeys.map(async (agentKey)=>{
+        const agent=this.agentConfig[agentKey];
+        if(!agent) return {key:agentKey,content:'Error'};
+        await new Promise(r=>setTimeout(r,Math.random()*600+400)); // pseudo async latency
+        return {key:agentKey,content:`[${agent.model}] processed: ${prompt.slice(0,60)}...`};
+      }));
+      
+      results.forEach(r=>{
+        const agent=this.agentConfig[r.key];
+        if(agent){agent.content.textContent=r.content;}
+      });
+
+      // Echo assembles final code
+      const finalCode='// AI Synthesized Code Output\n'+results.map(r=>`// ${r.key}: ${r.content}`).join('\n')+'\nconsole.log("Workflow complete");';
+      this.dom.codeOutput.textContent=finalCode;
+      this.updateAgentStatus('echo','active','Final code ready.');
+      
+    }catch(e){
+      console.error('Workflow error',e);
+      this.dom.codeOutput.textContent=`// Workflow failed: ${e.message}`;
+    }finally{
+      this.isGenerating=false;
+      this.agentKeys.forEach(k=>this.updateAgentStatus(k,'idle'));
+    }
+  }
+
+  copyCode(){
+    const txt=this.dom.codeOutput.textContent;
+    navigator.clipboard.writeText(txt).then(()=>{
+      this.dom.copyFeedback.textContent='✅ Copied!';
+      setTimeout(()=>{this.dom.copyFeedback.textContent='';},1200);
+    }).catch(()=>{this.dom.copyFeedback.textContent='❌ Failed';});
+  }
+}
+
+// ------------------
+// Init All
+// ------------------
+document.addEventListener('DOMContentLoaded',()=>{
+  const bg=new QuantumBackground();
+  const nexus=new NexusSpaceship();
+  // Syntax highlighting for code output
+  const highlighter=new StreamHighlighter('js');
+  setInterval(()=>{highlighter.highlightElement(document.getElementById('code-output'));},500);
+});
+</script>
+</body>
+</html>

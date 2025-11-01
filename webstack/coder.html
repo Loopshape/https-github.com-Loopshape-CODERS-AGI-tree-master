@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NEXUS | AI Editor (Verbose Stream Workflow)</title>
+
+<!-- External Libraries via CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+:root{
+  --primary:#BB86FC; --secondary:#03DAC6; --danger:#CF6679;
+  --bg:#121212; --surface:#1E1E1E; --text:#FFFFFF; --muted:rgba(255,255,255,.7);
+  --success: #34D399;
+}
+*{box-sizing:border-box}
+body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:var(--bg);color:var(--text);margin:0;overflow:hidden;height:100vh}
+#three-canvas{position:fixed;inset:0;z-index:10}
+#ui-container{position:absolute;inset:0;z-index:20;padding:16px;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:auto 1fr auto;gap:16px;pointer-events:none}
+
+/* Agent Card Styles */
+.agent-card{pointer-events:auto;background:rgba(30,30,30,.8);backdrop-filter:blur(10px);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 32px rgba(0,0,0,.3);transition:border-color .3s ease, box-shadow .3s ease}
+.agent-card.active{border-color:var(--primary);box-shadow:0 0 30px rgba(187,134,252,.25)}
+.agent-title{color:var(--primary);font-weight:700}
+.agent-subtitle{color:var(--secondary);font-weight:300;font-size:.85rem}
+.agent-hash{font-family:monospace;color:var(--secondary);opacity:.7;word-break:break-all;font-size:.75rem;margin-top:4px}
+.agent-content{margin-top:8px;color:var(--muted);font-size:.9rem;height:140px;overflow-y:auto; scrollbar-width: thin;}
+.agent-content pre {white-space: pre-wrap; word-wrap: break-word;}
+
+/* Grid Layout */
+#setup-card{grid-column:1/5;grid-row:1}
+#agent-nexus{grid-column:5/9;grid-row:1}
+#agent-relay{grid-column:9/13;grid-row:1}
+#agent-echo{grid-column:1/13;grid-row:2;display:flex;flex-direction:column;min-height:160px}
+#agent-cognito{grid-column:1/5;grid-row:3}
+#agent-sentinel{grid-column:5/9;grid-row:3}
+/* Footer will be placed by JS now */
+
+/* Prompt Bar */
+#prompt-container{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:25;display:flex;gap:12px;width:min(92vw,920px);pointer-events:auto}
+#prompt-input{flex:1;background:rgba(30,30,30,.8);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);padding:12px 16px;border-radius:10px;color:var(--text);outline:none;transition:border-color .3s ease}
+#prompt-input:focus{border-color:var(--primary)}
+#prompt-submit{width:48px;height:48px;border-radius:12px;background:var(--secondary);border:none;color:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background-color .3s ease}
+#prompt-submit:hover{background-color:#21f1de}
+#prompt-submit:disabled{background-color:#555;cursor:not-allowed}
+
+/* Utilities & Animations */
+.spinner{border:3px solid rgba(255,255,255,.1);border-left-color:var(--secondary);border-radius:50%;width:16px;height:16px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.connection-good{color:var(--success)}.connection-bad{color:var(--danger)}
+.copy-btn{background:transparent;border:1px solid rgba(255,255,255,.1);padding:6px;border-radius:6px;cursor:pointer;color:var(--muted);transition:background .2s ease,color .2s ease}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:var(--text)}
+.footer-note{position:fixed;bottom:2px;width:100%;text-align:center;font-size:.8rem;color:var(--muted);z-index:25;pointer-events:none}
+.setup-content{max-height:0;overflow:hidden;transition:max-height .4s ease-out;font-size:.9rem}
+.setup-content.open{max-height:150px}
+pre{background:#0b0b0b;color:var(--muted);padding:12px;border-radius:8px;overflow:auto;font-family:ui-monospace,monospace;white-space:pre-wrap;word-wrap:break-word;flex:1}
+
+/* Syntax Highlighting Styles */
+.sh-token.sh-comment{color:#797979}.sh-token.sh-string{color:#ce9178}.sh-token.sh-number{color:#b5cea8}.sh-token.sh-keyword{color:#c586c0}.sh-token.sh-bracket{color:#ffd700}.sh-token.sh-op{color:#569cd6}.sh-token.sh-id{color:#9cdcfe}
+</style>
+</head>
+<body>
+<canvas id="three-canvas" aria-hidden="true"></canvas>
+
+<div id="ui-container">
+    <!-- Setup Card -->
+    <div id="setup-card" class="agent-card" onclick="document.getElementById('setup-content').classList.toggle('open')">
+        <div class="flex justify-between items-center cursor-pointer">
+            <h2 class="text-md font-bold" style="color:#FBBF24">► Ollama Connection Status</h2>
+            <div id="connection-status" class="text-sm font-semibold flex items-center gap-2 mr-4"><div class="spinner"></div><span>Connecting...</span></div>
+        </div>
+        <div id="setup-content" class="setup-content mt-4">
+            <p>If status is <span class="connection-bad font-bold">Failed</span>, Ollama might not be running or CORS is not configured. Start Ollama with:</p>
+            <pre class="mt-2 text-xs"><code>export OLLAMA_ORIGINS='*'
+ollama serve</code></pre>
+        </div>
+    </div>
+
+    <!-- Agent Cards -->
+    <div id="agent-nexus" class="agent-card"><div class="agent-title">Nexus (Planner)</div><div class="agent-subtitle">Model: core</div><div class="agent-hash">origin_hash: inactive</div><div class="agent-content"><p>Awaiting prompt to create a high-level plan.</p></div></div>
+    <div id="agent-relay" class="agent-card"><div class="agent-title">Relay (Details)</div><div class="agent-subtitle">Model: 2244</div><div class="agent-hash">origin_hash: inactive</div><div class="agent-content"><p>Awaiting prompt to suggest function and variable names.</p></div></div>
+
+    <div id="agent-echo" class="agent-card">
+        <div class="flex justify-between items-center">
+            <div>
+                <div class="agent-title">Echo (Code Synthesizer)</div>
+                <div class="agent-subtitle">Model: code</div>
+                <div class="agent-hash" id="echo-hash">origin_hash: inactive</div>
+            </div>
+            <div class="flex gap-2 items-center">
+                <span id="copy-feedback" class="text-sm" style="color:var(--success)"></span>
+                <button id="copy-code" class="copy-btn" title="Copy code">Copy</button>
+            </div>
+        </div>
+        <div class="output-content mt-2 flex-1 flex flex-col min-h-0">
+            <pre><code id="code-output" class="language-js">// Final synthesized code from the agent swarm will stream here...</code></pre>
+        </div>
+    </div>
+
+    <div id="agent-cognito" class="agent-card"><div class="agent-title">Cognito (Logic)</div><div class="agent-subtitle">Model: loop</div><div class="agent-hash">origin_hash: inactive</div><div class="agent-content"><p>Awaiting prompt to generate a pseudo-code outline.</p></div></div>
+    <div id="agent-sentinel" class="agent-card"><div class="agent-title">Sentinel (Validator)</div><div class="agent-subtitle">Model: coin</div><div class="agent-hash">origin_hash: inactive</div><div class="agent-content"><p>Awaiting prompt to identify edge cases and validation needs.</p></div></div>
+</div>
+
+<!-- Prompt Input Area -->
+<div id="prompt-container">
+    <input id="prompt-input" placeholder="Initiate Cooperative Swarm..." aria-label="Prompt input">
+    <button id="prompt-submit" title="Send prompt">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3l18 9-18 9V3z"/></svg>
+    </button>
+</div>
+
+<div class="footer-note">Verbose Stream Workflow · Local-only by default — safe workflow</div>
+
+<script type="module">
+// --- Lightweight Syntax Highlighter ---
+class StreamHighlighter {
+    constructor(lang = 'js') {
+        this.lang = StreamHighlighter.langs[lang] || StreamHighlighter.langs.js;
+    }
+    static escape(s) { return s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] || c)); }
+    static langs = {
+        js: {
+            rules: [
+                { t: 'comment', r: /^(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/ },
+                { t: 'string', r: /^(`(?:\\[\s\S]|[^`])*`|^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*')/ },
+                { t: 'number', r: /^\b(?:0x[a-fA-F0-9]+|[0-9]+(?:\.[0-9]+)?(?:e[+-]?\d+)?)\b/ },
+                { t: 'keyword', r: /^\b(?:if|else|for|while|function|return|const|let|var|class|new|in|of|switch|case|break|continue|try|catch|throw|async|await|import|from|export|default|def|class)\b/ },
+                { t: 'bracket', r: /^[\[\]\{\}\(\)]/ },
+                { t: 'op', r: /^==|===|!=|!==|<=|>=|=>|->|[-+*/%=<>!&|^~?:.,;]/ },
+                { t: 'id', r: /^\b[a-zA-Z_$][\w$]*\b/ },
+                { t: 'ws', r: /^\s+/ }
+            ]
+        }
+    };
+    tokenize(txt) {
+        const o = []; let i = 0;
+        while (i < txt.length) {
+            let m = null;
+            for (const r of this.lang.rules) {
+                const s = txt.slice(i); const mm = r.r.exec(s);
+                if (mm) { m = { t: r.t, v: mm[0] }; break; }
+            }
+            if (!m) { o.push({ t: 'unknown', v: txt[i++] }); continue; }
+            o.push(m); i += m.v.length;
+        }
+        return o;
+    }
+    renderHTML(toks) {
+        return toks.map(t => `<span class="sh-token sh-${t.t}">${StreamHighlighter.escape(t.v)}</span>`).join('');
+    }
+    highlight(text) {
+        return this.renderHTML(this.tokenize(text));
+    }
+}
+
+// --- Main Application Class ---
+class NexusSpaceship {
+    constructor() {
+        this.isGenerating = false;
+        this.ollamaUrl = 'http://localhost:11434';
+        this.highlighter = new StreamHighlighter('js');
+        this.dom = {
+            promptInput: document.getElementById('prompt-input'),
+            promptSubmit: document.getElementById('prompt-submit'),
+            codeOutput: document.getElementById('code-output'),
+            connectionStatus: document.getElementById('connection-status'),
+            copyBtn: document.getElementById('copy-code'),
+            copyFeedback: document.getElementById('copy-feedback')
+        };
+        this.agentKeys = ['nexus', 'cognito', 'relay', 'sentinel', 'echo'];
+        this.analystKeys = ['nexus', 'cognito', 'relay', 'sentinel'];
+        this.agentConfig = {
+            nexus: { el: document.getElementById('agent-nexus'), model: 'llama3', hashEl: document.querySelector('#agent-nexus .agent-hash'), content: document.querySelector('#agent-nexus .agent-content'), system: "As the Planning Agent, create a concise, high-level plan for the user's request: '{USER_PROMPT}'. The other agents are: {SWARM_MANIFEST}. Output only the numbered plan." },
+            cognito: { el: document.getElementById('agent-cognito'), model: 'llama3', hashEl: document.querySelector('#agent-cognito .agent-hash'), content: document.querySelector('#agent-cognito .agent-content'), system: "As the Logic Agent, create a detailed pseudo-code outline based on the user's request: '{USER_PROMPT}'. The other agents are: {SWARM_MANIFEST}. Output only the logical outline." },
+            relay: { el: document.getElementById('agent-relay'), model: 'llama3', hashEl: document.querySelector('#agent-relay .agent-hash'), content: document.querySelector('#agent-relay .agent-content'), system: "As the Details Agent, suggest clear function and variable names for the user's request: '{USER_PROMPT}'. The other agents are: {SWARM_MANIFEST}. Output only your suggestions as a list." },
+            sentinel: { el: document.getElementById('agent-sentinel'), model: 'llama3', hashEl: document.querySelector('#agent-sentinel .agent-hash'), content: document.querySelector('#agent-sentinel .agent-content'), system: "As the Validation Agent, identify potential edge cases and validation needs for the user's request: '{USER_PROMPT}'. The other agents are: {SWARM_MANIFEST}. Output only your validation points as a bulleted list." },
+            echo: { el: document.getElementById('agent-echo'), model: 'codellama', hashEl: document.getElementById('echo-hash'), finalSystem: "As the Code Synthesis Agent, you will receive analyses from a team of agents. Your task is to synthesize these analyses into a single, runnable code block. Adhere strictly to the logic and plans provided. Output ONLY the code, with brief comments where necessary. Do not include any other text, explanations, or markdown formatting." }
+        };
+        this.init();
+    }
+
+    init() {
+        this.initEventListeners();
+        this.checkConnection();
+    }
+
+    initEventListeners() {
+        this.dom.promptSubmit.addEventListener('click', () => this.startWorkflow());
+        this.dom.promptInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) this.startWorkflow(); });
+        this.dom.copyBtn.addEventListener('click', () => this.copyCode());
+    }
+
+    async checkConnection() {
+        try {
+            const response = await fetch(`${this.ollamaUrl}/api/tags`);
+            if (!response.ok) throw new Error('Failed to fetch');
+            this.dom.connectionStatus.innerHTML = '<span class="connection-good">✅ Ollama Connected</span>';
+        } catch (e) {
+            this.dom.connectionStatus.innerHTML = '<span class="connection-bad">❌ Connection Failed</span>';
+        }
+    }
+    
+    updateAgentStatus(agentKey, status) {
+        const agent = this.agentConfig[agentKey];
+        if (!agent) return;
+        agent.el.classList.remove('active');
+        if (status === 'active') {
+            agent.el.classList.add('active');
+        }
+    }
+
+    async callOllamaStream(agentKey, prompt, systemPrompt, onToken) {
+        this.updateAgentStatus(agentKey, 'active');
+        const agent = this.agentConfig[agentKey];
+        const payload = { model: agent.model, prompt, system: systemPrompt, stream: true };
+
+        try {
+            const response = await fetch(`${this.ollamaUrl}/api/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.body) throw new Error("Response has no body");
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponse = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value, { stream: true });
+                // Ollama streams NDJSON, so we need to parse each line
+                const lines = chunk.split('\n').filter(line => line.trim() !== '');
+                for (const line of lines) {
+                    try {
+                        const parsed = JSON.parse(line);
+                        if (parsed.response) {
+                            fullResponse += parsed.response;
+                            onToken(fullResponse);
+                        }
+                    } catch (e) {
+                        console.warn("Could not parse stream chunk:", line);
+                    }
+                }
+            }
+            this.updateAgentStatus(agentKey, 'complete');
+            return fullResponse;
+
+        } catch (err) {
+            console.error(`Error with agent ${agentKey}:`, err);
+            const contentEl = agent.content || this.dom.codeOutput.parentElement;
+            contentEl.innerHTML = `<span class="connection-bad">Error: ${err.message}</span>`;
+            this.updateAgentStatus(agentKey, 'error');
+            throw err;
+        }
+    }
+
+    async startWorkflow() {
+        const initialPrompt = this.dom.promptInput.value.trim();
+        if (!initialPrompt || this.isGenerating) return;
+
+        this.isGenerating = true;
+        this.dom.promptSubmit.disabled = true;
+        this.dom.codeOutput.textContent = "// Agents are initializing...";
+
+        // Reset UI
+        this.agentKeys.forEach(k => {
+            const a = this.agentConfig[k];
+            a.el.classList.remove('active');
+            if(a.content) a.content.innerHTML = `<div class="flex items-center gap-2"><div class="spinner"></div><span>Initializing...</span></div>`;
+        });
+        
+        try {
+            const genesisHash = `gen_${crypto.randomUUID()}`;
+            const agentManifest = {};
+            this.agentKeys.forEach(key => {
+                const originHash = `${key.slice(0, 4)}_${crypto.randomUUID().slice(0, 8)}`;
+                agentManifest[key] = { originHash };
+                this.agentConfig[key].hashEl.textContent = `origin_hash: ${originHash}`;
+            });
+            const swarmManifestString = JSON.stringify(Object.keys(agentManifest));
+
+            // Phase 1: Analyst Agents run in parallel
+            const analystPromises = this.analystKeys.map(key => {
+                const agent = this.agentConfig[key];
+                const sys = agent.system
+                    .replace('{USER_PROMPT}', initialPrompt)
+                    .replace('{SWARM_MANIFEST}', swarmManifestString);
+                
+                return this.callOllamaStream(key, initialPrompt, sys, (tokenStream) => {
+                    agent.content.innerHTML = `<pre>${tokenStream}</pre>`;
+                });
+            });
+
+            const analystResults = await Promise.all(analystPromises);
+            
+            const combinedPrompt = `User Request: "${initialPrompt}"\n\n--- ANALYSES ---\n\n` +
+                `[Nexus - Plan]:\n${analystResults[0]}\n\n` +
+                `[Cognito - Logic]:\n${analystResults[1]}\n\n` +
+                `[Relay - Naming]:\n${analystResults[2]}\n\n` +
+                `[Sentinel - Validation]:\n${analystResults[3]}\n\n--- END ANALYSES ---\n\nSynthesize the final code based on these inputs.`;
+
+            // Phase 2: Echo Agent synthesizes the code
+            const echoSystem = this.agentConfig.echo.finalSystem;
+            this.dom.codeOutput.textContent = ""; // Clear for streaming
+            
+            await this.callOllamaStream('echo', combinedPrompt, echoSystem, (tokenStream) => {
+                this.dom.codeOutput.innerHTML = this.highlighter.highlight(tokenStream);
+            });
+
+        } catch (err) {
+            console.error('Workflow failed:', err);
+            this.dom.codeOutput.innerHTML = `<span class="connection-bad">Workflow failed: ${err.message}</span>`;
+        } finally {
+            this.isGenerating = false;
+            this.dom.promptSubmit.disabled = false;
+        }
+    }
+
+    copyCode() {
+        navigator.clipboard.writeText(this.dom.codeOutput.textContent || "").then(() => {
+            this.dom.copyFeedback.textContent = 'Copied!';
+            setTimeout(() => this.dom.copyFeedback.textContent = '', 2000);
+        }).catch(() => {
+            this.dom.copyFeedback.textContent = 'Failed!';
+            setTimeout(() => this.dom.copyFeedback.textContent = '', 2000);
+        });
+    }
+}
+
+// --- Initialize Application and 3D Background ---
+document.addEventListener('DOMContentLoaded', () => {
+    new NexusSpaceship();
+
+    // Three.js Quantum Background
+    const canvas = document.getElementById('three-canvas');
+    if (!canvas) return;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.position.z = 2.5;
+
+    const geometry = new THREE.IcosahedronGeometry(1, 0);
+    const material = new THREE.MeshStandardMaterial({
+        color: 0xBB86FC,
+        wireframe: true,
+        opacity: 0.2,
+        transparent: true
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xBB86FC, 1);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
+
+    function animate() {
+        requestAnimationFrame(animate);
+        mesh.rotation.x += 0.001;
+        mesh.rotation.y += 0.002;
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+});
+</script>
+</body>
+</html>

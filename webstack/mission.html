@@ -1,0 +1,658 @@
+This is a crucial, real-world robustness requirement: **The system must not crash on an Ollama error but should enter a non-blocking recovery mode, wait for reconnection, and then attempt to resume the failed workflow.**
+
+I will implement the **Error Recovery Protocol (ERP)**:
+
+1.  **Introduce `isRecovering`:** A new state flag in `NexusSpaceship` to stop new workflows during recovery.
+2.  **Modify `callOllamaAgent`:** If it catches an error, it will set `isRecovering = true` and call `startRecovery()`.
+3.  **Implement `startRecovery()`:** This function will:
+    *   Set the UI to a distinct "RECOVERING" state.
+    *   Stop the existing periodic `checkConnection` loop.
+    *   Start a new, aggressive `reconnectLoop`.
+4.  **Implement `reconnectLoop`:** This loop polls the connection. On success:
+    *   Clears the recovery state.
+    *   Resumes the original workflow by calling `startWorkflow()` with the last successful prompt.
+
+This will be a non-trivial but vital set of changes to `NexusSpaceship`.
+
+### **Key Changes in the Updated Script: (Error Recovery Protocol Implemented)**
+
+*   **New State Variables:** `this.isRecovering` and `this.lastSuccessfulPrompt`.
+*   **`startWorkflow()` Update:** Checks `this.isRecovering` and saves the current prompt to `this.lastSuccessfulPrompt`.
+*   **`callOllamaAgent()` Update:** Catches Ollama errors and initiates `this.startRecovery()`.
+*   **New Methods:** `startRecovery()` and `reconnectLoop()`.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS | Quantum Swarm AI Editor</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+:root {--primary:#BB86FC;--secondary:#03DAC6;--danger:#CF6679;--oracle:#FFD700;--background:#121212;--surface:#1E1E1E;--text-primary:#FFFFFF;--text-secondary:rgba(255,255,255,0.7);}
+* {margin:0; padding:0; box-sizing:border-box;}
+body {font-family:'Inter',sans-serif; background:var(--background); color:var(--text-primary); overflow:hidden; height:100vh; width:100vw;}
+#three-canvas {position:fixed; top:0; left:0; width:100%; height:100%; z-index:10; opacity:0.6;}
+#ui-container{position:absolute; top:0; left:0; width:100%; height:100%; z-index:20; padding:16px; display:grid; grid-template-columns:repeat(12, 1fr); grid-template-rows:auto 1fr auto; gap:16px; pointer-events:none;}
+.agent-card{background:rgba(30,30,30,0.8); backdrop-filter:blur(10px); border-radius:16px; padding:16px; color:var(--text-primary); border:1px solid rgba(255,255,255,0.1); box-shadow:0 4px 6px -1px rgba(0,0,0,0.4); pointer-events:auto; transition: all 0.3s ease;}
+.agent-card.active {border-color: var(--primary); box-shadow: 0 0 30px rgba(187,134,252,0.5);}
+.agent-card.tunneling {border-color: var(--danger); box-shadow: 0 0 30px rgba(207,102,121,0.7);}
+.agent-card.reforming {border-color: var(--secondary); box-shadow:0 0 30px rgba(3,218,198,0.6);}
+.agent-card.socratic {border-color: var(--oracle); box-shadow:0 0 30px rgba(255,215,0,0.6);}
+/* NEW: Recovery State Class */
+.agent-card.recovering {border-color: var(--oracle); box-shadow: 0 0 30px rgba(255,215,0,0.5); animation: recover-pulse 1.5s infinite;}
+@keyframes recover-pulse {
+    0% { box-shadow: 0 0 10px rgba(255,215,0,0.5); }
+    50% { box-shadow: 0 0 20px rgba(255,215,0,0.8); }
+    100% { box-shadow: 0 0 10px rgba(255,215,0,0.5); }
+}
+#agent-nexus {grid-column:5/9; grid-row:1; height:fit-content; position: relative;}
+#agent-echo {grid-column:1/13; grid-row:2; display:flex; flex-direction:column;}
+#agent-cognito {grid-column:1/5; grid-row:3; height:fit-content;}
+#agent-relay {grid-column:5/9; grid-row:3; height:fit-content;}
+#agent-sentinel {grid-column:9/13; grid-row:3; height:fit-content;}
+.agent-title{color:var(--primary); font-weight:700; font-size:1.2em;}
+.agent-subtitle{color:var(--secondary); font-weight:300; font-size:0.8em; margin-bottom:4px;}
+.agent-hash { font-family: monospace; font-size:0.7rem; color: var(--secondary); opacity:0.6; word-break: break-all; margin-bottom:8px; }
+.agent-content{ margin-top:8px; font-size:0.9em; color:var(--text-secondary); max-height:120px; overflow-y:auto; }
+#prompt-container{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); display:flex; gap:12px; z-index:25; width:min(90vw,600px); background:rgba(30,30,30,0.9); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px; box-shadow:0 10px 20px rgba(0,0,0,0.6);}
+#prompt-input{flex-grow:1; background:transparent; border:none; border-bottom:2px solid rgba(187,134,252,0.5); color:var(--text-primary); font-size:1em; padding:8px; outline:none;}
+#prompt-input:focus{border-bottom-color:var(--primary);}
+#prompt-submit{width:48px; height:48px; border-radius:50%; background:var(--secondary); color:var(--background); border:none; cursor:pointer; display:flex; align-items:center; justify:center; box-shadow:0 4px 10px rgba(3,218,198,0.4);}
+.btn:disabled {background:#333; cursor:not-allowed;}
+.data-packet{position:fixed; width:12px; height:12px; border-radius:50%; background:var(--primary); box-shadow:0 0 10px var(--primary); opacity:0; z-index:30;}
+.spinner{border:4px solid rgba(255,255,255,0.1);border-left-color:var(--secondary);border-radius:50%;width:16px;height:16px;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#agent-echo .output-content {flex-grow:1; position:relative; margin-top:1rem;}
+pre {background:#0A0A0A !important; border-radius:8px !important; padding:12px; overflow:auto; line-height:1.4; height:100%; margin:0; font-family:ui-monospace,monospace; white-space:pre-wrap; word-wrap:break-word;}
+.sh-comment { color:#64748b; } .sh-string { color:#a3e635 } .sh-number { color:#f59e0b } .sh-keyword { color:#f472b6; } .sh-bracket { color:#c084fc; } .sh-id, .sh-op { color:#94a3b8 }
+#setup-card {grid-column:1/-1; cursor:pointer;}
+.setup-content {max-height:0; overflow:hidden; transition:max-height 0.5s ease-out;}
+.setup-content.open {max-height:500px;} code.cmd {background:#333; color:var(--secondary); padding:2px 6px; border-radius:4px;}
+.connection-good {color:#10B981;} .connection-bad {color:#CF6679;}
+.workflow-status {position:absolute; top:12px; right:12px; font-size:0.75rem; padding:4px 8px; border-radius:6px; background:rgba(30,30,30,0.9); border: 1px solid;}
+.workflow-parallel {color:var(--secondary); border-color: var(--secondary);}
+.workflow-tunneling {color:var(--danger); border-color: var(--danger);}
+.workflow-reforming {color:var(--secondary); border-color: var(--secondary);}
+.workflow-socratic {color:var(--oracle); border-color: var(--oracle);}
+.copy-btn {background:transparent; border:1px solid rgba(255,255,255,0.1); padding:6px; border-radius:6px; cursor:pointer; color:var(--text-secondary);}
+</style>
+</head>
+<body>
+<canvas id="three-canvas"></canvas>
+<div id="ui-container">
+    <div id="setup-card" class="agent-card" onclick="document.getElementById('setup-content').classList.toggle('open')">
+        <div class="flex justify-between items-center">
+            <h2 class="text-md font-bold text-yellow-400">► Ollama Connection Status</h2>
+            <div id="connection-status" class="text-sm font-semibold flex items-center gap-2 mr-4"><div class="spinner"></div><span>Connecting...</span></div>
+        </div>
+        <div id="setup-content" class="setup-content mt-4 space-y-2 text-gray-400 text-sm">
+            <p>If status is <span class="connection-bad font-bold">Failed</span>, you must authorize this page. Stop Ollama, then run this command in your terminal and restart Ollama from there:</p>
+            <pre class="text-xs mt-2"><code class="cmd">export OLLAMA_ORIGINS='*' && ollama serve</code></pre>
+        </div>
+    </div>
+    <div id="agent-nexus" class="agent-card"><div class="agent-title">Nexus</div><div class="agent-subtitle">Orchestrator</div><div class="agent-hash">origin_hash: inactive</div><div class="agent-content">Idle. Awaiting prompt...</div><div id="workflow-status" class="workflow-status workflow-parallel">Parallel</div></div>
+    <div id="agent-echo" class="agent-card">
+        <div style="display:flex; justify-content:space-between; align-items:center">
+            <div><div class="agent-title">Echo</div><div class="agent-subtitle">Code Synthesis</div><div class="agent-hash">origin_hash: inactive</div></div>
+            <div><button id="copy-code" class="copy-btn" title="Copy code">Copy</button><div id="copy-feedback"></div></div>
+        </div>
+        <div class="output-content"><pre><code id="code-output" class="language-js">// Final AI generated code or Socratic inquiry will appear here...</code></pre></div>
+    </div>
+    <div id="agent-cognito" class="agent-card"><div class="agent-title">Cognito</div><div class="agent-subtitle">Logic & Algorithms</div><div class="agent-hash">origin_hash: inactive</div><div class="agent-content">Idle.</div></div>
+    <div id="agent-relay" class="agent-card"><div class="agent-title">Relay</div><div class="agent-subtitle">Structure & Naming</div><div class="agent-hash">origin_hash: inactive</div><div class="agent-content">Idle.</div></div>
+    <div id="agent-sentinel" class="agent-card"><div class="agent-title">Sentinel</div><div class="agent-subtitle">Validation & Edges</div><div class="agent-hash">origin_hash: inactive</div><div class="agent-content">Idle.</div></div>
+</div>
+<div id="prompt-container">
+    <input type="text" id="prompt-input" placeholder="Initiate Cooperative Swarm..." autofocus>
+    <button id="prompt-submit" class="btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3l18 9-18 9V3z"/></svg></button>
+</div>
+
+<script type="module">
+// ---------- Secondary Pipeline Logic (cooperative-loop.js) ----------
+export const SENTINEL = {
+  advise(context = {}) {
+    return {
+      directive: "stabilize_progress",
+      confidence: 0.97,
+      timestamp: Date.now(),
+      context
+    };
+  }
+};
+
+export const NEXUS_ABSTRACT = { // Renamed to avoid conflict with NexusSpaceship
+  receive(advice) {
+    const msg = `NEXUS_ABSTRACT interpreted directive: ${advice.directive}`;
+    return { signal: msg, time: Date.now() };
+  }
+};
+
+export const RELAY_ABSTRACT = { // Renamed
+  transmit(signal) {
+    const msg = `${signal.signal} → transmitted to ECHO_ABSTRACT`;
+    return { echo: msg, time: Date.now() };
+  }
+};
+
+export const ECHO_ABSTRACT = { // Renamed
+  manifest(echo) {
+    const msg = `${echo.echo} manifested`;
+    return { effect: msg, status: "ok", time: Date.now() };
+  }
+};
+
+export const COGNITO_ABSTRACT = { // Renamed
+  resolve(effect) {
+    const summary = `Resolution acknowledged: ${effect.status}`;
+    return {
+      summary,
+      nextContext: { previous: effect, iteration: Date.now() }
+    };
+  }
+};
+
+// ---------- Core Loop Controller ----------
+export async function cooperativeCycle(initialContext = {}) {
+  const advice = SENTINEL.advise(initialContext);
+  const signal = NEXUS_ABSTRACT.receive(advice);
+  const echo = RELAY_ABSTRACT.transmit(signal);
+  const effect = ECHO_ABSTRACT.manifest(echo);
+  const resolution = COGNITO_ABSTRACT.resolve(effect);
+  return resolution.nextContext;
+}
+
+// ---------- Finite Loop Runner ----------
+export async function runLoop(iterations = 3) {
+  let context = { phase: 1 };
+  console.log("--- Secondary Pipeline: Starting Finite Cycle ---");
+  for (let i = 0; i < iterations; i++) {
+    context = await cooperativeCycle(context);
+    console.log(`[Abstract Cycle] Cycle ${i + 1} complete. Directive: ${context.previous.effect.echo.signal.directive}`);
+  }
+  console.log("--- Secondary Pipeline: Loop stable and complete ---");
+  return context;
+}
+// -----------------------------------------------------------------
+
+
+// ---------------------------
+// A: CORE CLASSES
+// ---------------------------
+class SingularityLog {
+    constructor() { this.log = new Map(JSON.parse(localStorage.getItem('singularityLog')) || []); }
+    save() { localStorage.setItem('singularityLog', JSON.stringify(Array.from(this.log.entries()))); }
+    add(prompt, truthfulCore, paradox) {
+        const hash = `ancient_${this.hashCode(prompt)}`;
+        this.log.set(hash, { prompt, truthfulCore, paradox });
+        this.save();
+    }
+    clearLog() {
+        this.log.clear();
+        this.save();
+        console.log("Singularity Log Cleared by PRIME Protocol.");
+    }
+    findSimilar(prompt) {
+        const newPromptWords = new Set(prompt.toLowerCase().split(/\s+/));
+        for (let [hash, data] of this.log) {
+            const oldPromptWords = new Set(data.prompt.toLowerCase().split(/\s+/));
+            const intersection = new Set([...newPromptWords].filter(x => oldPromptWords.has(x)));
+            if (newPromptWords.size === 0) return null;
+            const similarity = intersection.size / newPromptWords.size;
+            if (similarity > 0.85) return { hash, ...data };
+        }
+        return null;
+    }
+    hashCode(str) { let hash = 0; for (let i = 0; i < str.length; i++) { const char = str.charCodeAt(i); hash = (hash << 5) - hash + char; hash |= 0; } return hash; }
+}
+
+class StreamHighlighter {
+    constructor(lang = 'js') { this.lang = StreamHighlighter.langs[lang] || StreamHighlighter.langs.js; }
+    static escape(s) { return s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+    static langs = { js: { rules: [{ t: 'comment', r: /^(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/ }, { t: 'string', r: /^`(?:\\[\s\S]|[^`])*`|^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/ }, { t: 'number', r: /^\b(?:0x[a-fA-F0-9]+|[0-9]+(?:\.[0-9]+)?(?:e[+-]?\d+)?)\b/ }, { t: 'keyword', r: /^\b(?:if|else|for|while|function|return|const|let|var|class|new|in|of|switch|case|break|continue|try|catch|throw|async|await|import|from|export|default|public|private|static)\b/ }, { t: 'bracket', r: /^[\[\]\{\}\(\)]/ }, { t: 'op', r: /^==|===|!=|!==|<=|>=|=>|->|[-+*/%=<>!&|^~?:.,;]/ }, { t: 'id', r: /^\b[a-zA-Z_$][\w$]*\b/ }, { t: 'ws', r: /^\s+/ }] } };
+    tokenize(txt) { const o = []; let i = 0; while (i < txt.length) { let m = null; for (const r of this.lang.rules) { r.r.lastIndex = 0; const s = txt.slice(i), mm = r.r.exec(s); if (mm) { m = { t: r.t, v: mm[0] }; break; } } if (!m) { o.push({ t: 'unknown', v: txt[i++] }); continue; } o.push(m); i += m.v.length; } return o; }
+    renderHTML(toks) { return toks.map(t => `<span class="sh-token sh-${t.t}">${StreamHighlighter.escape(t.v)}</span>`).join(''); }
+    highlightElement(el) { const cL = [...el.classList].find(c => c.startsWith('language-')); const l = cL ? cL.replace('language-', '') : 'js'; this.lang = StreamHighlighter.langs[l] || StreamHighlighter.langs.js; const c = el.textContent; const t = this.tokenize(c); el.innerHTML = this.renderHTML(t); }
+}
+
+// ---------------------------
+// B: NEXUS SWARM CONTROLLER
+// ---------------------------
+class NexusSpaceship {
+    META_INTENTIONS = {
+        'prime': { intent: "The user's workflow requires a fundamental 'reset, revive, and evolve' of the scheme. Treat this as a fresh start, discard similar past solutions, and aim for a fundamentally reworked approach." },
+        'rebounce': { intent: "The user's previous attempt failed; focus on radically different approaches and avoid past reasoning paths." },
+        'bounce': { intent: "The user wants a quick alternative solution without deep re-analysis; provide a slight variation on common themes." },
+        'remix': { intent: "Synthesize two or more known patterns/concepts into a new, single solution. Creativity is prioritized over orthodoxy." },
+        'adapt': { intent: "The current request is an adaptation of an existing concept; focus on the constraints, differences, and necessary modifications." },
+        'base': { intent: "The content is a fundamental concept; ensure the output is simple, robust, and general. Prioritize clarity and foundational stability." },
+        'rebase': { intent: "The current concept must be built upon a specific prior idea; focus on incremental, stable changes from a defined foundation." },
+        'rebased': { intent: "The current concept must be built upon a specific prior idea; focus on incremental, stable changes from a defined foundation." },
+        'based': { intent: "The content is a fundamental concept; ensure the output is simple, robust, and general. Prioritize clarity and foundational stability." },
+        'parallel': { intent: "The user has explicitly requested the Parallel Processing Topology for high-throughput execution. The agents should proceed simultaneously without sequential context-passing." } 
+    };
+
+    UNIFIED_MODEL = 'code:latest'; 
+
+    AGENT_ROOTS = {
+        'nexus': "As the Planning Agent, your task is to create a concise, high-level plan of execution for the user's request: '{USER_PROMPT}'. Focus on the main steps required. Output only the plan.",
+        'cognito': "As the Logic Agent, your task is to create a detailed pseudo-code or algorithmic outline for the user's request: '{USER_PROMPT}'. Do not write final code. Output only the logical outline.",
+        'relay': "As the Details Agent, your task is to suggest clear and appropriate function names, variable names, and data structures for the user's request: '{USER_PROMPT}'. Output only your suggestions as a list.",
+        'sentinel': "As the Validation Agent, your task is to identify potential edge cases, error conditions, and validation requirements for the user's request: '{USER_PROMPT}'. Output only your validation points as a list.",
+        'echoInitial': "As the Schema Agent, your first task is to define the ideal shape of the final answer for the user's request: '{USER_PROMPT}'. Output a structural schema or code signature (e.g., 'function name(params){...}'). Be very concise.",
+        'echoFinal': "As the Code Synthesis Agent, your task is to synthesize all provided analyses into a single, complete, and runnable code block. You MUST perform an internal coherence check on the analysis data provided. If you find conflicts, prioritize the Logic and Schema to resolve them. Adhere strictly to the user's request. Output ONLY the code, wrapped in a single markdown block." 
+    };
+    
+    ANALYTICAL_SEQUENCE_KEYS = ['cognito', 'relay', 'sentinel', 'nexus']; 
+
+    constructor() {
+        this.isGenerating = false;
+        this.isConnected = false;
+        this.isRecovering = false; // NEW: Recovery State
+        this.lastSuccessfulPrompt = null; // NEW: Stores prompt for resume
+        this.checkInterval = null;
+        this.ollamaUrl = 'http://localhost:11434';
+        this.singularityLog = new SingularityLog();
+        this.dom = {
+            promptInput: document.getElementById('prompt-input'), promptSubmit: document.getElementById('prompt-submit'),
+            codeOutput: document.getElementById('code-output'), connectionStatus: document.getElementById('connection-status'),
+            workflowStatus: document.getElementById('workflow-status'), copyBtn: document.getElementById('copy-code'), copyFeedback: document.getElementById('copy-feedback')
+        };
+        this.agentKeys = ['nexus', 'cognito', 'relay', 'sentinel', 'echo'];
+        this.analystKeys = ['nexus', 'cognito', 'relay', 'sentinel']; 
+        this.agentConfig = {
+            'nexus': { el: document.getElementById('agent-nexus'), model: this.UNIFIED_MODEL, hashEl: document.querySelector('#agent-nexus .agent-hash'), content: document.querySelector('#agent-nexus .agent-content'), originalRootSystem: this.AGENT_ROOTS.nexus },
+            'cognito': { el: document.getElementById('agent-cognito'), model: this.UNIFIED_MODEL, hashEl: document.querySelector('#agent-cognito .agent-hash'), content: document.querySelector('#agent-cognito .agent-content'), originalRootSystem: this.AGENT_ROOTS.cognito },
+            'relay': { el: document.getElementById('agent-relay'), model: this.UNIFIED_MODEL, hashEl: document.querySelector('#agent-relay .agent-hash'), content: document.querySelector('#agent-relay .agent-content'), originalRootSystem: this.AGENT_ROOTS.relay },
+            'sentinel': { el: document.getElementById('agent-sentinel'), model: this.UNIFIED_MODEL, hashEl: document.querySelector('#agent-sentinel .agent-hash'), content: document.querySelector('#agent-sentinel .agent-content'), originalRootSystem: this.AGENT_ROOTS.sentinel },
+            'echo': { el: document.getElementById('agent-echo'), model: this.UNIFIED_MODEL, hashEl: document.querySelector('#agent-echo .agent-hash'), content: document.querySelector('#agent-echo .output-content'),
+                      originalRootSystem: this.AGENT_ROOTS.echoFinal,
+                      initialSystem: this.AGENT_ROOTS.echoInitial,
+                      finalSystem: this.AGENT_ROOTS.echoFinal }
+        };
+        this.init();
+    }
+
+    async init() {
+        this.initEventListeners();
+        this.checkConnection(true);
+        new QuantumBackground();
+        runLoop(5); // Secondary Pipeline Activation
+    }
+
+    initEventListeners() {
+        this.dom.promptSubmit.addEventListener('click', () => this.startWorkflow());
+        this.dom.promptInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !this.isGenerating) this.startWorkflow(); });
+        this.dom.copyBtn.addEventListener('click', () => this.copyCode());
+    }
+
+    updateConnectionStatus(isConnected) {
+        this.isConnected = isConnected;
+        if (isConnected) {
+            this.dom.connectionStatus.innerHTML = '<span class="connection-good">✅ Ollama Connected</span>';
+            if (!this.isRecovering) this.dom.promptInput.placeholder = "Initiate Cooperative Swarm...";
+        } else {
+            this.dom.connectionStatus.innerHTML = `<span class="connection-bad">❌ Connection Failed</span>`;
+            if (!this.isRecovering) this.dom.promptInput.placeholder = "Ollama Disconnected. Reconnecting...";
+        }
+    }
+
+    async checkConnection(isInitial = false) {
+        if (!isInitial && this.isGenerating) {
+            this.checkInterval = setTimeout(() => this.checkConnection(), 7000);
+            return;
+        }
+
+        if (!isInitial && !this.isRecovering) {
+            this.dom.connectionStatus.innerHTML = `<span>Checking...</span>`;
+        }
+
+        try {
+            const response = await fetch(this.ollamaUrl, { signal: AbortSignal.timeout(5000) });
+            this.updateConnectionStatus(response.ok);
+        } catch (error) {
+            this.updateConnectionStatus(false);
+        }
+
+        clearTimeout(this.checkInterval);
+        if (!this.isRecovering) this.checkInterval = setTimeout(() => this.checkConnection(), 7000);
+    }
+    
+    // NEW: Recovery Loop
+    startRecovery() {
+        if (this.isRecovering) return;
+        this.isRecovering = true;
+        this.isGenerating = false; // Release the workflow lock
+        this.dom.promptSubmit.disabled = true;
+
+        clearTimeout(this.checkInterval); // Stop normal checks
+        this.setWorkflowStatus('RECOVERING');
+        this.dom.connectionStatus.innerHTML = `<span>⚠️ Attempting Reconnect...</span>`;
+        this.dom.promptInput.placeholder = "RECOVERING: Waiting for Ollama...";
+
+        this.agentKeys.forEach(key => this.agentConfig[key].el.classList.add('recovering'));
+        
+        // Start aggressive, fast reconnect loop
+        this.reconnectLoop();
+    }
+
+    async reconnectLoop() {
+        if (!this.isRecovering) return;
+
+        try {
+            const response = await fetch(this.ollamaUrl, { signal: AbortSignal.timeout(2000) });
+            if (response.ok) {
+                // SUCCESS: Resume workflow
+                this.isRecovering = false;
+                this.updateConnectionStatus(true);
+                this.agentKeys.forEach(key => this.agentConfig[key].el.classList.remove('recovering'));
+                this.dom.promptSubmit.disabled = false;
+                
+                this.renderCode(`// Connection Restored. Resuming workflow for: ${this.lastSuccessfulPrompt}`);
+                this.setWorkflowStatus('RESUMING');
+                
+                // Immediately attempt to re-run the last failed workflow
+                this.startWorkflow(true); 
+                return;
+            }
+        } catch (error) {
+            // Still disconnected, update UI, and continue trying
+            this.updateConnectionStatus(false);
+            this.dom.connectionStatus.innerHTML = `<span>⚠️ Reconnect Failed. Retrying...</span>`;
+        }
+
+        // Try again in 3 seconds
+        setTimeout(() => this.reconnectLoop(), 3000);
+    }
+    // END NEW RECOVERY LOOP
+
+    parseMetaIntention(prompt) {
+        const parts = prompt.trim().split(/:\s*|\s+/, 2);
+        const keyword = parts[0].toLowerCase();
+
+        if (this.META_INTENTIONS.hasOwnProperty(keyword)) {
+            let content = prompt.trim().substring(keyword.length).trim();
+            if (content.startsWith(':')) content = content.substring(1).trim();
+            return {
+                keyword: keyword,
+                intention: this.META_INTENTIONS[keyword].intent,
+                content: content
+            };
+        }
+        return { keyword: null, intention: null, content: prompt };
+    }
+
+    getAgentSystemPrompt(agentKey, finalPrompt, metaIntention) {
+        const originalRootSystem = this.agentConfig[agentKey].originalRootSystem;
+        if (!originalRootSystem) { throw new Error(`Agent Root for ${agentKey} is corrupt!`); }
+        
+        let systemPrompt = originalRootSystem;
+        
+        if (agentKey !== 'nexus' && metaIntention) {
+            const prefix = `[USER WORKFLOW INTENTION: ${metaIntention}] `;
+            systemPrompt = prefix + systemPrompt;
+        }
+        
+        return systemPrompt.replace('{USER_PROMPT}', finalPrompt);
+    }
+
+    async delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    // Parallel Execution Flow (Original Logic - High Throughput)
+    async runParallelAnalysis(finalPrompt, intention) {
+        this.setWorkflowStatus('Parallel');
+        
+        await Promise.all(this.agentKeys.map(key => this.animateDataPacket(this.dom.promptInput, this.agentConfig[key].el)));
+
+        const analystPromises = this.analystKeys.map(key => {
+            const systemPrompt = this.getAgentSystemPrompt(key, finalPrompt, intention);
+            return this.callOllamaAgent(finalPrompt, key, systemPrompt);
+        });
+        const echoSchemaPromise = this.callOllamaAgent(finalPrompt, 'echo', this.AGENT_ROOTS.echoInitial.replace('{USER_PROMPT}', finalPrompt));
+
+        const [nexusResult, cognitoResult, relayResult, sentinelResult] = await Promise.all(analystPromises);
+        const echoSchemaResult = await echoSchemaPromise;
+        
+        return {
+            Plan: nexusResult,
+            Logic: cognitoResult,
+            Details: relayResult,
+            Validation: sentinelResult,
+            Schema: echoSchemaResult
+        };
+    }
+
+    // Sequential Execution Flow (Re-looped/Generational Learning - High Context)
+    async runSequentialAnalysis(finalPrompt, intention) {
+        this.setWorkflowStatus('Re-looped');
+
+        const accumulatedContext = {};
+        let currentContext = `User Request: "${finalPrompt}"`;
+
+        // Run sequential analysis: Cognito -> Relay -> Sentinel -> Nexus
+        for (const agentKey of this.ANALYTICAL_SEQUENCE_KEYS) {
+            // Get the proper root name (Plan for Nexus, Logic for Cognito, etc.)
+            const rootName = this.agentConfig[agentKey].originalRootSystem.match(/As the (.*?),/)[1].trim();
+            const resultKey = (agentKey === 'nexus') ? 'Plan' : rootName.split(' ')[0]; 
+
+            this.updateAgentStatus('nexus', 'active', `Root: Planning | Processing: ${rootName}`);
+            
+            // Animate flow from previous agent/prompt
+            const previousIndex = this.ANALYTICAL_SEQUENCE_KEYS.indexOf(agentKey) - 1;
+            const sourceElement = (previousIndex === -1) ? this.dom.promptInput : this.agentConfig[this.ANALYTICAL_SEQUENCE_KEYS[previousIndex]].el;
+            await this.animateDataPacket(sourceElement, this.agentConfig[agentKey].el);
+
+            const fullPrompt = (agentKey === 'cognito') 
+                ? `${currentContext}\n---\nFulfill your core task, ignoring Plan/Details/Validation. Focus only on the request.` 
+                : `${currentContext}\n---\nBased on the accumulated context above, fulfill your core task:`;
+
+            const systemPrompt = this.getAgentSystemPrompt(agentKey, finalPrompt, intention);
+
+            const result = await this.callOllamaAgent(fullPrompt, agentKey, systemPrompt);
+            
+            accumulatedContext[resultKey] = result;
+            currentContext += `\n${resultKey}: ${result}`;
+        }
+
+        // Final Plan is now in accumulatedContext.Plan
+
+        // Step 2: Get Schema (Echo Initial)
+        this.updateAgentStatus('nexus', 'active', `Root: Planning | Processing: Schema Agent`);
+        await this.animateDataPacket(this.dom.promptInput, this.agentConfig.echo.el); // Animate from prompt to Echo
+        const echoSchemaPromise = this.callOllamaAgent(finalPrompt, 'echo', this.AGENT_ROOTS.echoInitial.replace('{USER_PROMPT}', finalPrompt));
+        const echoSchemaResult = await echoSchemaPromise;
+        accumulatedContext.Schema = echoSchemaResult;
+        
+        return accumulatedContext;
+    }
+
+    async startWorkflow(isResuming = false) { // Added isResuming flag
+        const initialPrompt = this.dom.promptInput.value.trim();
+        const currentPrompt = isResuming ? this.lastSuccessfulPrompt : initialPrompt;
+
+        if (!currentPrompt || this.isGenerating || this.isRecovering) return;
+        if (!this.isConnected) {
+            this.dom.codeOutput.textContent = `// ERROR: Ollama is disconnected. Please ensure the service is running and authorized (see Setup). NEXUS cannot initiate swarm until connection is restored.`;
+            // Do not enter recovery mode yet, let the user see the error first unless recovering
+            return; 
+        }
+        
+        const { keyword, intention, content: finalPrompt } = this.parseMetaIntention(currentPrompt);
+        
+        if (!finalPrompt) {
+             this.dom.codeOutput.textContent = `// Meta-Intention '${keyword}' was recognized. Please provide the content after the keyword, e.g., '${keyword}: generate a factorial function'.`;
+             return;
+        }
+
+        this.isGenerating = true; 
+        this.dom.promptSubmit.disabled = true; 
+        this.dom.codeOutput.textContent = '';
+        this.agentKeys.forEach(key => this.updateAgentStatus(key, 'idle', '...'));
+        this.lastSuccessfulPrompt = currentPrompt; // Save the prompt before execution
+
+        if (keyword === 'prime') {
+            this.updateAgentStatus('nexus', 'reforming', 'PRIME PROTOCOL: Clearing Singularity Log...');
+            this.singularityLog.clearLog();
+            await this.delay(1000);
+        }
+
+        this.updateAgentStatus('nexus', 'active', `Root: Planning | Intent: ${intention || 'Standard'}`); 
+        await this.delay(500);
+
+        const ancientCall = this.singularityLog.findSimilar(finalPrompt);
+        if (ancientCall) { this.initiateSocraticDialogue(ancientCall); return; }
+
+        let accumulatedContext = {};
+        try {
+            const genesisHash = `gen_${crypto.randomUUID()}`;
+            this.agentKeys.forEach(key => this.updateAgentHash(key, genesisHash));
+            
+            if (keyword === 'parallel') {
+                accumulatedContext = await this.runParallelAnalysis(finalPrompt, intention);
+            } else {
+                accumulatedContext = await this.runSequentialAnalysis(finalPrompt, intention);
+            }
+
+            // Step 3: Coherence Check (RE-INSTATED UNDER NEXUS)
+            this.updateAgentStatus('nexus', 'processing', `Root: Planning | Final Verdict Check...`);
+            const coherenceContext = `Analyses:\nPlan: ${accumulatedContext.Plan}\nLogic: ${accumulatedContext.Logic}\nDetails: ${accumulatedContext.Details}\nValidation: ${accumulatedContext.Validation}\nAre these logically compatible? Answer only COHERENT or INCOHERENT.`;
+            const coherenceResult = await this.callOllamaAgent(coherenceContext, 'nexus', this.AGENT_ROOTS.nexus.replace('{USER_PROMPT}', coherenceContext));
+
+            let finalCode = '';
+            if (coherenceResult.toLowerCase().includes("incoherent")) {
+                this.setWorkflowStatus('Tunneling');
+                this.updateAgentStatus('nexus', 'tunneling', `Root: Planning | Paradox! Arbiter Check...`);
+                const schemaValidityContext = `Is this Solution Schema a valid foundation for the Request?\nRequest: "${finalPrompt}"\nSchema: "${accumulatedContext.Schema}"\nAnswer only VALID or INVALID.`;
+                const schemaValidityResult = await this.callOllamaAgent(schemaValidityContext, 'nexus', this.AGENT_ROOTS.nexus.replace('{USER_PROMPT}', schemaValidityContext));
+
+                if (schemaValidityResult.toLowerCase().includes("invalid")) {
+                    this.setWorkflowStatus('Reforming');
+                    this.updateAgentStatus('nexus', 'reforming', `Root: Planning | Schema Invalid! Reforming Genesis...`);
+                    const truthfulCore = accumulatedContext.Logic;
+                    const paradox = "Plan vs Logic";
+                    this.singularityLog.add(finalPrompt, truthfulCore, paradox); 
+                    
+                    const reformationContext = `EMERGENCY REFORMATION: A double paradox was detected. The only sound logic is this 'Truthful Core':\n${truthfulCore}\n\nYour new mission is to build the final code based ONLY on this Truthful Core to fulfill the original user request: "${finalPrompt}".`;
+                    await this.animateDataPacket(this.agentConfig.nexus.el, this.agentConfig.echo.el);
+                    finalCode = await this.callOllamaAgent(reformationContext, 'echo', this.AGENT_ROOTS.echoFinal);
+                } else {
+                    const tunnelContext = `EMERGENCY: A reasoning paradox was detected. Use your pre-generated Solution Schema as the primary truth.\nRequest: "${finalPrompt}"\nSchema: "${accumulatedContext.Schema}"\nGenerate the final code.`;
+                    await this.animateDataPacket(this.agentConfig.nexus.el, this.agentConfig.echo.el);
+                    finalCode = await this.callOllamaAgent(tunnelContext, 'echo', this.AGENT_ROOTS.echoFinal);
+                }
+            } else {
+                this.setWorkflowStatus('Parallel');
+                const masterContext = `TASK: Synthesize the agent footprints into final code.\nRequest: "${finalPrompt}"\nPlan: ${accumulatedContext.Plan}\nLogic: ${accumulatedContext.Logic}\nDetails: ${accumulatedContext.Details}\nValidation: ${accumulatedContext.Validation}\nSchema: ${accumulatedContext.Schema}\nGenerate the final code.`;
+                
+                for (const key of this.ANALYTICAL_SEQUENCE_KEYS) {
+                    await this.animateDataPacket(this.agentConfig[key].el, this.agentConfig.echo.el);
+                }
+
+                finalCode = await this.callOllamaAgent(masterContext, 'echo', this.AGENT_ROOTS.echoFinal);
+            }
+            this.renderCode(finalCode);
+        } catch (error) {
+            console.error("Workflow failed:", error);
+            this.renderCode(`// Workflow failed: ${error.message}. Initiating Recovery Protocol...`);
+            this.startRecovery(); // Initiate recovery on failure
+        } finally {
+            this.isGenerating = false; 
+            this.dom.promptSubmit.disabled = false;
+            this.agentKeys.forEach(key => this.agentConfig[key].el.classList.remove('active', 'tunneling', 'reforming', 'socratic'));
+            if (!this.isRecovering) this.updateAgentStatus('nexus', 'idle', 'Idle. Awaiting prompt...');
+        }
+    }
+
+    initiateSocraticDialogue(ancientCallData) {
+        this.setWorkflowStatus('Socratic');
+        this.agentKeys.forEach(k => this.updateAgentStatus(k, 'socratic', 'Awaiting User Input...'));
+        const inquiryText = `⚠️ ANCIENT CALL DETECTED ⚠️\n\nThis request has failed before due to a deep paradox between concepts.\n\nThe only sound logic we salvaged was this 'Truthful Core':\n\n${ancientCallData.truthfulCore}\n\nTo finally solve this, you must provide the missing law. Please describe how the conflicting ideas should relate to each other, using the Core as our starting point.`;
+        this.renderCode(inquiryText, 'text');
+        this.dom.promptInput.value = ''; this.dom.promptInput.placeholder = "Provide your clarifying law...";
+        this.dom.promptSubmit.onclick = () => { this.resumeWithClarification(ancientCallData.prompt, ancientCallData.truthfulCore); };
+    }
+
+    async resumeWithClarification(originalPrompt, truthfulCore) {
+        const clarifyingLaw = this.dom.promptInput.value.trim();
+        if (!clarifyingLaw) return;
+        this.dom.promptInput.value = ''; this.dom.promptInput.placeholder = "Initiate Cooperative Swarm...";
+        this.dom.promptSubmit.onclick = () => this.startWorkflow();
+        const finalGenesisPrompt = `Original Request: "${originalPrompt}"\nValidated Truthful Core: \n${truthfulCore}\n\nUser's Authoritative Clarifying Law: "${clarifyingLaw}"\n---\nNew Mission: Synthesize these into a final, complete, and runnable code solution. Output ONLY the code.`;
+        this.agentKeys.forEach(k => this.updateAgentStatus(k, 'processing', 'Final Synthesis...'));
+        try {
+            await this.animateDataPacket(this.dom.promptInput, this.agentConfig.echo.el);
+            const finalCode = await this.callOllamaAgent(finalGenesisPrompt, 'echo', this.AGENT_ROOTS.echoFinal);
+            this.renderCode(finalCode);
+        } catch (error) { this.renderCode(`// Final Synthesis Failed: ${error.message}`);
+        } finally { this.isGenerating = false; this.dom.promptSubmit.disabled = false; this.agentKeys.forEach(key => this.agentConfig[key].el.classList.remove('active', 'socratic')); }
+    }
+
+    async callOllamaAgent(prompt, agentKey, systemPrompt) {
+        this.updateAgentStatus(agentKey, 'active', 'Thinking...');
+        const agent = this.agentConfig[agentKey];
+        const payload = { model: this.UNIFIED_MODEL, prompt, system: systemPrompt, stream: false, options: { temperature: 0.3 } }; 
+        try {
+            const response = await fetch(`${this.ollamaUrl}/api/generate`, { method: 'POST', body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error(`API error (${response.status})`);
+            const data = await response.json();
+            this.updateAgentStatus(agentKey, 'idle', 'Done.');
+            this.updateConnectionStatus(true);
+            return data.response;
+        } catch (error) {
+            this.updateConnectionStatus(false);
+            // Throw error to be caught by startWorkflow for recovery
+            throw error; 
+        }
+    }
+
+    updateAgentStatus(agentKey, status, message) {
+        const agent = this.agentConfig[agentKey];
+        agent.el.classList.remove('active', 'tunneling', 'reforming', 'socratic', 'recovering');
+        if (status !== 'idle') agent.el.classList.add(status);
+        agent.content.innerHTML = (status === 'active') ? `<div class="flex items-center gap-2"><div class="spinner"></div><span>${message}</span></div>` : message;
+    }
+
+    updateAgentHash(agentKey, hash) { this.agentConfig[agentKey].hashEl.textContent = `genesis_hash: ${hash.substring(0,12)}`; }
+
+    setWorkflowStatus(mode) {
+        const el = this.dom.workflowStatus;
+        el.textContent = mode;
+        el.className = `workflow-status workflow-${mode.toLowerCase()}`;
+        if (mode.toLowerCase() === 're-looped' || mode.toLowerCase() === 'parallel' || mode.toLowerCase() === 'delegated' || mode.toLowerCase() === 'resuming') {
+             el.classList.add('workflow-parallel'); 
+        }
+        if (mode.toLowerCase() === 'recovering') {
+             el.classList.add('workflow-socratic'); // Use Socratic color for Oracle/Recovery
+        }
+    }
+
+    renderCode(rawText, lang = 'js') {
+        const codeMatch = rawText.match(/```(?:\w+)?\n([\s\S]*?)\n```/);
+        const code = codeMatch ? codeMatch[1].trim() : rawText.trim();
+        const langMatch = rawText.match(/```(\w+)/);
+        const finalLang = langMatch ? langMatch : lang;
+        const el = this.dom.codeOutput;
+        el.className = `language-${finalLang}`; el.textContent = code;
+        if (finalLang !== 'text') new StreamHighlighter(finalLang).highlightElement(el);
+    }
+
+    copyCode() {
+        navigator.clipboard.writeText(this.dom.codeOutput.textContent);
+        this.dom.copyFeedback.textContent = 'Copied!';
+        setTimeout(() => this.dom.copyFeedback.textContent = '', 2000);
+    }
+
+    animateDataPacket(from, to) { return new Promise(resolve => { const p = document.createElement('div'); p.className = 'data-packet'; document.body.appendChild(p); const sR = from.getBoundingClientRect(), tR = to.getBoundingClientRect(); gsap.set(p, { x: sR.left + sR.width / 2, y: sR.top + sR.height / 2, opacity: 1, scale: .5 }); gsap.to(p, { x: tR.left + tR.width / 2, y: tR.top + tR.height / 2, scale: 1.2, opacity: .8, duration: 1.2, ease: "power2.inOut", onComplete: () => { p.remove(); resolve(); } }); }); }
+}
+
+document.addEventListener('DOMContentLoaded', () => { new NexusSpaceship(); });
+</script>
+</body>
+</html>
+```
