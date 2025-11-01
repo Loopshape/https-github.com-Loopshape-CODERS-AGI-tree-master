@@ -1,0 +1,11 @@
+# requirements.txt - Python Dependencies for Nemodian 2244-1 AI Backend
+
+# Core HTTP Request Handling (Used for Ollama API calls)
+requests
+
+# Web Framework (Used for exposing the /api/reason endpoint)
+Flask
+
+# Optional: If you use the full, unadapted 'ai.py' which uses subprocess calls
+# that might require tools like 'file' or 'grep', you should list the Python
+# equivalents or ensure system dependencies are met via apt.
