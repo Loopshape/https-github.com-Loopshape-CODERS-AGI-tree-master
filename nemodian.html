@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nemodian 2244-1 :: Autonomous 5-Agent AI Editor</title>
+<!-- Load necessary external libraries for 5-Agent System -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+
+<style>
+    /* ----- Modern CSS Variables (from Editor) ----- */
+    :root {
+        --muted: #888;
+        --info: #2196F3;
+        --warn: #FF9800;
+        --error: #F44336;
+        --success: #4CAF50;
+        --baseline: 1.5em;
+        --header-h: calc(var(--baseline) * 1.6);
+        --status-h: var(--baseline);
+        --footer-h: calc(var(--baseline) * 2);
+        --font-size: 13px;
+        --ln-width: 50px;
+        --theme-bg: #3a3c31;
+        --panel: #313328;
+        --header-bg: #2e3026;
+        --status-bg: #22241e;
+        --accent: #4ac94a;
+        --muted-text: #999966;
+        --err: #a03333;
+        --warn-bg: #f0ad4e;
+        --hover-blue: #3366a0;
+        --info-bg: #5bc0de;
+    }
+
+    /* Base Styles & Material Dark Theme (from 5-Agent System) */
+    body {
+        margin: 0;
+        background: #121212;
+        color: #eee;
+        font-family: 'Inter', Roboto, sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        font-size: var(--font-size); /* Integrated from editor */
+        line-height: var(--baseline); /* Integrated from editor */
+    }
+
+    #three-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 10;
+        width: 100%;
+        height: 100%;
+    }
+
+    #ui-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 20;
+        padding: 16px;
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        grid-template-rows: auto 1fr auto;
+        gap: 16px;
+        pointer-events: none;
+    }
+
+    /* Material Card Styling */
+    .agent-card {
+        background: #1F1F1F;
+        border-radius: 16px;
+        padding: 16px;
+        color: #eee;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4);
+        pointer-events: auto;
+        transition: box-shadow 0.3s ease;
+        display: flex; /* Added for editor layout within Echo */
+        flex-direction: column; /* Added for editor layout within Echo */
+    }
+
+    /* REBUILT: Grid Layout for 5-Agent Dashboard on 12-Column Grid */
+    #agent-nexus {
+        grid-column: 5 / 9;
+        grid-row: 1 / 2;
+        height: fit-content;
+    }
+
+    #agent-echo {
+        grid-column: 1 / 13;
+        grid-row: 2 / 3;
+        max-height: 100%;
+        overflow-y: auto;
+        z-index: 20;
+    }
+
+    #agent-cognito {
+        grid-column: 1 / 5;
+        grid-row: 3 / 4;
+        height: fit-content;
+    }
+
+    #agent-relay {
+        grid-column: 5 / 9;
+        grid-row: 3 / 4;
+        height: fit-content;
+    }
+
+    #agent-sentinel {
+        grid-column: 9 / 13;
+        grid-row: 3 / 4;
+        height: fit-content;
+    }
+
+    /* Material Typography & Color */
+    .agent-title { color: #BB86FC; font-weight: 700; font-size: 1.4em; }
+    .agent-subtitle { color: #03DAC6; font-weight: 300; font-size: 0.8em; margin-bottom: 8px; }
+    .agent-content {
+        margin-top: 12px;
+        font-size: 0.9em;
+        color: rgba(255,255,255,0.7);
+        max-height: 100%; /* Changed from fixed height for Echo editor */
+        overflow-y: hidden; /* Changed to hidden for Echo, editor-container handles its own scroll */
+        flex: 1; /* For Echo agent to take available space */
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Input Prompt Styling (from 5-Agent System) */
+    #prompt-container {
+        position: fixed;
+        top: 45%;
+        left: 50%;
+        transform: translate(-50%,-50%);
+        display: flex;
+        gap: 12px;
+        z-index: 25;
+        width: min(90vw, 600px);
+        background: #1F1F1F;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+    }
+    #prompt-input {
+        flex-grow: 1;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid rgba(187,134,252,0.5);
+        color: #eee;
+        font-size: 1em;
+        padding: 8px;
+        outline: none;
+        transition: border-color 0.3s ease;
+    }
+    #prompt-input:focus { border-bottom-color: #BB86FC; }
+    #prompt-submit {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: #03DAC6;
+        color: #121212;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px rgba(3,218,198,0.4);
+        transition: transform 0.1s;
+    }
+    #prompt-submit:active { transform: scale(0.95); }
+
+    /* Data Packet Animation */
+    .data-packet {
+        position: fixed;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #BB86FC;
+        box-shadow: 0 0 10px #BB86FC;
+        opacity: 0;
+        z-index: 30;
+    }
+    .spinner {
+        border: 4px solid rgba(255,255,255,0.1);
+        border-left-color: #03DAC6;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* PrismJS Code Highlighting Theme */
+    pre[class*="language-"] {
+        margin: 0;
+        padding: 10px;
+        border-radius: 6px;
+        background: #121212;
+        font-size: 0.8em;
+        white-space: pre-wrap;
+        word-break: break-all;
+        border: 1px solid #333;
+    }
+    .token.string { color: #81C784; }
+    .token.keyword { color: #BB86FC; }
+    .token.comment { color: #666666; }
+
+    /* ----- Editor-Specific Styles (Merged and Adapted) ----- */
+    button {
+        background: var(--err);
+        border: 1px solid var(--err);
+        color: #f0f0e0;
+        padding: 6px 8px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all .2s;
+        border-radius: 3px;
+    }
+    button:hover {
+        background: var(--hover-blue);
+        border-color: var(--hover-blue);
+    }
+    button.success { background: var(--accent); border-color: var(--accent); }
+    button.info { background: var(--info-bg); border-color: var(--info-bg); }
+    button.warn { background: var(--warn-bg); border-color: var(--warn-bg); color: #3a3c31; }
+    .small { font-size: 12px; padding: 6px 8px; }
+
+    /* Modern Editor Container - Adapted to fit agent-card */
+    .editor-container {
+        position: relative;
+        display: flex;
+        flex: 1; /* Allows it to expand within the agent-content */
+        background: var(--theme-bg);
+        overflow: auto; /* Handles its own scrolling */
+        border: 1px solid #22241e; /* From editor, adapted */
+        border-radius: 8px; /* New, to fit card style */
+        margin-top: 5px; /* Spacing */
+    }
+
+    .line-numbers {
+        width: var(--ln-width);
+        padding: 10px 8px;
+        background: var(--panel);
+        color: var(--muted-text);
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+        user-select: none;
+        line-height: var(--baseline);
+        font-family: 'Fira Code', monospace; /* Use Fira Code as desired */
+        font-size: inherit;
+        flex-shrink: 0;
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        overflow: hidden; /* Prevent its own scrollbar */
+    }
+
+    .editor-content {
+        flex: 1;
+        position: relative;
+        min-height: 100%;
+        padding: 10px;
+        padding-left: 12px;
+        box-sizing: border-box;
+        white-space: pre;
+        line-height: var(--baseline);
+        font-family: 'Fira Code', monospace; /* Use Fira Code as desired */
+        font-size: inherit;
+        tab-size: 4;
+        -moz-tab-size: 4;
+        caret-color: var(--accent);
+        outline: none;
+        overflow-wrap: normal;
+        word-break: normal;
+        overflow: hidden; /* Editor-container handles scroll */
+    }
+    .editor-content:focus { outline: none; }
+
+    /* StreamHighlighter Styles */
+    .sh-token { transition: opacity 0.08s ease; pointer-events: none; }
+    .sh-comment { color: #64748b; font-style: italic; opacity: 0.8; }
+    .sh-string { color: #a3e635; font-weight: 500; }
+    .sh-number { color: #f59e0b; font-weight: 600; }
+    .sh-keyword { color: #f472b6; font-weight: 600; }
+    .sh-type { color: #7dd3fc; font-weight: 500; }
+    .sh-bracket { color: #c084fc; font-weight: 700; }
+    .sh-id { color: #94a3b8; }
+    .sh-op { color: #94a3b8; font-weight: 500; }
+    .sh-ws { opacity: 0.3; }
+    .sh-key { color: #7dd3fc; font-weight: 500; }
+    .sh-number2 { color: #f59e0b; font-weight: 600; }
+    .sh-text { color: #e2e8f0; }
+    .sh-unknown { color: #f87171; }
+    .sh-tag { color: #f472b6; font-weight: 600; }
+    .sh-property { color: #7dd3fc; font-weight: 500; }
+    .sh-function { color: #4ac94a; font-weight: 500; }
+
+    /* Selection styling */
+    .editor-content::selection { background: rgba(74, 201, 74, 0.3); }
+
+    /* Scrollbar styling for editor-container */
+    .editor-container::-webkit-scrollbar { width: 12px; }
+    .editor-container::-webkit-scrollbar-track { background: var(--panel); }
+    .editor-container::-webkit-scrollbar-thumb { background: var(--muted-text); border-radius: 6px; }
+    .editor-container::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* Editor Overlay Panels */
+    .editor-overlay { /* Generic for preview and AI response */
+        position: fixed;
+        background: var(--panel);
+        border: 1px solid var(--accent);
+        border-radius: 5px;
+        box-shadow: 0 4px 12px rgba(0,0,0,.3);
+        z-index: 1000; /* High z-index */
+        display: none;
+    }
+
+    #preview-panel {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%;
+        height: 80%;
+        flex-direction: column;
+    }
+    #preview-header {
+        background: var(--header-bg);
+        color: #f0f0e0;
+        padding: 8px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--accent);
+    }
+    #preview-content {
+        width: 100%;
+        height: calc(100% - 40px);
+        border: none;
+        background: white;
+    }
+    #close-preview {
+        background: transparent; border: none; color: #f0f0e0; font-size: 18px; cursor: pointer;
+        padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+    }
+
+    #ai-response-panel {
+        bottom: 60px;
+        right: 20px;
+        width: 400px;
+        max-height: 300px;
+        padding: 10px;
+        overflow-y: auto;
+    }
+    #ai-response-content { font-size: 12px; line-height: 1.4; }
+    #close-ai-panel {
+        position: absolute; top: 5px; right: 5px; background: transparent; border: none;
+        color: var(--muted-text); font-size: 14px; cursor: pointer;
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+        #prompt-container { width: calc(100% - 32px); }
+        #preview-panel { width: 95%; height: 85%; }
+        #ai-response-panel { width: calc(100% - 40px); right: 20px; left: 20px; bottom: 20px; }
+    }
+</style>
+</head>
+<body>
+
+<canvas id="three-canvas"></canvas>
+
+<!-- Main Global AI Prompt (for 5-agent system) -->
+<div id="prompt-container">
+    <input type="text" id="prompt-input" placeholder="Enter high-level command or question..." autofocus>
+    <button id="prompt-submit">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3l18 9-18 9V3z"/></svg>
+    </button>
+</div>
+
+<div id="ui-container">
+    <div id="agent-nexus" class="agent-card"><div class="agent-title">Nexus</div><div class="agent-subtitle">Orchestrator (Core)</div><div class="agent-content">Idle. Awaiting command.</div></div>
+    <div id="agent-cognito" class="agent-card"><div class="agent-title">Cognito</div><div class="agent-subtitle">Analyzer (Loop)</div><div class="agent-content">Offline</div></div>
+    <div id="agent-relay" class="agent-card"><div class="agent-title">Relay</div><div class="agent-subtitle">Communicator (2244)</div><div class="agent-content">Offline</div></div>
+    <div id="agent-sentinel" class="agent-card"><div class="agent-title">Sentinel</div><div class="agent-subtitle">Monitor (Coin)</div><div class="agent-content">Offline</div></div>
+
+    <!-- Echo Agent Card: Contains the Modern AI Editor -->
+    <div id="agent-echo" class="agent-card">
+        <div class="agent-title">Echo</div>
+        <div class="agent-subtitle">Reporter (Code Editor)</div>
+        <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; pointer-events: auto;">
+            <button id="editor-open-file" class="small info">Open</button>
+            <button id="editor-save-file" class="small success">Save</button>
+            <button id="editor-save-as" class="small success">Save As</button>
+            <button id="editor-render-html" class="small warn">Render HTML</button>
+            <button id="editor-beautify" class="small">Beautify</button>
+            <button id="editor-undo" class="small">UNDO</button>
+            <button id="editor-redo" class="small">REDO</button>
+        </div>
+        <div id="echo-status-bar" style="font-size: 12px; color: var(--muted-text); margin-bottom: 8px; display: flex; justify-content: space-between;">
+            <div id="echo-file-meta">No File Loaded</div>
+            <div id="echo-editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>
+        </div>
+
+        <!-- The actual editor content from Modern AI Editor -->
+        <div class="editor-container">
+            <div class="line-numbers" id="editor-line-numbers"></div>
+            <div
+                class="editor-content"
+                id="editor-content"
+                contenteditable="true"
+                spellcheck="false"
+                data-gramm="false"
+                data-gramm_editor="false"
+                data-enable-grammarly="false"
+            >&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;Nemodian 2244-1 Demo&lt;/title&gt;
+&lt;style&gt;
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      color: white;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      max-width: 600px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #4ac94a, #5bc0de);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      font-size: 1.2rem;
+      line-height: 1.6;
+    }
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .feature {
+      background: rgba(74, 201, 74, 0.2);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid #4ac94a;
+    }
+    button {
+      background: #4ac94a;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: #3aa83a;
+      transform: translateY(-2px);
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class="container"&gt;
+    &lt;h1&gt;Welcome to Nemodian 2244-1&lt;/h1&gt;
+    &lt;p&gt;This is a demonstration of the offline AI editor's capabilities. You can edit this HTML and CSS, and then click "Render HTML" to see your changes.&lt;/p&gt;
+    &lt;div class="features"&gt;
+      &lt;div class="feature"&gt;HTML Editing&lt;/div&gt;
+      &lt;div class="feature"&gt;CSS Styling&lt;/div&gt;
+      &lt;div class="feature"&gt;AI Assistance&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;button&gt;Get Started&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 10px; pointer-events: auto;">
+            <input id="editor-prompt-input" placeholder="AI Prompt for code (Ctrl+Enter to run)" style="flex: 1; padding: 8px; background: var(--status-bg); border: 1px solid var(--accent); color: #f0f0e0; font-family: inherit; border-radius: 3px; font-size: 16px;">
+            <button id="editor-send-button" class="success">SEND</button>
+        </div>
+    </div>
+</div>
+
+<!-- File Input (hidden) -->
+<input type="file" id="global-file-input" accept=".js,.html,.css,.txt,.json" style="display: none;">
+
+<!-- Editor Overlay Panels -->
+<div id="preview-panel" class="editor-overlay">
+    <div id="preview-header">
+        <span>HTML Preview</span>
+        <button id="close-preview">×</button>
+    </div>
+    <iframe id="preview-content"></iframe>
+</div>
+<div id="ai-response-panel" class="editor-overlay">
+    <button id="close-ai-panel">×</button>
+    <div id="ai-response-content"></div>
+</div>
+
+<!-- ENVIRONMENT VARIABLE INJECTION (Simulating .env read) -->
+<script>
+    /**
+     * Simulated Dotfile / .env Injection
+     * This block simulates a BUILD PROCESS reading a local .env file (e.g., via a utility
+     * like 'dotfiles-extension') and securely injecting client-visible environment variables
+     * into the browser as global window properties.
+     * In a hosted production environment, these must be replaced dynamically by a server.
+     */
+
+    (function() {
+        // Example: API Key (must be replaced with actual key in .env or manually)
+        window.__API_KEY_INJECTION__ = window.__API_KEY_INJECTION__ || null;
+
+        // Firebase / App Config
+        window.__app_id = window.__app_id || 'simulation-app-123';
+        window.__firebase_config = window.__firebase_config || JSON.stringify({
+            apiKey: null,          // Replace with actual public Firebase API key if needed
+            authDomain: null,
+            projectId: null,
+            storageBucket: null,
+            messagingSenderId: null,
+            appId: null
+        });
+
+        // Optional initial authentication token for pre-signed users
+        window.__initial_auth_token = window.__initial_auth_token || null;
+
+        // Additional environment variables (example: feature flags)
+        window.__FEATURE_FLAGS__ = window.__FEATURE_FLAGS__ || {
+            enableAdvancedTTS: true,
+            enableDebugMode: false
+        };
+
+        console.log("[ENV INJECTION] Globals initialized:", {
+            API_KEY: window.__API_KEY_INJECTION__,
+            appId: window.__app_id,
+            firebaseConfig: JSON.parse(window.__firebase_config),
+            initialAuthToken: window.__initial_auth_token,
+            featureFlags: window.__FEATURE_FLAGS__
+        });
+    })();
+</script>
+
+<script type="module">
+// --- Firebase & Auth Setup (MANDATORY) ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+window.firebaseApp = null;
+window.db = null;
+window.auth = null;
+window.userId = 'unauthenticated-user';
+
+// Variables are now read from the injected global scope
+const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
+const firebaseConfig = typeof window.__firebase_config !== 'undefined' ? JSON.parse(window.__firebase_config) : null;
+const initialAuthToken = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
+
+if (firebaseConfig && Object.keys(firebaseConfig).some(key => firebaseConfig[key] !== null)) { // Check if config has non-null values
+    setLogLevel('Debug');
+    window.firebaseApp = initializeApp(firebaseConfig);
+    window.db = getFirestore(window.firebaseApp);
+    window.auth = getAuth(window.firebaseApp);
+
+    onAuthStateChanged(window.auth, async (user) => {
+        if (user) window.userId = user.uid;
+        else if (!user && initialAuthToken) {
+            try { await signInWithCustomToken(window.auth, initialAuthToken); window.userId = window.auth.currentUser.uid; }
+            catch { await signInAnonymously(window.auth); window.userId = window.auth.currentUser.uid; }
+        } else { await signInAnonymously(window.auth); window.userId = window.auth.currentUser.uid; }
+        console.log("Firebase Auth Ready. User ID:", window.userId);
+    });
+} else {
+    // If no firebaseConfig is provided (like in the placeholder), log the unauthenticated state
+    console.log("Firebase not configured. Running in unauthenticated mode.");
+}
+
+// --- Core Application Logic ---
+// 🚨 CRITICAL: The API key is read from the injected global variable (__API_KEY_INJECTION__)
+const injectedApiKey = typeof window.__API_KEY_INJECTION__ !== 'undefined' && window.__API_KEY_INJECTION__ !== null
+    ? window.__API_KEY_INJECTION__
+    : "AIzaSyBtto2pvY2bTO26XwuV1hAB9RbSqYo3Fnw"; // Placeholder if .env injection fails
+
+const apiKey = injectedApiKey;
+const modelName = "gemini-2.5-flash-preview-09-2025";
+const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+const ttsModelUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`; // TTS model URL
+
+const crew = {
+    nexus: { model:'core', el: document.getElementById('agent-nexus'), content: document.querySelector('#agent-nexus .agent-content') },
+    cognito: { model:'loop', el: document.getElementById('agent-cognito'), content: document.querySelector('#agent-cognito .agent-content') },
+    relay: { model:'2244', el: document.getElementById('agent-relay'), content: document.querySelector('#agent-relay .agent-content') },
+    sentinel: { model:'coin', el: document.getElementById('agent-sentinel'), content: document.querySelector('#agent-sentinel .agent-content') },
+    echo: { model:'code', el: document.getElementById('agent-echo'), content: document.querySelector('#agent-echo .agent-content') }
+};
+
+let isGenerating = false;
+let isSpeaking = false;
+
+// --- LLM Interaction Helpers ---
+
+function isHumanPrompt(text){
+    // Basic detection: ends with ? or contains interrogative
+    return /\?$|^who|^what|^how|^when|^where|^why|^wer|^was|^wie|^wann|^wo|^warum/i.test(text.trim());
+}
+
+async function echoAnswer(promptText, answer, isEditorRequest) {
+    const isQuestion = isHumanPrompt(promptText);
+    crew.echo.el.style.boxShadow = '0 0 20px #03DAC6'; // Highlight Echo card
+
+    if (isEditorRequest) {
+        // For editor-specific requests, update the modernEditor instance
+        try {
+            const codeMatch = answer.match(/```(?:javascript|js|html|css)\n([\s\S]*?)\n```/i);
+            const content = codeMatch ? codeMatch[1].trim() : answer.trim();
+
+            modernEditor.setContent(content, modernEditor.currentFileType);
+            document.getElementById('ai-response-content').innerHTML = `<p class="text-white text-sm">Editor updated with AI response.</p>`;
+            document.getElementById('ai-response-panel').style.display = 'block';
+        } catch (e) {
+            document.getElementById('ai-response-content').innerHTML = `<p class="text-red-400">Error updating editor: ${e.message}</p><pre>${answer}</pre>`;
+            document.getElementById('ai-response-panel').style.display = 'block';
+        }
+    } else if (isQuestion) {
+        // For general questions, use TTS
+        crew.echo.content.innerHTML = `<p class="text-white text-sm text-left">Speaking answer (Model: ${crew.echo.model}).</p>`;
+        await generateTTSAndPlay(answer);
+    } else {
+        // For general commands/code generation, display in Echo card with Prism highlight
+        try {
+            const codeMatch = answer.match(/```(?:javascript|js)\n([\s\S]*?)\n```/i);
+            const content = codeMatch ? codeMatch[1].trim() : answer.trim();
+            const highlightedCode = Prism.highlight(content, Prism.languages.javascript, 'javascript');
+            crew.echo.content.innerHTML = `<pre class="language-javascript"><code class="language-javascript">${highlightedCode}</code></pre>`;
+        } catch(e) {
+             crew.echo.content.innerHTML = `<p class="text-red-400">Error highlighting code. Raw output:</p><pre>${answer}</pre>`;
+        }
+    }
+
+    // Return to standard elevation
+    crew.echo.el.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4)';
+}
+
+// --- Agent Workflow ---
+
+async function startCrewSimulation(promptText, isEditorRequest = false, editorContext = '') {
+    if (isGenerating || isSpeaking) return;
+    if (apiKey === "YOUR_GEMINI_API_KEY_HERE" || apiKey === null) {
+         alert("Please replace 'YOUR_GEMINI_API_KEY_HERE' in the script or use the global variable injection (simulating .env read) to set your actual Gemini API Key to run the simulation.");
+         return;
+    }
+    isGenerating = true;
+    const submitBtn = isEditorRequest ? document.getElementById('editor-send-button') : document.getElementById('prompt-submit');
+    submitBtn.disabled = true;
+
+    // Clear previous output and set initial status
+    Object.values(crew).forEach(a => {
+        a.content.innerHTML = a.el.id === 'agent-nexus'
+            ? `<div class="flex items-center space-x-2"><div class="spinner"></div><span>Processing input...</span></div>`
+            : 'Idle.';
+        a.el.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4)';
+    });
+    if (!isEditorRequest) {
+        crew.echo.content.innerHTML = `<p class="text-sm">Awaiting report...</p>`;
+    } else {
+        // For editor requests, update the AI response panel directly
+        document.getElementById('ai-response-content').textContent = 'Processing editor request...';
+        document.getElementById('ai-response-panel').style.display = 'block';
+    }
+
+
+    const step = async (agentKey, statusMessage, duration = 800) => {
+        const agent = crew[agentKey];
+        agent.el.style.boxShadow = '0 0 20px #FFD54F'; // Highlight in Yellow
+        agent.content.innerHTML = `<div class="flex items-center space-x-2"><div class="spinner"></div><span>${statusMessage}</span></div>`;
+        await new Promise(r => setTimeout(r, duration));
+        agent.el.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4)';
+    };
+
+    try {
+        // 1. PHASE: NEXUS (Data Packet Transfer)
+        const inputRect = (isEditorRequest ? document.getElementById('editor-prompt-input') : document.getElementById('prompt-container')).getBoundingClientRect();
+        const nexusRect = crew.nexus.el.getBoundingClientRect();
+        animateDataPacket(inputRect, nexusRect, () => {
+             // 2. PHASE: COGNITO (LLM Call)
+            step('nexus', `Command received. Directing to ${crew.cognito.model}...`, 500).then(() => {
+                const cognitoRect = crew.cognito.el.getBoundingClientRect();
+                animateDataPacket(nexusRect, cognitoRect, async () => {
+                    await step('cognito', `Executing Model Call...`, 1500);
+
+                    const systemPrompt = isEditorRequest
+                        ? `You are an expert coding assistant. The user wants you to perform an action on the provided code. Your response should be a complete, runnable code block (e.g., \`\`\`javascript\n...\n\`\`\`). Do not include any conversational text outside the code block unless absolutely necessary for clarification.`
+                        : isHumanPrompt(promptText)
+                            ? "You are a concise, world-class AI system. Answer the user's question analytically and clearly. Use clear English."
+                            : "You are a coding agent. Provide only a single, commented, runnable JavaScript code block that solves the user's request. Do not include any text outside the code block.";
+
+                    const fullPrompt = isEditorRequest
+                        ? `User prompt: "${promptText}"\n\nCode context:\n\`\`\`\n${editorContext}\n\`\`\`\n\nPerform the requested action on the code and provide the full, modified or new code block.`
+                        : promptText;
+
+                    const payload = {
+                        contents: [{ parts: [{ text: fullPrompt }] }],
+                        tools: [{ "google_search": {} }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                    };
+
+                    let responseData = null, retryCount = 0, maxRetries = 3;
+                    while (retryCount < maxRetries) {
+                        try {
+                            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                            if (!response.ok) {
+                                if (response.status === 429 && retryCount < maxRetries - 1) {
+                                    await new Promise(r => setTimeout(r, (Math.pow(2, retryCount) * 1000 + Math.random() * 1000))); retryCount++; continue;
+                                } else { throw new Error(`API error: ${response.status} - ${response.statusText}`); }
+                            }
+                            responseData = await response.json();
+                            break;
+                        } catch (e) { throw new Error(`API Failure in Cognito: ${e.message}`); }
+                    }
+
+                    const generatedText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text || "Error: No response text found.";
+                    crew.cognito.content.innerHTML = `<p class="text-sm">Processed. Routing to **Relay**.</p>`;
+
+                    // 3. PHASE: RELAY & SENTINEL (Validation & Routing)
+                    const cognitoRectUpdated = crew.cognito.el.getBoundingClientRect();
+                    const echoRect = crew.echo.el.getBoundingClientRect();
+                    animateDataPacket(cognitoRectUpdated, echoRect, async () => {
+                        await step('relay', `Transmitting data... (Model: ${crew.relay.model})`, 1000);
+                        await step('sentinel', `Validating integrity... (Model: ${crew.sentinel.model})`, 1000);
+
+                        // 4. PHASE: ECHO (Final Report)
+                        await step('echo', `Generating final report (Model: ${crew.echo.model})...`, 500);
+                        await echoAnswer(promptText, generatedText, isEditorRequest);
+
+                        // Final state
+                        crew.nexus.content.innerHTML = 'Idle. Awaiting command.';
+                        crew.cognito.content.innerHTML = 'Ready.';
+                        crew.relay.content.innerHTML = 'Ready.';
+                        crew.sentinel.content.innerHTML = 'Ready.';
+
+                        // Persistence (optional)
+                        if (window.db && window.userId !== 'unauthenticated-user') {
+                            const docRef = doc(window.db, `artifacts/${appId}/users/${window.userId}/agent_reports`, `report_${Date.now()}`);
+                            await setDoc(docRef, { prompt: promptText, response: generatedText.substring(0, 100) + '...', timestamp: new Date().toISOString() });
+                        }
+                        isGenerating = false;
+                        submitBtn.disabled = false;
+                    });
+                });
+            });
+
+        });
+
+    } catch (e) {
+        console.error("Simulation failed:", e);
+        Object.values(crew).forEach(a => a.el.style.boxShadow = '0 0 20px #ff0000');
+        crew.echo.content.innerHTML = `<p class="text-red-400 font-bold">CRITICAL ERROR: ${e.message}</p>`;
+        if (isEditorRequest) {
+            document.getElementById('ai-response-content').innerHTML = `<p class="text-red-400 font-bold">CRITICAL ERROR: ${e.message}</p>`;
+            document.getElementById('ai-response-panel').style.display = 'block';
+        }
+        isGenerating = false;
+        submitBtn.disabled = false;
+    }
+}
+
+// --- GSAP Data Packet Animation ---
+function animateDataPacket(sourceRect, targetRect, onComplete) {
+    const packet = document.createElement('div');
+    packet.className = 'data-packet';
+    document.body.appendChild(packet);
+
+    const startX = sourceRect.left + sourceRect.width / 2;
+    const startY = sourceRect.top + sourceRect.height / 2;
+
+    const endX = targetRect.left + targetRect.width / 2;
+    const endY = targetRect.top + targetRect.height / 2;
+
+    gsap.set(packet, { x: startX, y: startY, opacity: 1, scale: 0.5 });
+
+    gsap.to(packet, {
+        x: endX,
+        y: endY,
+        scale: 1.5,
+        opacity: 0.8,
+        duration: 0.8,
+        ease: "power2.inOut",
+        onComplete: () => {
+            packet.remove();
+            onComplete && onComplete();
+        }
+    });
+}
+
+// --- Three.js Plasma Background Setup ---
+let scene, camera, renderer, uniforms, mesh;
+let width = window.innerWidth, height = window.innerHeight;
+
+const vertexShader = `void main(){gl_Position=vec4(position,1.0);}`;
+const fragmentShader = `
+uniform float time;
+uniform vec2 resolution;
+float plasma(vec2 p){return sin(p.x*10.0+time)+sin(p.y*10.0+time/2.0)+sin((p.x+p.y)*10.0+time/3.0)+sin(length(p)*10.0+time/4.0);}
+void main(){
+    vec2 uv=gl_FragCoord.xy/resolution.xy;
+    uv=2.0*uv-1.0;
+    float p=plasma(uv*0.5);
+    vec3 color=0.5+0.5*cos(3.14159*(uv.xyx+vec3(0.0,0.6,0.9)+p*0.2));
+    // Dark Material inspired color palette
+    color*=vec3(0.1,0.1,0.3)+p*0.15;
+    gl_FragColor=vec4(color,1.0);
+}`;
+
+function initThree() {
+    scene = new THREE.Scene();
+    camera = new THREE.Camera();
+    camera.position.z = 1;
+    renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') });
+    renderer.setSize(width, height);
+
+    uniforms = { time: { type: 'f', value: 1.0 }, resolution: { type: 'v2', value: new THREE.Vector2(width, height) } };
+    const material = new THREE.ShaderMaterial({ uniforms: uniforms, vertexShader: vertexShader, fragmentShader: fragmentShader });
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    window.addEventListener('resize', onWindowResize);
+    onWindowResize();
+    animateThree();
+}
+
+function onWindowResize() {
+    width = window.innerWidth; height = window.innerHeight;
+    renderer.setSize(width, height);
+    uniforms.resolution.value.x = width;
+    uniforms.resolution.value.y = height;
+}
+
+function animateThree() {
+    requestAnimationFrame(animateThree);
+    uniforms.time.value += 0.05;
+    renderer.render(scene, camera);
+}
+
+
+// --- Audio TTS Utility Functions ---
+
+function base64ToArrayBuffer(base64) {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+function pcmToWav(pcm16, sampleRate = 24000) {
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const dataSize = pcm16.byteLength;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+
+    function writeString(view, offset, string) {
+        for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+        }
+    }
+    writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + dataSize, true); writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true); view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true); view.setUint16(32, blockAlign, true); view.setUint16(34, bitsPerSample, true);
+    writeString(view, 36, 'data'); view.setUint32(40, dataSize, true);
+
+    let offset = 44;
+    for (let i = 0; i < pcm16.length; i++) { view.setInt16(offset, pcm16[i], true); offset += 2; }
+    return new Blob([buffer], { type: 'audio/wav' });
+}
+
+function playAudioBuffer(wavBlob) {
+    if (isSpeaking) return;
+    const audioUrl = URL.createObjectURL(wavBlob);
+    const audio = new Audio(audioUrl);
+
+    audio.onplay = () => { isSpeaking = true; crew.echo.el.style.boxShadow = '0 0 20px #03DAC6'; };
+    audio.onended = () => {
+        isSpeaking = false;
+        crew.echo.el.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4)';
+        URL.revokeObjectURL(audioUrl);
+    };
+    audio.play();
+}
+
+async function generateTTSAndPlay(textToSpeak) {
+    if (isSpeaking) return;
+    crew.echo.content.innerHTML = `<div class="flex items-center space-x-2"><div class="spinner"></div><span>Generating speech...</span></div>`;
+
+    const payload = {
+        contents: [{ parts: [{ text: textToSpeak }] }],
+        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } },
+    };
+
+    let responseData = null, retryCount = 0, maxRetries = 3;
+    while (retryCount < maxRetries) {
+        try {
+            const response = await fetch(ttsModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) {
+                if (response.status === 429 && retryCount < maxRetries - 1) { await new Promise(r => setTimeout(r, (Math.pow(2, retryCount) * 1000 + Math.random() * 1000))); retryCount++; continue; } else { throw new Error(`TTS API error: ${response.status}`); }
+            }
+            responseData = await response.json();
+            break;
+        } catch (e) {
+            console.error("TTS generation failed:", e);
+            crew.echo.content.innerHTML = `<span class="text-red-500">TTS Error: Cannot reach service.</span>`;
+            return;
+        }
+    }
+
+    const part = responseData?.candidates?.[0]?.content?.parts?.[0];
+    const audioData = part?.inlineData?.data;
+    const mimeType = part?.inlineData?.mimeType;
+
+    if (audioData && mimeType && mimeType.startsWith("audio/L16")) {
+        const rateMatch = mimeType.match(/rate=(\d+)/);
+        const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+        const pcmDataBuffer = base64ToArrayBuffer(audioData);
+        const pcm16 = new Int16Array(pcmDataBuffer);
+        const wavBlob = pcmToWav(pcm16, sampleRate);
+        crew.echo.content.innerHTML = `<p class="text-green-400">Speaking...</p>`;
+        playAudioBuffer(wavBlob);
+    } else {
+        console.error("No valid audio data returned from TTS API.");
+        crew.echo.content.innerHTML = `<span class="text-red-500">TTS Error: Audio data missing.</span>`;
+    }
+}
+
+
+/* =========================================================================
+       Modern StreamHighlighter — Pure CSS3 + JS, No Legacy Prism.js
+       (Adapted for integration)
+       ========================================================================== */
+
+class ModernHighlighter {
+    constructor() {
+        this.languages = {
+            js: {
+                rules: [
+                    {t:'comment',r:/^(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/},
+                    {t:'string',r:/^`(?:\\[\s\S]|[^`])*`|^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/},
+                    {t:'number',r:/^\b(?:0x[a-fA-F0-9]+|[0-9]+(?:\.[0-9]+)?(?:e[+-]?\d+)?)\b/},
+                    {t:'keyword',r:/^\b(?:if|else|for|while|function|return|const|let|var|class|new|in|of|switch|case|break|continue|try|catch|throw|async|await|export|import|from|default)\b/},
+                    {t:'function',r:/^\b[a-zA-Z_$][\w$]*(?=\s*\()/},
+                    {t:'bracket',r:/^[\[\]\{\}\(\)]/},
+                    {t:'op',r:/^==|===|!=|!==|<=|>=|=>|->|[-+*/%=<>!&|^~?:.,;]/},
+                    {t:'id',r:/^\b[a-zA-Z_$][\w$]*\b/},
+                    {t:'ws',r:/^\s+/}
+                ]
+            },
+            html: {
+                rules: [
+                    {t:'comment',r:/^&lt;!--[\s\S]*?--&gt;/},
+                    {t:'tag',r:/^&lt;\/?[^\s>\/]+/},
+                    {t:'string',r:/^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/},
+                    {t:'bracket',r:/^[\[\]\{\}\(\)]/},
+                    {t:'op',r:/^==|===|!=|!==|<=|>=|=>|->|[-+*/%=<>!&|^~?:.,;]/},
+                    {t:'ws',r:/^\s+/},
+                    {t:'text',r:/^[^<]+/}
+                ]
+            },
+            css: {
+                rules: [
+                    {t:'comment',r:/^(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/},
+                    {t:'string',r:/^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/},
+                    {t:'number',r:/^\b(?:0x[a-fA-F0-9]+|[0-9]+(?:\.[0-9]+)?(?:e[+-]?\d+)?)\b/},
+                    {t:'keyword',r:/^\b(?:@import|@media|@keyframes|@font-face|!important|initial|inherit|unset)\b/},
+                    {t:'property',r:/^[a-zA-Z-]+(?=\s*:)/},
+                    {t:'bracket',r:/^[\[\]\{\}\(\)]/},
+                    {t:'op',r:/^[:;,#.]/},
+                    {t:'ws',r:/^\s+/}
+                ]
+            }
+        };
+    }
+
+    static escape(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    tokenize(text, language = 'js') {
+        const rules = this.languages[language]?.rules || this.languages.js.rules;
+        const tokens = [];
+        let position = 0;
+
+        while (position < text.length) {
+            let matched = false;
+
+            for (const rule of rules) {
+                rule.r.lastIndex = position;
+                const match = rule.r.exec(text);
+
+                if (match && match.index === position) {
+                    tokens.push({
+                        type: rule.t,
+                        value: match[0],
+                        length: match[0].length
+                    });
+                    position += match[0].length;
+                    matched = true;
+                    break;
+                }
+            }
+
+            if (!matched) {
+                tokens.push({
+                    type: 'unknown',
+                    value: text[position],
+                    length: 1
+                });
+                position++;
+            }
+        }
+
+        return tokens;
+    }
+
+    highlight(text, language = 'js') {
+        const tokens = this.tokenize(text, language);
+        return tokens.map(token =>
+            `<span class="sh-token sh-${token.type}">${ModernHighlighter.escape(token.value)}</span>`
+        ).join('');
+    }
+
+    highlightElement(element, language = 'js') {
+        const text = element.textContent || '';
+        const html = this.highlight(text, language);
+
+        const selection = window.getSelection();
+        const range = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+
+        element.innerHTML = html;
+
+        if (range) {
+            try { // Attempt to restore, might fail if content changes drastically
+                selection.removeAllRanges();
+                selection.addRange(range);
+            } catch (e) {
+                // Fallback to setting cursor at end if restore fails
+                const newRange = document.createRange();
+                newRange.selectNodeContents(element);
+                newRange.collapse(false); // Collapse to end
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+            }
+        }
+    }
+}
+
+// ----- Modern Editor Core (Adapted for integration) -----
+class ModernEditor {
+    constructor(editorId, lineNumbersId, fileMetaId, editorMetaId) {
+        this.editor = document.getElementById(editorId);
+        this.lineNumbers = document.getElementById(lineNumbersId);
+        this.statusFile = document.getElementById(fileMetaId);
+        this.statusEditor = document.getElementById(editorMetaId);
+        this.highlighter = new ModernHighlighter();
+
+        this.currentFileName = 'code.html';
+        this.currentFileType = 'html';
+        this.historyStack = [];
+        this.redoStack = [];
+        this.isComposing = false; // For IME input
+
+        this.init();
+    }
+
+    init() {
+        this.bindEvents();
+        this.render(this.editor.textContent);
+        this.pushHistory();
+        this.statusFile.textContent = this.currentFileName;
+    }
+
+    bindEvents() {
+        this.editor.addEventListener('input', this.handleInput.bind(this));
+        this.editor.addEventListener('compositionstart', () => this.isComposing = true);
+        this.editor.addEventListener('compositionend', () => {
+            this.isComposing = false;
+            this.handleInput();
+        });
+
+        this.editor.addEventListener('keydown', this.handleKeydown.bind(this));
+        this.editor.addEventListener('click', this.updateStatus.bind(this));
+        this.editor.addEventListener('keyup', this.updateStatus.bind(this));
+        this.editor.addEventListener('scroll', this.syncScroll.bind(this));
+    }
+
+    handleInput() {
+        if (this.isComposing) return;
+
+        this.pushHistory();
+        this.highlightContent();
+        this.updateLineNumbers();
+        this.updateStatus();
+    }
+
+    handleKeydown(event) {
+        if (event.key === 'Tab') {
+            event.preventDefault();
+            this.insertText('    ');
+        }
+
+        if (event.ctrlKey || event.metaKey) {
+            if (event.key === 'z' && !event.shiftKey) {
+                event.preventDefault();
+                this.undo();
+            } else if (event.key === 'z' && event.shiftKey) {
+                event.preventDefault();
+                this.redo();
+            } else if (event.key === 'y') {
+                event.preventDefault();
+                this.redo();
+            }
+        }
+    }
+
+    insertText(text) {
+        const selection = window.getSelection();
+        if (selection.rangeCount === 0) return;
+
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(document.createTextNode(text));
+
+        range.setStart(range.endContainer, range.endOffset);
+        range.setEnd(range.endContainer, range.endOffset);
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        this.handleInput();
+    }
+
+    highlightContent() {
+        this.highlighter.highlightElement(this.editor, this.currentFileType);
+    }
+
+    updateLineNumbers() {
+        const text = this.editor.textContent || '';
+        const lines = text.split('\n');
+        const lineCount = lines.length;
+
+        let lineNumbersHTML = '';
+        for (let i = 1; i <= lineCount; i++) {
+            lineNumbersHTML += i + '<br>';
+        }
+
+        this.lineNumbers.innerHTML = lineNumbersHTML;
+        // Ensure line numbers height matches editor scroll height
+        // This requires editor-container to be scrolled, not the editor-content directly
+        if (this.editor.parentElement) { // editor.parentElement is .editor-container
+            this.lineNumbers.style.height = this.editor.parentElement.scrollHeight + 'px';
+        }
+    }
+
+    syncScroll() {
+        if (this.editor.parentElement) {
+            this.lineNumbers.scrollTop = this.editor.parentElement.scrollTop;
+        }
+    }
+
+    updateStatus() {
+        const selection = window.getSelection();
+        const text = this.editor.textContent || '';
+        const lines = text.split('\n');
+
+        let lineNum = 1;
+        let colNum = 0;
+
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const preCaretRange = range.cloneRange();
+            preCaretRange.selectNodeContents(this.editor);
+            preCaretRange.setEnd(range.endContainer, range.endOffset);
+
+            const preCaretText = preCaretRange.toString();
+            const preCaretLines = preCaretText.split('\n');
+
+            lineNum = preCaretLines.length;
+            colNum = preCaretLines[preCaretLines.length - 1].length;
+        }
+
+        this.statusEditor.textContent =
+            `Cursor: ${lineNum}:${colNum} | Lines: ${lines.length} | Chars: ${text.length} | History: ${this.historyStack.length}`;
+    }
+
+    pushHistory() {
+        const content = this.editor.textContent;
+        if (this.historyStack.length && this.historyStack[this.historyStack.length - 1] === content) return;
+
+        this.historyStack.push(content);
+        this.redoStack = [];
+    }
+
+    undo() {
+        if (this.historyStack.length > 1) {
+            this.redoStack.push(this.historyStack.pop());
+            this.render(this.historyStack[this.historyStack.length - 1]);
+        }
+    }
+
+    redo() {
+        if (this.redoStack.length) {
+            const content = this.redoStack.pop();
+            this.historyStack.push(content);
+            this.render(content);
+        }
+    }
+
+    render(content) {
+        this.editor.textContent = content;
+        this.highlightContent();
+        this.updateLineNumbers();
+        this.updateStatus();
+    }
+
+    setContent(content, fileType = 'html') {
+        this.currentFileType = fileType;
+        this.render(content);
+        this.historyStack = [content];
+        this.redoStack = [];
+        this.statusFile.textContent = this.currentFileName;
+    }
+
+    getContent() {
+        return this.editor.textContent;
+    }
+}
+
+// ----- Initialize Components -----
+let modernEditor;
+
+window.addEventListener('load', () => {
+    initThree(); // Start the 3D background
+
+    // Initialize Modern Editor within the Echo Agent Card
+    modernEditor = new ModernEditor(
+        'editor-content',
+        'editor-line-numbers',
+        'echo-file-meta',
+        'echo-editor-meta'
+    );
+
+    // Initial state for non-Nexus agents
+    crew.cognito.content.innerHTML = 'Ready.';
+    crew.relay.content.innerHTML = 'Ready.';
+    crew.sentinel.content.innerHTML = 'Ready.';
+
+    // Set initial prompt for the main agent system
+    document.getElementById('prompt-input').value = 'Write a javascript function to sort an array';
+
+    // --- Main Agent System Prompt Handlers ---
+    const mainPromptInput = document.getElementById('prompt-input');
+    const mainPromptSubmit = document.getElementById('prompt-submit');
+
+    const handleMainPromptSubmit = () => {
+        const promptText = mainPromptInput.value.trim();
+        if (promptText && !isGenerating && !isSpeaking) {
+            startCrewSimulation(promptText);
+            mainPromptInput.value = ''; // Clear input after submission
+        }
+    };
+
+    mainPromptSubmit.addEventListener('click', handleMainPromptSubmit);
+    mainPromptInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleMainPromptSubmit();
+        }
+    });
+
+    // --- Editor-Specific Functionality Handlers ---
+    initEditorFileHandling();
+    initEditorPreview();
+    initEditorAI();
+    initEditorButtons();
+
+    console.log("Autonomous 5-Agent System Initialized with Integrated Editor.");
+});
+
+function initEditorFileHandling() {
+    document.getElementById('editor-open-file').onclick = () => {
+        document.getElementById('global-file-input').click();
+    };
+
+    document.getElementById('global-file-input').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const fileName = file.name;
+            const fileType = detectLanguage(fileName);
+
+            modernEditor.currentFileName = fileName; // Update editor's current file name
+            modernEditor.setContent(ev.target.result, fileType);
+            modernEditor.statusFile.textContent = fileName; // Update status bar
+        };
+        reader.readAsText(file);
+    });
+
+    document.getElementById('editor-save-file').onclick = saveFile;
+    document.getElementById('editor-save-as').onclick = saveAsFile;
+}
+
+function detectLanguage(fileName) {
+    const ext = fileName?.split('.').pop().toLowerCase();
+    return {
+        'js': 'js',
+        'html': 'html',
+        'htm': 'html',
+        'css': 'css',
+        'json': 'js', // Treat JSON as JS for highlighting
+        'txt': 'js' // Treat generic text as JS for highlighting
+    }[ext] || 'html';
+}
+
+function saveFile() {
+    if (!modernEditor.currentFileName || modernEditor.currentFileName === 'code.html') { // Use 'code.html' as a default/unsaved indicator
+        saveAsFile();
+        return;
+    }
+
+    const blob = new Blob([modernEditor.getContent()], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = modernEditor.currentFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+}
+
+function saveAsFile() {
+    const fileName = prompt('Enter file name', modernEditor.currentFileName || 'code.html');
+    if (fileName) {
+        modernEditor.currentFileName = fileName;
+        modernEditor.currentFileType = detectLanguage(fileName);
+        modernEditor.statusFile.textContent = fileName; // Update status bar
+        saveFile();
+    }
+}
+
+function initEditorAI() {
+    document.getElementById('editor-send-button').onclick = runEditorAI;
+
+    document.getElementById('editor-prompt-input').addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            runEditorAI();
+        }
+    });
+
+    document.getElementById('close-ai-panel').onclick = () => {
+        document.getElementById('ai-response-panel').style.display = 'none';
+    };
+}
+
+function runEditorAI() {
+    const promptInput = document.getElementById('editor-prompt-input');
+    const prompt = promptInput.value.trim();
+    if (!prompt) return;
+
+    // Call the unified agent simulation with editor context
+    startCrewSimulation(prompt, true, modernEditor.getContent());
+    promptInput.value = ''; // Clear prompt input
+}
+
+
+function initEditorPreview() {
+    document.getElementById('editor-render-html').onclick = renderHTML;
+    document.getElementById('close-preview').onclick = () => {
+        document.getElementById('preview-panel').style.display = 'none';
+        const previewContent = document.getElementById('preview-content');
+        if (previewContent.src.startsWith('blob:')) {
+            URL.revokeObjectURL(previewContent.src);
+        }
+    };
+}
+
+function renderHTML() {
+    try {
+        const blob = new Blob([modernEditor.getContent()], { type: 'text/html' });
+        const previewContent = document.getElementById('preview-content');
+        previewContent.src = URL.createObjectURL(blob);
+        document.getElementById('preview-panel').style.display = 'flex';
+    } catch (e) {
+        alert('Error rendering HTML: ' + e.message);
+    }
+}
+
+function initEditorButtons() {
+    document.getElementById('editor-undo').onclick = () => modernEditor.undo();
+    document.getElementById('editor-redo').onclick = () => modernEditor.redo();
+    document.getElementById('editor-beautify').onclick = beautifyCode;
+}
+
+function beautifyCode() {
+    alert('Beautification would be implemented here with a proper formatter.');
+}
+
+// Mobile keyboard handling (re-evaluate if needed, as CSS grid is responsive)
+// document.getElementById('prompt-input').addEventListener('focus', () => { setTimeout(handleViewportResize, 100); });
+// document.getElementById('prompt-input').addEventListener('blur', () => { setTimeout(handleViewportResize, 100); });
+// document.getElementById('editor-prompt-input').addEventListener('focus', () => { setTimeout(handleViewportResize, 100); });
+// document.getElementById('editor-prompt-input').addEventListener('blur', () => { setTimeout(handleViewportResize, 100); });
+
+</script>
+
+</body>
+</html>
