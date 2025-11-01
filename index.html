@@ -88,6 +88,15 @@
             animation: quantumPulse 2s infinite alternate;
         }
 
+.typing-active {
+  caret-color: lime;
+  animation: blink 1s infinite;
+}
+@keyframes blink {
+  0%, 50% { background-color: transparent; }
+  51%, 100% { background-color: rgba(0,255,0,0.05); }
+}
+
         @keyframes quantumPulse {
             0% { opacity: 0.7; transform: scale(1); }
             100% { opacity: 1; transform: scale(1.05); }
