@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nemodian 2244-1 :: Quantum Fractal AI Editor</title>
+    <style>
+        /* - Quantum CSS Variables - */
+        :root {
+            --muted: #888;
+            --info: #2196F3;
+            --warn: #FF9800;
+            --error: #F44336;
+            --success: #4CAF50;
+            --baseline: 1.5em;
+            --header-h: calc(var(--baseline) * 1.6);
+            --status-h: var(--baseline);
+            --footer-h: calc(var(--baseline) * 2);
+            --font-size: 13px;
+            --ln-width: 50px;
+            --theme-bg: #3a3c31;
+            --panel: #313328;
+            --header-bg: #2e3026;
+            --status-bg: #22241e;
+            --accent: #4ac94a;
+            --muted-text: #999966;
+            --border: #555;
+            --err: #a03333;
+            --warn-bg: #f0ad4e;
+            --hover-blue: #3366a0;
+            --info-bg: #5bc0de;
+            --agent-nexus: #BB86FC;
+            --agent-cognito: #03DAC6;
+            --agent-relay: #FFD54F;
+            --agent-sentinel: #CF6679;
+            --agent-echo: #4ac94a;
+            --quantum-glow: rgba(187, 134, 252, 0.6);
+        }
+
+        /* - Base - */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Fira Code', monospace;
+            font-size: var(--font-size);
+            line-height: var(--baseline);
+            background: var(--theme-bg);
+            color: #f0f0e0;
+            overflow: hidden;
+        }
+
+        body {
+            display: grid;
+            grid-template-rows: var(--header-h) var(--status-h) 1fr var(--footer-h);
+        }
+
+        /* - Quantum Header - */
+        header {
+            grid-row: 1;
+            background: var(--header-bg);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: 15px;
+        }
+
+        nav a {
+            color: var(--muted-text);
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+
+        nav a:hover {
+            background: var(--status-bg);
+            color: #fff;
+        }
+
+        /* - Status Bar - */
+        #status-bar {
+            grid-row: 2;
+            background: var(--status-bg);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            font-size: 0.9em;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+
+        #quantum-threads {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .quantum-thread {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 2px;
+            background: var(--quantum-glow);
+            opacity: 0.3;
+            animation: pulse 2s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.3; }
+            100% { opacity: 0.8; }
+        }
+
+        .status-item {
+            margin-right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .quantum-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--muted);
+        }
+
+        .quantum-dot.connected {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        /* - Main Editor Area - */
+        main {
+            grid-row: 3;
+            display: flex;
+        }
+
+        /* - Quantum Sidebar - */
+        aside {
+            width: 250px;
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .panel {
+            margin-bottom: 20px;
+        }
+
+        .panel h3 {
+            margin-top: 0;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+        }
+
+        .agent-card {
+            background: var(--status-bg);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+
+        .agent-card.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 10px var(--quantum-glow);
+        }
+
+        .agent-nexus { border-left: 3px solid var(--agent-nexus); }
+        .agent-cognito { border-left: 3px solid var(--agent-cognito); }
+        .agent-relay { border-left: 3px solid var(--agent-relay); }
+        .agent-sentinel { border-left: 3px solid var(--agent-sentinel); }
+        .agent-echo { border-left: 3px solid var(--agent-echo); }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .agent-name {
+            font-weight: bold;
+        }
+
+        .agent-status {
+            font-size: 0.8em;
+            color: var(--muted);
+        }
+
+        .agent-content {
+            font-size: 0.9em;
+        }
+
+        /* - Quantum Editor Container - */
+        .editor-container {
+            flex: 1;
+            display: flex;
+            position: relative;
+        }
+
+        .quantum-thinking {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+        }
+
+        .fractal-node {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: float 3s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(5px, 5px); }
+            50% { transform: translate(0, 10px); }
+            75% { transform: translate(-5px, 5px); }
+        }
+
+        .line-numbers {
+            width: var(--ln-width);
+            background: var(--status-bg);
+            color: var(--muted-text);
+            text-align: right;
+            padding: 10px 5px;
+            font-family: 'Fira Code', monospace;
+            line-height: var(--baseline);
+            user-select: none;
+            border-right: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .editor-content {
+            flex: 1;
+            padding: 10px;
+            font-family: 'Fira Code', monospace;
+            line-height: var(--baseline);
+            outline: none;
+            overflow: auto;
+            white-space: pre;
+            tab-size: 4;
+        }
+
+        /* - Footer - */
+        footer {
+            grid-row: 4;
+            background: var(--status-bg);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background: var(--panel);
+            color: #f0f0e0;
+            border: 1px solid var(--border);
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Fira Code', monospace;
+            font-size: inherit;
+        }
+
+        button:hover {
+            background: var(--header-bg);
+        }
+
+        button.success { background: var(--success); }
+        button.info { background: var(--info); }
+        button.warn { background: var(--warn); }
+        button.error { background: var(--error); }
+
+        .small { padding: 3px 6px; font-size: 0.8em; }
+
+        input, select {
+            background: var(--status-bg);
+            color: #f0f0e0;
+            border: 1px solid var(--border);
+            padding: 4px 6px;
+            border-radius: 3px;
+            font-family: 'Fira Code', monospace;
+            font-size: inherit;
+        }
+
+        /* - Syntax Highlighting - */
+        .keyword { color: #c792ea; }
+        .function { color: #82aaff; }
+        .string { color: #c3e88d; }
+        .comment { color: #546e7a; font-style: italic; }
+        .number { color: #f78c6c; }
+        .tag { color: #ff5370; }
+        .attr { color: #c792ea; }
+        .property { color: #82aaff; }
+        .value { color: #c3e88d; }
+        .selector { color: #c792ea; }
+        .txtfile { color: #999966; }
+
+        /* - AI Response Panel - */
+        #ai-response-panel {
+            position: fixed;
+            bottom: 60px;
+            right: 20px;
+            width: 500px;
+            max-height: 600px;
+            background: var(--panel);
+            border: 1px solid var(--accent);
+            border-radius: 5px;
+            padding: 15px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,.3);
+        }
+
+        #ai-response-content {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        #close-ai-panel {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: transparent;
+            border: none;
+            color: var(--muted-text);
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .ai-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .ai-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--muted);
+        }
+
+        .ai-dot.processing {
+            background: var(--info);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .action-buttons {
+            margin-top: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .quantum-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--muted-text);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Quantum Header -->
+    <header>
+        <div class="logo">Nemodian 2244-1</div>
+        <nav>
+            <ul>
+                <li><a href="#" id="btn-new">New</a></li>
+                <li><a href="#" id="btn-open">Open</a></li>
+                <li><a href="#" id="btn-save">Save</a></li>
+                <li><a href="#" id="btn-render">Preview</a></li>
+                <li><a href="#" id="btn-ai">AI Assistant</a></li>
+                <li><a href="#" id="btn-orchestrate">Multi-Agent</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Status Bar -->
+    <div id="status-bar">
+        <div id="quantum-threads"></div>
+        <div class="status-item">
+            <div class="quantum-dot" id="quantum-status-dot"></div>
+            <span id="quantum-status">Quantum State: Initializing...</span>
+        </div>
+        <div class="status-item">
+            <span id="editor-meta">Lines: 0 | Chars: 0</span>
+        </div>
+        <div class="status-item">
+            <span id="file-meta">No file loaded</span>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Quantum Sidebar -->
+        <aside id="quantum-sidebar">
+            <div class="panel">
+                <h3>AI Assistant</h3>
+                <div class="agent-card agent-nexus">
+                    <div class="agent-header">
+                        <div class="agent-name">Nexus</div>
+                        <div class="agent-status" id="nexus-status">Idle</div>
+                    </div>
+                    <div class="agent-content" id="nexus-agent">Ready to process requests...</div>
+                </div>
+                
+                <div class="agent-card agent-cognito">
+                    <div class="agent-header">
+                        <div class="agent-name">Cognito</div>
+                        <div class="agent-status" id="cognito-status">Idle</div>
+                    </div>
+                    <div class="agent-content" id="cognito-agent">Analysis engine ready</div>
+                </div>
+                
+                <div class="agent-card agent-relay">
+                    <div class="agent-header">
+                        <div class="agent-name">Relay</div>
+                        <div class="agent-status" id="relay-status">Idle</div>
+                    </div>
+                    <div class="agent-content" id="relay-agent">Communication hub active</div>
+                </div>
+                
+                <div class="agent-card agent-sentinel">
+                    <div class="agent-header">
+                        <div class="agent-name">Sentinel</div>
+                        <div class="agent-status" id="sentinel-status">Idle</div>
+                    </div>
+                    <div class="agent-content" id="sentinel-agent">Security monitoring</div>
+                </div>
+                
+                <div class="agent-card agent-echo">
+                    <div class="agent-header">
+                        <div class="agent-name">Echo</div>
+                        <div class="agent-status" id="echo-status">Idle</div>
+                    </div>
+                    <div class="agent-content" id="echo-agent">Response synthesizer</div>
+                </div>
+                
+                <textarea id="prompt-input" placeholder="Enter AI prompt..." style="width: 100%; height: 80px; margin-top: 10px; background: var(--status-bg); color: #f0f0e0; border: 1px solid var(--border); padding: 5px; font-family: 'Fira Code', monospace; font-size: 12px;"></textarea>
+                <div style="margin-top: 10px;">
+                    <button id="send-button">Send to AI</button>
+                    <button id="run-local-ai">Run Local AI</button>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>Multi-Agent Orchestrator</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div>
+                        <label>Agents: </label>
+                        <input type="number" id="agent-count" min="1" max="10" value="4" style="width: 60px;">
+                    </div>
+                    <div>
+                        <label>Rounds: </label>
+                        <input type="number" id="max-rounds" min="1" max="10" value="3" style="width: 60px;">
+                    </div>
+                    <button id="run-orchestrator">Run Orchestrator</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Quantum Editor Container -->
+        <div class="editor-container">
+            <div class="quantum-thinking" id="quantum-thinking"></div>
+            <div class="line-numbers" id="line-numbers"></div>
+            <div class="editor-content" id="editor" contenteditable="true" spellcheck="false" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;title&gt;Quantum Fractal AI Demo&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;h1&gt;Hello, Quantum World!&lt;/h1&gt;
+    &lt;p&gt;This is a test of the quantum editor.&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;</div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-controls">
+            <button id="btn-undo">Undo</button>
+            <button id="btn-redo">Redo</button>
+            <button id="btn-format">Format</button>
+            <button id="btn-render">Preview</button>
+            <button id="btn-ai">AI</button>
+            <button id="btn-orchestrate">Orchestrate</button>
+        </div>
+    </footer>
+
+    <!-- AI Response Panel -->
+    <div id="ai-response-panel">
+        <button id="close-ai-panel">×</button>
+        <div id="ai-response-content"></div>
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="file-input" accept=".txt,.js,.html,.css,.py,.md,.json,.sql,.php">
+
+    <script>
+        // Quantum Highlighter Class
+        class QuantumHighlighter {
+            constructor() {
+                this.tokenPatterns = {
+                    js: {
+                        keyword: /\b(function|return|if|else|elif|for|while|var|let|const|class|import|export|from|as|async|await|try|catch|finally|throw|new|this|typeof|instanceof|in|of)\b/g,
+                        function: /\b[A-Za-z_$][A-Za-z0-9_$]*(?=\s*\()/g,
+                        string: /(["'`])(?:(?=(\\?))\2.)*?\1/g,
+                        comment: /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm,
+                        number: /\b\d+(\.\d+)?\b/g
+                    },
+                    html: {
+                        tag: /(&lt;\/?[\w\s="'-:.#]+&gt;)/g,
+                        attr: /\b([\w-]+)(=)/g,
+                        string: /(["']).*?\1/g,
+                        comment: /&lt;!--[\s\S]*?--&gt;/g
+                    },
+                    css: {
+                        selector: /[.#]?\w[\w-]*\s*(?=\{)/g,
+                        property: /(\b[a-z-]+)(?=:)/g,
+                        value: /:\s*([^;]+)(?=;)/g,
+                        comment: /\/\*[\s\S]*?\*\//g
+                    },
+                    py: {
+                        keyword: /\b(def|class|if|elif|else|for|while|return|import|from|as|def|lambda|try|except|finally|with|yield|global|nonlocal|assert|break|continue|del|pass|raise|await|async)\b/g,
+                        string: /(["'`])(?:(?=(\\?))\2.)*?\1/g,
+                        comment: /#.*$/gm,
+                        number: /\b\d+(\.\d+)?\b/g
+                    },
+                    sql: {
+                        keyword: /\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|INNER|LEFT|RIGHT|ON|GROUP|BY|ORDER|LIMIT|AS)\b/gi,
+                        string: /(["']).*?\1/g,
+                        comment: /(--.*$|\/\*[\s\S]*?\*\/)/gm,
+                        number: /\b\d+(\.\d+)?\b/g
+                    },
+                    php: {
+                        keyword: /\b(function|return|if|else|elseif|for|while|foreach|class|public|private|protected|new|echo|require|include)\b/g,
+                        string: /(["']).*?\1/g,
+                        comment: /(\/\/.*$|\/\*[\s\S]*?\*\/|#.*$)/gm,
+                        number: /\b\d+(\.\d+)?\b/g
+                    },
+                    md: {
+                        header: /^#+\s.*$/gm,
+                        bold: /\*\*(.*?)\*\*/g,
+                        italic: /\*(.*?)\*/g,
+                        code: /`(.*?)`/g,
+                        link: /\[([^\]]+)\]\(([^)]+)\)/g
+                    },
+                    sh: {
+                        keyword: /\b(if|then|else|fi|for|in|do|done|while|case|esac|function|exit|return)\b/g,
+                        string: /(["']).*?\1/g,
+                        comment: /#.*/g,
+                        number: /\b\d+(\.\d+)?\b/g
+                    },
+                    txt: {}
+                };
+            }
+
+            highlight(text, language) {
+                if (!this.tokenPatterns[language]) {
+                    language = 'txt';
+                }
+
+                if (language === 'txt') {
+                    return `<span class="txtfile">${this.escapeHtml(text)}</span>`;
+                }
+
+                let html = this.escapeHtml(text);
+                const patterns = this.tokenPatterns[language];
+
+                for (const [type, regex] of Object.entries(patterns)) {
+                    html = html.replace(regex, (match) => `<span class="${type}">${match}</span>`);
+                }
+
+                return html;
+            }
+
+            escapeHtml(text) {
+                return text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            highlightElement(element, language) {
+                const text = element.textContent;
+                const html = this.highlight(text, language);
+                
+                // Save cursor position
+                const selection = window.getSelection();
+                const range = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+                
+                element.innerHTML = html;
+                
+                // Restore cursor position
+                if (range) {
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            }
+        }
+
+        // Quantum Editor Core
+        class QuantumEditor {
+            constructor() {
+                this.editor = document.getElementById('editor');
+                this.lineNumbers = document.getElementById('line-numbers');
+                this.statusEditor = document.getElementById('editor-meta');
+                this.highlighter = new QuantumHighlighter();
+                
+                this.currentFileName = null;
+                this.currentFileType = 'html';
+                this.historyStack = [];
+                this.redoStack = [];
+                this.isComposing = false;
+                
+                // Quantum features
+                this.quantumMode = true;
+                this.hyperthreading = true;
+                this.multiAgentMode = true;
+                
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.render(this.editor.textContent);
+                this.pushHistory();
+                this.initQuantumVisuals();
+            }
+
+            bindEvents() {
+                this.editor.addEventListener('input', () => this.handleInput());
+                this.editor.addEventListener('scroll', () => this.syncScroll());
+                this.editor.addEventListener('keydown', (e) => this.handleKeyDown(e));
+                this.editor.addEventListener('paste', () => setTimeout(() => this.handleInput(), 0));
+                
+                // Track composition events for IME
+                this.editor.addEventListener('compositionstart', () => this.isComposing = true);
+                this.editor.addEventListener('compositionend', () => {
+                    this.isComposing = false;
+                    this.handleInput();
+                });
+            }
+
+            handleInput() {
+                if (this.isComposing) return;
+                
+                this.updateLineNumbers();
+                this.updateStatus();
+                this.highlightContent();
+                this.pushHistory();
+            }
+
+            handleKeyDown(e) {
+                // Tab key handling
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    this.insertAtCursor('    '); // 4 spaces for tab
+                }
+                
+                // Undo/Redo with Ctrl+Z/Ctrl+Y
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        this.redo();
+                    } else {
+                        this.undo();
+                    }
+                }
+            }
+
+            insertAtCursor(text) {
+                const selection = window.getSelection();
+                if (selection.rangeCount === 0) return;
+                
+                const range = selection.getRangeAt(0);
+                range.deleteContents();
+                range.insertNode(document.createTextNode(text));
+                
+                // Move cursor to end of inserted text
+                range.setStart(range.endContainer, range.endOffset);
+                range.setEnd(range.endContainer, range.endOffset);
+                
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                this.handleInput();
+            }
+
+            highlightContent() {
+                this.highlighter.highlightElement(this.editor, this.currentFileType);
+            }
+
+            updateLineNumbers() {
+                const text = this.editor.textContent || '';
+                const lines = text.split('\n');
+                const lineCount = lines.length;
+                
+                let lineNumbersHTML = '';
+                for (let i = 1; i <= lineCount; i++) {
+                    lineNumbersHTML += i + '<br>';
+                }
+                
+                this.lineNumbers.innerHTML = lineNumbersHTML;
+            }
+
+            updateStatus() {
+                const text = this.editor.textContent || '';
+                const lines = text.split('\n').length;
+                const chars = text.length;
+                
+                this.statusEditor.textContent = `Lines: ${lines} | Chars: ${chars}`;
+            }
+
+            syncScroll() {
+                this.lineNumbers.scrollTop = this.editor.scrollTop;
+            }
+
+            pushHistory() {
+                const content = this.editor.textContent;
+                
+                // Only push if content changed
+                if (this.historyStack.length === 0 || this.historyStack[this.historyStack.length - 1] !== content) {
+                    this.historyStack.push(content);
+                    
+                    // Limit history to 50 items
+                    if (this.historyStack.length > 50) {
+                        this.historyStack.shift();
+                    }
+                    
+                    // Clear redo stack when new content is added
+                    this.redoStack = [];
+                }
+            }
+
+            undo() {
+                if (this.historyStack.length > 1) {
+                    this.redoStack.push(this.historyStack.pop());
+                    const previousContent = this.historyStack[this.historyStack.length - 1];
+                    this.setContent(previousContent, this.currentFileType);
+                }
+            }
+
+            redo() {
+                if (this.redoStack.length > 0) {
+                    const redoContent = this.redoStack.pop();
+                    this.historyStack.push(redoContent);
+                    this.setContent(redoContent, this.currentFileType);
+                }
+            }
+
+            setContent(content, fileType = 'html') {
+                this.currentFileType = fileType;
+                this.editor.textContent = content;
+                this.render(content);
+                this.historyStack = [content];
+                this.redoStack = [];
+            }
+
+            render(content) {
+                this.highlightContent();
+                this.updateLineNumbers();
+                this.updateStatus();
+            }
+
+            getContent() {
+                return this.editor.textContent;
+            }
+
+            initQuantumVisuals() {
+                // Create quantum threads in status bar
+                const threadsContainer = document.getElementById('quantum-threads');
+                for (let i = 0; i < 5; i++) {
+                    const thread = document.createElement('div');
+                    thread.className = 'quantum-thread';
+                    thread.style.left = `${20 + i * 15}%`;
+                    thread.style.animationDelay = `${i * 0.3}s`;
+                    threadsContainer.appendChild(thread);
+                }
+                
+                // Create fractal nodes in editor
+                this.createFractalNodes();
+            }
+
+            createFractalNodes() {
+                if (!this.quantumMode) return;
+                
+                this.quantumThinking.innerHTML = '';
+                const nodeCount = this.hyperthreading ? 12 : 6;
+                
+                for (let i = 0; i < nodeCount; i++) {
+                    const node = document.createElement('div');
+                    node.className = 'fractal-node';
+                    node.style.left = `${Math.random() * 100}%`;
+                    node.style.top = `${Math.random() * 100}%`;
+                    node.style.animationDelay = `${Math.random() * 2}s`;
+                    this.quantumThinking.appendChild(node);
+                }
+            }
+        }
+
+        // Initialize quantum editor
+        const quantumEditor = new QuantumEditor();
+
+        // File operations
+        function detectQuantumLanguage(fileName) {
+            const ext = fileName?.split('.').pop().toLowerCase();
+            return {
+                'js': 'js',
+                'html': 'html',
+                'htm': 'html',
+                'css': 'css',
+                'json': 'js',
+                'py': 'py',
+                'sql': 'sql',
+                'php': 'php',
+                'md': 'md',
+                'sh': 'sh',
+                'txt': 'txt'
+            }[ext] || 'txt';
+        }
+
+        function quantumSaveFile() {
+            if (!quantumEditor.currentFileName) {
+                quantumSaveAsFile();
+                return;
+            }
+            
+            const blob = new Blob([quantumEditor.getContent()], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = quantumEditor.currentFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }
+
+        function quantumSaveAsFile() {
+            const fileName = prompt('Enter quantum file name', quantumEditor.currentFileName || 'quantum_code.html');
+            if (fileName) {
+                quantumEditor.currentFileName = fileName;
+                quantumEditor.currentFileType = detectQuantumLanguage(fileName);
+                document.getElementById('file-meta').textContent = fileName;
+                quantumSaveFile();
+            }
+        }
+
+        // Initialize file operations
+        document.getElementById('btn-new').addEventListener('click', () => {
+            quantumEditor.setContent('', 'txt');
+            quantumEditor.currentFileName = null;
+            document.getElementById('file-meta').textContent = 'New file';
+        });
+
+        document.getElementById('btn-open').addEventListener('click', () => {
+            document.getElementById('file-input').click();
+        });
+
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                quantumEditor.setContent(event.target.result, detectQuantumLanguage(file.name));
+                quantumEditor.currentFileName = file.name;
+                document.getElementById('file-meta').textContent = file.name;
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('btn-save').addEventListener('click', quantumSaveFile);
+
+        // Preview functionality
+        function renderQuantumHTML() {
+            try {
+                const content = quantumEditor.getContent();
+                const blob = new Blob([content], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                
+                const previewPanel = document.createElement('div');
+                previewPanel.id = 'preview-panel';
+                previewPanel.style.position = 'fixed';
+                previewPanel.style.top = '0';
+                previewPanel.style.left = '0';
+                previewPanel.style.width = '100%';
+                previewPanel.style.height = '100%';
+                previewPanel.style.backgroundColor = 'rgba(0,0,0,0.9)';
+                previewPanel.style.zIndex = '1000';
+                previewPanel.style.display = 'flex';
+                previewPanel.style.flexDirection = 'column';
+                
+                const header = document.createElement('div');
+                header.style.backgroundColor = '#222';
+                header.style.padding = '10px';
+                header.style.display = 'flex';
+                header.style.justifyContent = 'space-between';
+                header.innerHTML = `
+                    <h3 style="margin: 0; color: white;">Quantum Preview</h3>
+                    <button id="close-preview" style="background: #555; color: white; border: none; padding: 5px 10px; cursor: pointer;">Close</button>
+                `;
+                
+                const iframe = document.createElement('iframe');
+                iframe.style.flex = '1';
+                iframe.style.border = 'none';
+                iframe.src = url;
+                
+                previewPanel.appendChild(header);
+                previewPanel.appendChild(iframe);
+                document.body.appendChild(previewPanel);
+                
+                document.getElementById('close-preview').addEventListener('click', () => {
+                    document.body.removeChild(previewPanel);
+                    URL.revokeObjectURL(url);
+                });
+            } catch (e) {
+                console.error('Error rendering preview:', e);
+                alert('Error rendering preview: ' + e.message);
+            }
+        }
+
+        // Initialize preview
+        document.getElementById('btn-render').addEventListener('click', renderQuantumHTML);
+
+        // AI functionality
+        let currentModel = 'codellama:code';
+        let quantumConnected = false;
+        const quantumStatus = document.getElementById('quantum-status');
+        const quantumDot = document.getElementById('quantum-status-dot');
+        const aiResponsePanel = document.getElementById('ai-response-panel');
+        const aiResponseContent = document.getElementById('ai-response-content');
+        const closeAiPanel = document.getElementById('close-ai-panel');
+
+        async function checkOllamaStatus() {
+            try {
+                const response = await fetch("http://127.0.0.1:11434/api/tags");
+                if (response.ok) {
+                    quantumConnected = true;
+                    quantumDot.classList.add('connected');
+                    quantumStatus.innerHTML = `<div class="quantum-dot connected"></div><span>Quantum State: Entangled (Ollama Running)</span>`;
+                    
+                    const data = await response.json();
+                    if (data.models && data.models.length > 0) {
+                        currentModel = data.models[0].name;
+                        quantumStatus.innerHTML = `<div class="quantum-dot connected"></div><span>Quantum State: Entangled (${currentModel})</span>`;
+                    }
+                } else {
+                    setQuantumDisconnected();
+                }
+            } catch (error) {
+                setQuantumDisconnected();
+            }
+        }
+
+        function setQuantumDisconnected() {
+            quantumConnected = false;
+            quantumDot.classList.remove('connected');
+            quantumStatus.innerHTML = `<div class="quantum-dot"></div><span>Quantum State: Disconnected (Ollama Unavailable)</span>`;
+        }
+
+        async function streamOllamaToEditor(prompt, model) {
+            if (!quantumConnected) {
+                alert("Ollama is not connected. Please start Ollama server first.");
+                return;
+            }
+
+            const editor = document.getElementById('editor');
+            if (!editor) {
+                console.error("Editor element #editor not found!");
+                return;
+            }
+
+            const url = "http://127.0.0.1:11434/api/generate";
+            const payload = { model, prompt: prompt, stream: true };
+
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    console.error("❌ Ollama connection failed:", response.status);
+                    setQuantumDisconnected();
+                    return;
+                }
+
+                quantumConnected = true;
+                quantumDot.classList.add('connected');
+                quantumStatus.innerHTML = `<div class="quantum-dot connected"></div><span>Quantum State: Entangled (${model})</span>`;
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let buffer = "";
+
+                // Show AI response panel
+                aiResponsePanel.style.display = 'block';
+                aiResponseContent.innerHTML = '<div class="ai-status"><div class="ai-dot processing"></div> Generating response...</div>';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // Keep last incomplete line in buffer
+
+                    for (const line of lines) {
+                        if (line.trim() === '') continue;
+
+                        try {
+                            const json = JSON.parse(line);
+                            if (json.response) {
+                                // Update the editor content with streaming response
+                                editor.textContent += json.response;
+                                
+                                // Update response panel
+                                aiResponseContent.innerHTML += json.response;
+                                
+                                // Scroll to bottom of response panel
+                                aiResponsePanel.scrollTop = aiResponsePanel.scrollHeight;
+                                
+                                // Re-highlight content after each chunk
+                                quantumEditor.highlightContent();
+                            }
+                        } catch (e) {
+                            console.error('Error parsing JSON:', e, line);
+                        }
+                    }
+                }
+
+                // Finalize response
+                aiResponseContent.innerHTML += '<div style="margin-top: 10px; color: var(--success);">✅ Generation complete</div>';
+                
+                // Update editor status
+                quantumEditor.handleInput();
+            } catch (error) {
+                console.error("Error streaming from Ollama:", error);
+                aiResponseContent.innerHTML += `<div style="color: var(--error);">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function initQuantumAI() {
+            document.getElementById('send-button').addEventListener('click', async () => {
+                const prompt = document.getElementById('prompt-input').value;
+                if (!prompt) return;
+                
+                await streamOllamaToEditor(prompt, currentModel);
+            });
+
+            document.getElementById('run-local-ai').addEventListener('click', async () => {
+                const prompt = document.getElementById('prompt-input').value;
+                if (!prompt) return;
+                
+                await streamOllamaToEditor(prompt, "codellama:code");
+            });
+
+            document.getElementById('prompt-input').addEventListener('keydown', e => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('send-button').click();
+                }
+            });
+
+            closeAiPanel.addEventListener('click', () => {
+                aiResponsePanel.style.display = 'none';
+            });
+        }
+
+        // Multi-agent orchestrator
+        class QuantumOrchestrator {
+            constructor() {
+                this.agentCount = 4;
+                this.maxRounds = 3;
+                this.isGenerating = false;
+                
+                // Agent elements
+                this.agentCards = {
+                    nexus: document.querySelector('.agent-nexus'),
+                    cognito: document.querySelector('.agent-cognito'),
+                    relay: document.querySelector('.agent-relay'),
+                    sentinel: document.querySelector('.agent-sentinel'),
+                    echo: document.querySelector('.agent-echo')
+                };
+                
+                this.agents = {
+                    nexus: document.getElementById('nexus-agent'),
+                    cognito: document.getElementById('cognito-agent'),
+                    relay: document.getElementById('relay-agent'),
+                    sentinel: document.getElementById('sentinel-agent'),
+                    echo: document.getElementById('echo-agent')
+                };
+                
+                this.initQuantumHashing();
+                this.bindOrchestratorEvents();
+            }
+
+            bindOrchestratorEvents() {
+                document.getElementById('run-orchestrator').addEventListener('click', () => {
+                    this.runMultiAgentOrchestrator();
+                });
+
+                document.getElementById('btn-orchestrate').addEventListener('click', () => {
+                    this.runMultiAgentOrchestrator();
+                });
+
+                document.getElementById('agent-count').addEventListener('change', (e) => {
+                    this.agentCount = parseInt(e.target.value);
+                });
+
+                document.getElementById('max-rounds').addEventListener('change', (e) => {
+                    this.maxRounds = parseInt(e.target.value);
+                });
+            }
+
+            initQuantumHashing() {
+                // Initialize quantum hash sequences for hyperthreaded thinking
+                this.hashSequences = {
+                    nexus: this.generateFractalHash('nexus'),
+                    cognito: this.generateFractalHash('cognito'),
+                    relay: this.generateFractalHash('relay'),
+                    sentinel: this.generateFractalHash('sentinel'),
+                    echo: this.generateFractalHash('echo')
+                };
+            }
+
+            generateFractalHash(seed) {
+                let hash = 0;
+                for (let i = 0; i < seed.length; i++) {
+                    const char = seed.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash |= 0; // Convert to 32bit integer
+                }
+                return Math.abs(hash).toString(16);
+            }
+
+            generateGenesisHash() {
+                const now = Date.now().toString();
+                return this.generateFractalHash(now + Math.random().toString());
+            }
+
+            async runMultiAgentOrchestrator() {
+                if (this.isGenerating) return;
+                this.isGenerating = true;
+
+                // Reset agents
+                Object.values(this.agentCards).forEach(card => {
+                    card.classList.add('active');
+                });
+
+                Object.values(this.agents).forEach(agent => {
+                    agent.innerHTML = 'Initializing multi-agent consensus...';
+                });
+
+                Object.values(this.agentCards).forEach(card => {
+                    card.classList.remove('active');
+                });
+
+                this.agents.nexus.innerHTML = '<div class="quantum-spinner"></div>Starting multi-agent orchestrator...';
+                this.agentCards.nexus.classList.add('active');
+
+                try {
+                    // Generate genesis hash
+                    const genesis = this.generateGenesisHash();
+                    this.agents.nexus.innerHTML = `Genesis: ${genesis.substring(0, 16)}...`;
+
+                    // Simulate multiple agents
+                    const agents = [];
+                    for (let i = 0; i < this.agentCount; i++) {
+                        agents.push({
+                            id: `agent-${i}`,
+                            name: `Agent ${i+1}`,
+                            specialty: ['Frontend', 'Backend', 'DevOps', 'QA'][i % 4],
+                            status: 'Thinking...'
+                        });
+                    }
+
+                    // Simulate rounds of discussion
+                    for (let round = 1; round <= this.maxRounds; round++) {
+                        this.agents.nexus.innerHTML = `Round ${round}/${this.maxRounds}: Processing...`;
+                        
+                        for (const agent of agents) {
+                            this.agentCards[Object.keys(this.agentCards)[1 + (round-1) % 4]].classList.add('active');
+                            this.agents[Object.keys(this.agents)[1 + (round-1) % 4]].innerHTML = 
+                                `${agent.name} (${agent.specialty}): Analyzing...`;
+                            
+                            // Simulate processing time
+                            await new Promise(resolve => setTimeout(resolve, 800));
+                        }
+                    }
+
+                    // Generate consensus
+                    const consensus = {
+                        selectedCandidate: `// Generated by multi-agent consensus\nfunction quantumConsensus() {\n    console.log("Quantum state achieved");\n    return true;\n}`,
+                        confidence: 0.95,
+                        agents: agents.length
+                    };
+
+                    // Display results
+                    const highlightedCode = quantumEditor.highlighter.highlight(consensus.selectedCandidate, quantumEditor.currentFileType);
+                    const quantumButtons = `
+                        <div class="action-buttons">
+                            <button class="small success" onclick="quantumCopyConsensus()">Copy Consensus</button>
+                            <button class="small info" onclick="quantumApplyConsensus()">Apply Consensus</button>
+                            <button class="small" onclick="quantumRerunOrchestrator()" style="background: var(--agent-nexus);">Rerun Orchestrator</button>
+                        </div>
+                    `;
+                    
+                    this.agents.echo.innerHTML = `
+                        <div style="border-left: 3px solid var(--agent-nexus); padding-left: 10px; margin-bottom: 10px;">
+                            <strong>Consensus Achieved!</strong><br>
+                            Confidence: ${(consensus.confidence * 100).toFixed(1)}%<br>
+                            Agents: ${consensus.agents}
+                        </div>
+                        <pre style="background: var(--status-bg); padding: 10px; border-radius: 3px; overflow-x: auto; margin: 10px 0;">${highlightedCode}</pre>
+                        ${quantumButtons}
+                    `;
+                    
+                    this.agentCards.echo.classList.add('active');
+                } catch (e) {
+                    console.error("Quantum system collapse:", e);
+                    Object.values(this.agentCards).forEach(card => {
+                        card.style.boxShadow = '0 0 15px #ff0000';
+                    });
+                    this.agents.echo.innerHTML = `<span style="color: #ff4444">Quantum Error: ${e.message}</span>`;
+                } finally {
+                    Object.values(this.agentCards).forEach(card => {
+                        card.classList.remove('active');
+                        card.style.boxShadow = '';
+                    });
+                    this.isGenerating = false;
+                }
+            }
+        }
+
+        function quantumCopyConsensus() {
+            const code = document.querySelector('#echo-agent pre').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('Consensus code copied to clipboard!');
+            });
+        }
+
+        function quantumApplyConsensus() {
+            const code = document.querySelector('#echo-agent pre').textContent;
+            quantumEditor.setContent(code, quantumEditor.currentFileType);
+            alert('Consensus code applied to editor!');
+        }
+
+        function quantumRerunOrchestrator() {
+            quantumOrchestrator.runMultiAgentOrchestrator();
+        }
+
+        // Initialize systems
+        const quantumOrchestrator = new QuantumOrchestrator();
+        initQuantumAI();
+        checkOllamaStatus();
+    </script>
+
+    <script type="module">
+        /* === Quantum Fractal Realtime Syntax Highlighter ===
+           Supports: .sh, .py, .md, .php, .sql, .js, .css, .html, etc.
+           .txt files are dark grey only
+           Works with your existing editor structure, CSS untouched */
+        class RealtimeHighlighter {
+            constructor(editorSelector) {
+                this.editor = document.querySelector(editorSelector);
+                if (!this.editor) return console.error("Editor element not found");
+                
+                this.fileType = 'txt'; // default
+                this.tokenPatterns = {}; // language regexes
+                
+                // Define token patterns for each language
+                this.tokenPatterns = {
+                    js: {
+                        keyword: /\b(function|return|if|else|elif|for|while|var|let|const|class|import|export|from|as|async|await|try|catch|finally|throw|new|this|typeof|instanceof|in|of)\b/g,
+                        function: /\b[A-Za-z_$][A-Za-z0-9_$]*(?=\s*\()/g,
+                        string: /(["'`])(?:(?=(\\?))\2.)*?\1/g,
+                        comment: /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm,
+                        number: /\b\d+(\.\d+)?\b/g
+                    },
+                    html: {
+                        tag: /(&lt;\/?[\w\s="'-:.#]+&gt;)/g,
+                        attr: /\b([\w-]+)(=)/g,
+                        string: /(["']).*?\1/g,
+                        comment: /&lt;!--[\s\S]*?--&gt;/g
+                    },
+                    css: {
+                        selector: /[.#]?\w[\w-]*\s*(?=\{)/g,
+                        property: /(\b[a-z-]+)(?=:)/g,
+                        value: /:\s*([^;]+)(?=;)/g,
+                        comment: /\/\*[\s\S]*?\*\//g
+                    },
+                    py: {
+                        keyword: /\b(def|class|if|elif|else|for|while|return|import|from|as|def|lambda|try|except|finally|with|yield|global|nonlocal|assert|break|continue|del|pass|raise|await|async)\b/g,
+                        string: /(["'`])(?:(?=(\\?))\2.)*?\1/g,
+                        comment: /#.*$/gm,
+                        number: /\b\d+(\.\d+)?\b/g
+                    },
+                    sql: {
+                        keyword: /\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|INNER|LEFT|RIGHT|ON|GROUP|BY|ORDER|LIMIT|AS)\b/gi,
+                        string: /(["']).*?\1/g,
+                        comment: /(--.*$|\/\*[\s\S]*?\*\/)/gm,
+                        number: /\b\d+(\.\d+)?\b/g
+                    },
+                    php: {
+                        keyword: /\b(function|return|if|else|elseif|for|while|foreach|class|public|private|protected|new|echo|require|include)\b/g,
+                        string: /(["']).*?\1/g,
+                        comment: /(\/\/.*$|\/\*[\s\S]*?\*\/|#.*$)/gm,
+                        number: /\b\d+(\.\d+)?\b/g
+                    },
+                    md: {
+                        header: /^#+\s.*$/gm,
+                        bold: /\*\*(.*?)\*\*/g,
+                        italic: /\*(.*?)\*/g,
+                        code: /`(.*?)`/g,
+                        link: /\[([^\]]+)\]\(([^)]+)\)/g
+                    },
+                    sh: {
+                        keyword: /\b(if|then|else|fi|for|in|do|done|while|case|esac|function|exit|return)\b/g,
+                        string: /(["']).*?\1/g,
+                        comment: /#.*/g,
+                        number: /\b\d+(\.\d+)?\b/g
+                    },
+                    txt: {}
+                };
+            }
+
+            setFileType(fileType) {
+                this.fileType = fileType;
+            }
+
+            highlight(content) {
+                if (this.fileType === 'txt') {
+                    return `<span class="txtfile">${this.escapeHtml(content)}</span>`;
+                }
+
+                const patterns = this.tokenPatterns[this.fileType] || {};
+                let html = this.escapeHtml(content);
+
+                for (const [type, regex] of Object.entries(patterns)) {
+                    html = html.replace(regex, (match) => `<span class="${type}">${match}</span>`);
+                }
+
+                return html;
+            }
+
+            escapeHtml(text) {
+                return text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            observeChanges() {
+                const updateHighlight = () => {
+                    const text = this.editor.textContent || this.editor.value || "";
+                    const html = this.highlight(text);
+
+                    if (this.editor.innerHTML !== html) {
+                        this.editor.innerHTML = html;
+                    }
+                };
+
+                // Live updates
+                this.editor.addEventListener('input', updateHighlight);
+                this.editor.addEventListener('paste', () => setTimeout(updateHighlight, 10));
+                
+                // Initial highlight
+                updateHighlight();
+            }
+        }
+
+        // Initialize the realtime highlighter
+        const realtimeHighlighter = new RealtimeHighlighter('#editor');
+        realtimeHighlighter.observeChanges();
+    </script>
+</body>
+</html>
