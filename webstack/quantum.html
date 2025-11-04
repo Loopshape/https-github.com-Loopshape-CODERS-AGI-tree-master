@@ -3,2362 +3,2280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEXUS | Quantum AI Dashboard</title>
-    
-    <!-- External Dependencies -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    
-    <!-- Prism.js Language Support -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
-
+    <title>Nemodian 2244-1 :: Quantum Fractal AI Editor</title>
     <style>
-        /* All the CSS styles from the original file */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
+        /* ----- Quantum CSS Variables ----- */
         :root {
-            --primary: #6366F1;
-            --primary-dark: #4F46E5;
-            --secondary: #10B981;
-            --accent: #8B5CF6;
-            --danger: #EF4444;
-            --warning: #F59E0B;
-            --background: #0F0F23;
-            --surface: #1A1B2E;
-            --surface-light: #252642;
-            --text-primary: #F8FAFC;
-            --text-secondary: #94A3B8;
-            --border: #2D2F45;
-            --gradient: linear-gradient(135deg, #6366F1, #8B5CF6, #10B981);
+            --muted: #888;
+            --info: #2196F3;
+            --warn: #FF9800;
+            --error: #F44336;
+            --success: #4CAF50;
+            --baseline: 1.5em;
+            --header-h: calc(var(--baseline) * 1.6);
+            --status-h: var(--baseline);
+            --footer-h: calc(var(--baseline) * 2);
+            --font-size: 13px;
+            --ln-width: 50px;
+            --theme-bg: #3a3c31;
+            --panel: #313328;
+            --header-bg: #2e3026;
+            --status-bg: #22241e;
+            --accent: #4ac94a;
+            --muted-text: #999966;
+            --err: #a03333;
+            --warn-bg: #f0ad4e;
+            --hover-blue: #3366a0;
+            --info-bg: #5bc0de;
+            --agent-nexus: #BB86FC;
+            --agent-cognito: #03DAC6;
+            --agent-relay: #FFD54F;
+            --agent-sentinel: #CF6679;
+            --agent-echo: #4ac94a;
+            --quantum-glow: rgba(187, 134, 252, 0.6);
         }
 
-        * {
+        /* ----- Base ----- */
+        html, body {
+            height: 100%;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            font-family: 'Fira Code', monospace;
+            font-size: var(--font-size);
+            line-height: var(--baseline);
+            background: var(--theme-bg);
+            color: #f0f0e0;
+            overflow: hidden;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: var(--background);
-            color: var(--text-primary);
-            overflow: hidden;
-            height: 100vh;
+            display: grid;
+            grid-template-rows: var(--header-h) var(--status-h) 1fr var(--footer-h);
         }
 
-        /* Glass morphism effect */
-        .glass {
-            background: rgba(26, 27, 46, 0.7);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--surface);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--primary-dark);
-        }
-
-        /* Animations */
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-
-        @keyframes glow {
-            0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
-            50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.6); }
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes quantum-pulse {
-            0%, 100% { text-shadow: 0 0 20px rgba(99, 102, 241, 0.5); }
-            50% { text-shadow: 0 0 30px rgba(99, 102, 241, 0.8), 0 0 40px rgba(139, 92, 246, 0.6); }
-        }
-
-        @keyframes quantum-spin {
-            0% { transform: rotate(0deg) scale(1); }
-            50% { transform: rotate(180deg) scale(1.1); }
-            100% { transform: rotate(360deg) scale(1); }
-        }
-
-        @keyframes quantum-float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            33% { transform: translateY(-10px) rotate(0.5deg); }
-            66% { transform: translateY(-5px) rotate(-0.5deg); }
-        }
-
-        /* Three.js Canvas */
-        #three-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-        }
-
-        /* Main Layout */
-        .dashboard {
+        /* ----- Quantum Header ----- */
+        header {
+            grid-row: 1;
+            grid-column: 1 / -1;
+            background: var(--header-bg);
+            border-bottom: 1px solid #22241e;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 12px;
             position: relative;
-            z-index: 1;
-            height: 100vh;
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            grid-template-rows: 80px 1fr;
-            grid-template-areas:
-                "sidebar header"
-                "sidebar main";
-            gap: 0;
-        }
-
-        /* Header */
-        .header {
-            grid-area: header;
-            background: rgba(15, 15, 35, 0.8);
-            border-bottom: 1px solid var(--border);
-            padding: 0 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .status-indicators {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--secondary);
-            animation: glow 2s infinite;
-        }
-
-        .status-dot.warning { background: var(--warning); }
-        .status-dot.danger { background: var(--danger); }
-
-        /* Sidebar */
-        .sidebar {
-            grid-area: sidebar;
-            background: rgba(15, 15, 35, 0.9);
-            border-right: 1px solid var(--border);
-            padding: 2rem 0;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .logo {
-            padding: 0 2rem 2rem;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 2rem;
-        }
-
-        .logo h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .nav-section {
-            margin-bottom: 2rem;
-        }
-
-        .nav-title {
-            padding: 0 2rem 0.5rem;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-secondary);
-        }
-
-        .nav-items {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 2rem;
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: all 0.3s ease;
-            border-left: 3px solid transparent;
-        }
-
-        .nav-item:hover, .nav-item.active {
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--text-primary);
-            border-left-color: var(--primary);
-        }
-
-        .nav-item i {
-            width: 20px;
-            text-align: center;
-        }
-
-        /* Main Content */
-        .main-content {
-            grid-area: main;
-            padding: 2rem;
-            overflow-y: auto;
-            display: grid;
-            grid-template-columns: 1fr 400px;
-            grid-template-rows: auto 1fr;
-            gap: 2rem;
-            grid-template-areas:
-                "metrics metrics"
-                "agents sidebar";
-        }
-
-        /* Metrics Grid */
-        .metrics-grid {
-            grid-area: metrics;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-        }
-
-        .metric-card {
-            background: var(--surface);
-            border-radius: 16px;
-            padding: 1.5rem;
-            border: 1px solid var(--border);
-            transition: all 0.3s ease;
-        }
-
-        .metric-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--primary);
-            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
-        }
-
-        .metric-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .metric-title {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        .metric-value {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .metric-change {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            font-size: 0.875rem;
-        }
-
-        .metric-change.positive { color: var(--secondary); }
-        .metric-change.negative { color: var(--danger); }
-
-        /* Agents Grid */
-        .agents-grid {
-            grid-area: agents;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
-        }
-
-        .agent-card {
-            background: var(--surface);
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .agent-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--primary);
-            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
-        }
-
-        .agent-card.active {
-            border-color: var(--primary);
-            box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
-        }
-
-        .agent-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .agent-title {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .agent-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            background: var(--gradient);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .agent-name {
-            font-weight: 600;
-        }
-
-        .agent-role {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .agent-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .agent-content {
-            padding: 1.5rem;
-            height: 200px;
-            overflow-y: auto;
-        }
-
-        .agent-progress {
-            margin-top: 1rem;
-        }
-
-        .progress-bar {
-            height: 4px;
-            background: var(--surface-light);
-            border-radius: 2px;
             overflow: hidden;
         }
 
-        .progress-fill {
-            height: 100%;
-            background: var(--gradient);
-            border-radius: 2px;
-            transition: width 0.3s ease;
-        }
-
-        /* Right Sidebar */
-        .right-sidebar {
-            grid-area: sidebar;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        /* Prompt Card */
-        .prompt-card {
-            background: var(--surface);
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            padding: 1.5rem;
-        }
-
-        .prompt-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .prompt-input {
-            width: 100%;
-            background: var(--surface-light);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1rem;
-            color: var(--text-primary);
-            font-size: 0.875rem;
-            resize: none;
-            height: 120px;
-            margin-bottom: 1rem;
-        }
-
-        .prompt-input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .prompt-actions {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            flex: 1;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: var(--surface-light);
-            color: var(--text-primary);
-        }
-
-        .btn-secondary:hover {
-            background: var(--border);
-        }
-
-        /* Activity Feed */
-        .activity-card {
-            background: var(--surface);
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            padding: 1.5rem;
-            flex: 1;
-        }
-
-        .activity-list {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .activity-item {
-            display: flex;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            border-radius: 8px;
-            transition: background 0.3s ease;
-        }
-
-        .activity-item:hover {
-            background: var(--surface-light);
-        }
-
-        .activity-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: var(--gradient);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .activity-content {
-            flex: 1;
-        }
-
-        .activity-title {
-            font-size: 0.875rem;
-            font-weight: 500;
-            margin-bottom: 0.25rem;
-        }
-
-        .activity-desc {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .activity-time {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        /* System Stats */
-        .stats-card {
-            background: var(--surface);
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            padding: 1.5rem;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: 1rem;
-            background: var(--surface-light);
-            border-radius: 12px;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        /* Code Output */
-        .output-card {
-            background: var(--surface);
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            overflow: hidden;
-        }
-
-        .output-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .output-content {
-            padding: 1.5rem;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .code-block {
-            background: #1E1E1E;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 1rem;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .code-block::before {
+        header::before {
             content: '';
             position: absolute;
             top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: var(--gradient);
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, var(--quantum-glow), transparent);
+            animation: quantumScan 3s infinite linear;
         }
 
-        .code-block:hover::before {
-            opacity: 1;
+        @keyframes quantumScan {
+            0% { left: -100%; }
+            100% { left: 100%; }
         }
 
-        .code-header {
-            background: #2D2D2D;
-            padding: 0.75rem 1rem;
+        .quantum-pulse {
+            animation: quantumPulse 2s infinite alternate;
+        }
+
+        @keyframes quantumPulse {
+            0% { opacity: 0.7; transform: scale(1); }
+            100% { opacity: 1; transform: scale(1.05); }
+        }
+
+        header .left {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        header .right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        button {
+            background: var(--err);
+            border: 1px solid var(--err);
+            color: #f0f0e0;
+            padding: 6px 8px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all .2s;
+            border-radius: 3px;
+        }
+
+        button:hover {
+            background: var(--hover-blue);
+            border-color: var(--hover-blue);
+        }
+
+        button.success {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        button.info {
+            background: var(--info-bg);
+            border-color: var(--info-bg);
+        }
+
+        button.warn {
+            background: var(--warn-bg);
+            border-color: var(--warn-bg);
+            color: #3a3c31;
+        }
+
+        /* ----- Quantum Status Bar ----- */
+        #status-bar {
+            grid-row: 2;
+            grid-column: 1 / -1;
+            background: var(--status-bg);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.875rem;
-            color: var(--text-secondary);
+            padding: 4px 12px;
+            font-size: 12px;
+            position: relative;
         }
 
-        .code-content {
-            padding: 1rem;
-            font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 0.875rem;
-            line-height: 1.5;
+        .quantum-threads {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.3;
         }
 
-        /* Enhanced Quantum Effects */
-        .quantum-float {
-            animation: quantum-float 4s ease-in-out infinite;
+        .quantum-thread {
+            position: absolute;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent, var(--agent-nexus), transparent);
+            animation: threadFlow 2s infinite linear;
         }
 
-        .quantum-glow {
-            animation: quantum-pulse 2s ease-in-out infinite;
+        @keyframes threadFlow {
+            0% { top: -100%; }
+            100% { top: 100%; }
         }
 
-        .processing-spinner {
+        /* ----- Modern Editor Layout ----- */
+        #editor-stage {
+            grid-row: 3;
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 0px 1fr;
+            background: var(--theme-bg);
+            overflow: hidden;
+            position: relative;
+            transition: grid-template-columns 0.3s ease;
+        }
+
+        #editor-stage.left-panel-open {
+            grid-template-columns: 240px 1fr;
+        }
+
+        #left-panel {
+            background: var(--panel);
+            border-right: 1px solid #22241e;
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow: hidden;
+            width: 240px;
+        }
+
+        /* ----- Modern Editor Container ----- */
+        .editor-container {
+            position: relative;
+            display: flex;
+            flex: 1;
+            background: var(--theme-bg);
+            overflow: auto;
+        }
+
+        .line-numbers {
+            width: var(--ln-width);
+            padding: 10px 8px;
+            background: var(--panel);
+            color: var(--muted-text);
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+            user-select: none;
+            line-height: var(--baseline);
+            font-family: inherit;
+            font-size: inherit;
+            flex-shrink: 0;
+            position: sticky;
+            left: 0;
+            z-index: 10;
+        }
+
+        .editor-content {
+            flex: 1;
+            position: relative;
+            min-height: 100%;
+            padding: 10px;
+            padding-left: 12px;
+            box-sizing: border-box;
+            white-space: pre;
+            line-height: var(--baseline);
+            font-family: inherit;
+            font-size: inherit;
+            tab-size: 4;
+            -moz-tab-size: 4;
+            caret-color: var(--accent);
+            outline: none;
+            overflow-wrap: normal;
+            word-break: normal;
+            overflow: auto;
+        }
+
+        .editor-content:focus {
+            outline: none;
+        }
+
+        /* ----- Quantum Footer ----- */
+        footer {
+            grid-row: 4;
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 12px;
+            background: var(--header-bg);
+            border-top: 1px solid #22241e;
+            position: sticky;
+            bottom: 0;
+        }
+
+        #prompt-input {
+            flex: 1;
+            margin-right: 8px;
+            padding: 8px;
+            background: var(--status-bg);
+            border: 1px solid var(--accent);
+            color: #f0f0e0;
+            font-family: inherit;
+            border-radius: 3px;
+            font-size: 16px;
+        }
+
+        .small {
+            font-size: 12px;
+            padding: 6px 8px;
+        }
+
+        /* ----- Quantum 5-Agent System Styles ----- */
+        .agent-card {
+            background: var(--panel);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-left: 4px solid var(--muted-text);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .agent-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .agent-card.active::before {
+            left: 100%;
+        }
+
+        .agent-card.active {
+            box-shadow: 0 0 20px var(--quantum-glow);
+            transform: translateY(-2px);
+        }
+
+        .agent-card.nexus { border-left-color: var(--agent-nexus); }
+        .agent-card.cognito { border-left-color: var(--agent-cognito); }
+        .agent-card.relay { border-left-color: var(--agent-relay); }
+        .agent-card.sentinel { border-left-color: var(--agent-sentinel); }
+        .agent-card.echo { border-left-color: var(--agent-echo); }
+
+        .agent-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .agent-nexus .agent-title { color: var(--agent-nexus); }
+        .agent-cognito .agent-title { color: var(--agent-cognito); }
+        .agent-relay .agent-title { color: var(--agent-relay); }
+        .agent-sentinel .agent-title { color: var(--agent-sentinel); }
+        .agent-echo .agent-title { color: var(--agent-echo); }
+
+        .agent-subtitle {
+            font-size: 11px;
+            color: var(--muted-text);
+            margin-bottom: 6px;
+        }
+
+        .agent-content {
+            font-size: 12px;
+            line-height: 1.4;
+            min-height: 20px;
+        }
+
+        .quantum-spinner {
             width: 16px;
             height: 16px;
-            border: 2px solid #6366F1;
-            border-top: 2px solid transparent;
+            display: inline-block;
+            margin-right: 6px;
+            position: relative;
+        }
+
+        .quantum-spinner::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid transparent;
+            border-top: 2px solid var(--agent-cognito);
             border-radius: 50%;
-            animation: quantum-spin 1s linear infinite;
+            animation: quantumSpin 1s linear infinite;
         }
 
-        /* Notification System */
-        .notification-container {
+        .quantum-spinner::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid transparent;
+            border-bottom: 2px solid var(--agent-nexus);
+            border-radius: 50%;
+            animation: quantumSpin 0.5s linear infinite;
+        }
+
+        @keyframes quantumSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Quantum Data Packet Animation */
+        .quantum-packet {
             position: fixed;
-            top: 100px;
-            right: 20px;
-            z-index: 10000;
-            max-width: 400px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--agent-nexus);
+            box-shadow: 0 0 10px var(--agent-nexus);
+            opacity: 0;
+            z-index: 100;
+            pointer-events: none;
         }
 
-        .notification {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 0.5rem;
+        .quantum-trail {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--agent-nexus), transparent);
+            opacity: 0;
+        }
+
+        /* Action Buttons for Generated Content */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--muted-text);
+        }
+
+        .action-buttons button {
+            flex: 1;
+            padding: 6px;
+            font-size: 11px;
+        }
+
+        /* Quantum Connection Status */
+        .quantum-status {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            backdrop-filter: blur(20px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            gap: 6px;
+            font-size: 11px;
+            margin-top: 5px;
         }
 
-        .notification-success {
-            border-left: 4px solid var(--secondary);
+        .quantum-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--muted-text);
+            position: relative;
         }
 
-        .notification-warning {
-            border-left: 4px solid var(--warning);
+        .quantum-dot::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border-radius: 50%;
+            border: 1px solid var(--agent-nexus);
+            animation: quantumPulseDot 2s infinite;
         }
 
-        .notification-close {
-            background: none;
+        .quantum-dot.connected {
+            background: var(--accent);
+        }
+
+        @keyframes quantumPulseDot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+        }
+
+        /* ----- StreamHighlighter Styles ----- */
+        .sh-token {
+            transition: opacity 0.08s ease;
+            pointer-events: none;
+        }
+        .sh-comment {
+            color: #64748b;
+            font-style: italic;
+            opacity: 0.8;
+        }
+        .sh-string {
+            color: #a3e635;
+            font-weight: 500;
+        }
+        .sh-number {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        .sh-keyword {
+            color: #f472b6;
+            font-weight: 600;
+        }
+        .sh-type {
+            color: #7dd3fc;
+            font-weight: 500;
+        }
+        .sh-bracket {
+            color: #c084fc;
+            font-weight: 700;
+        }
+        .sh-id {
+            color: #94a3b8;
+        }
+        .sh-op {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        .sh-ws {
+            opacity: 0.3;
+        }
+        .sh-key {
+            color: #7dd3fc;
+            font-weight: 500;
+        }
+        .sh-number2 {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        .sh-text {
+            color: #e2e8f0;
+        }
+        .sh-unknown {
+            color: #f87171;
+        }
+        .sh-tag {
+            color: #f472b6;
+            font-weight: 600;
+        }
+        .sh-property {
+            color: #7dd3fc;
+            font-weight: 500;
+        }
+        .sh-function {
+            color: #4ac94a;
+            font-weight: 500;
+        }
+
+        /* Quantum Selection styling */
+        .editor-content::selection {
+            background: rgba(74, 201, 74, 0.3);
+        }
+
+        /* Quantum Scrollbar styling */
+        .editor-container::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .editor-container::-webkit-scrollbar-track {
+            background: var(--panel);
+        }
+
+        .editor-container::-webkit-scrollbar-thumb {
+            background: var(--muted-text);
+            border-radius: 6px;
+        }
+
+        .editor-container::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
+        /* ----- Quantum Panels ----- */
+        #preview-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            background: white;
+            border: 2px solid var(--accent);
+            border-radius: 5px;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 0 30px rgba(0,0,0,.7);
+        }
+
+        #preview-header {
+            background: var(--header-bg);
+            color: #f0f0e0;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--accent);
+        }
+
+        #preview-content {
+            width: 100%;
+            height: calc(100% - 40px);
             border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 1.2rem;
-            margin-left: auto;
+            background: white;
         }
 
-        .connection-status {
+        #close-preview {
+            background: transparent;
+            border: none;
+            color: #f0f0e0;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: var(--surface-light);
-            border-radius: 8px;
-            font-size: 0.875rem;
+            justify-content: center;
         }
 
-        .connection-status.connected {
-            color: var(--secondary);
+        #ai-response-panel {
+            position: fixed;
+            bottom: 60px;
+            right: 20px;
+            width: 500px;
+            max-height: 600px;
+            background: var(--panel);
+            border: 1px solid var(--accent);
+            border-radius: 5px;
+            padding: 15px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,.3);
         }
 
-        .connection-status.disconnected {
-            color: var(--danger);
+        #ai-response-content {
+            font-size: 12px;
+            line-height: 1.4;
         }
 
-        .metrics-grid.paused .metric-card {
-            opacity: 0.7;
-            filter: grayscale(0.5);
+        #close-ai-panel {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: transparent;
+            border: none;
+            color: var(--muted-text);
+            font-size: 14px;
+            cursor: pointer;
         }
 
-        /* Responsive */
-        @media (max-width: 1400px) {
-            .dashboard {
-                grid-template-columns: 250px 1fr;
-            }
-
-            .main-content {
-                grid-template-columns: 1fr 350px;
-            }
+        #file-input {
+            display: none;
         }
 
-        @media (max-width: 1200px) {
-            .main-content {
-                grid-template-columns: 1fr;
-                grid-template-areas:
-                    "metrics"
-                    "agents"
-                    "sidebar";
-            }
-
-            .right-sidebar {
-                grid-template-columns: 1fr 1fr;
-                grid-template-areas:
-                    "prompt activity"
-                    "stats output";
-            }
+        .ai-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
+        .ai-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: none;
+        }
+
+        .ai-dot.probing {
+            background: var(--err);
+            animation: pulse 2s infinite;
+        }
+
+        .ai-dot.connected {
+            background: var(--accent);
+            animation: none;
+        }
+
+        /* Quantum Thinking Visualization */
+        .quantum-thinking {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .fractal-node {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--agent-cognito);
+            animation: fractalPulse 1.5s infinite alternate;
+        }
+
+        @keyframes fractalPulse {
+            0% { transform: scale(1); opacity: 0.3; }
+            100% { transform: scale(1.5); opacity: 0.8; }
+        }
+
+        /* Mobile optimizations */
         @media (max-width: 768px) {
-            .dashboard {
-                grid-template-columns: 1fr;
-                grid-template-areas:
-                    "header"
-                    "main";
+            #editor-stage {
+                grid-template-columns: 1fr !important;
             }
-            
-            .sidebar {
-                display: none;
+
+            #left-panel {
+                position: absolute;
+                height: 100%;
+                z-index: 30;
+                transform: translateX(-240px);
             }
-            
-            .metrics-grid {
-                grid-template-columns: 1fr 1fr;
+
+            #left-panel.open {
+                transform: translateX(0);
             }
-            
-            .agents-grid {
-                grid-template-columns: 1fr;
+
+            #ai-response-panel {
+                width: calc(100% - 40px);
+                right: 20px;
+                left: 20px;
+            }
+
+            #preview-panel {
+                width: 95%;
+                height: 85%;
+            }
+
+            body {
+                grid-template-rows: var(--header-h) var(--status-h) 1fr auto;
+            }
+
+            footer {
+                position: relative;
             }
         }
 
-        /* Animation classes */
-        .slide-in {
-            animation: slideIn 0.6s ease-out;
+        /* New Consensus Panel Styles */
+        .consensus-panel {
+            background: var(--panel);
+            border: 1px solid var(--agent-nexus);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
         }
 
-        .float {
-            animation: float 3s ease-in-out infinite;
+        .consensus-header {
+            font-weight: bold;
+            color: var(--agent-nexus);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        /* Custom utility classes */
-        .gradient-text {
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .candidate-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--agent-cognito);
         }
 
-        .border-gradient {
-            border: 1px solid transparent;
-            background: linear-gradient(var(--surface), var(--surface)) padding-box,
-                        var(--gradient) border-box;
+        .candidate-meta {
+            font-size: 10px;
+            color: var(--muted-text);
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .candidate-content {
+            font-size: 11px;
+            font-family: 'Fira Code', monospace;
+            white-space: pre-wrap;
+            max-height: 80px;
+            overflow: hidden;
+        }
+
+        .entropy-badge {
+            background: var(--agent-nexus);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+        }
+
+        .selected-candidate {
+            border-left-color: var(--accent);
+            background: rgba(74, 201, 74, 0.1);
         }
     </style>
 </head>
 <body>
-    <!-- Three.js Background -->
-    <canvas id="three-canvas"></canvas>
-
-    <!-- Main Dashboard -->
-    <div class="dashboard">
-        <!-- Header -->
-        <header class="header glass">
-            <div class="header-left">
-                <div class="status-indicators">
-                    <div class="status-item">
-                        <div class="status-dot active"></div>
-                        <span>Quantum Core</span>
-                    </div>
-                    <div class="status-item">
-                        <div class="status-dot active"></div>
-                        <span>Vector Engine</span>
-                    </div>
-                    <div class="status-item">
-                        <div class="status-dot active"></div>
-                        <span>Fractal Reasoning</span>
-                    </div>
-                </div>
-            </div>
-            <div class="header-right">
-                <div class="flex items-center gap-4">
-                    <div class="text-sm text-gray-400">v2.4.1</div>
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"></div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Sidebar -->
-        <nav class="sidebar glass">
-            <div class="logo">
-                <h1>NEXUS</h1>
-                <div class="text-xs text-gray-400 mt-1">Quantum AI Platform</div>
-            </div>
-
-            <div class="nav-section">
-                <div class="nav-title">Core Systems</div>
-                <div class="nav-items">
-                    <a href="#" class="nav-item active">
-                        <i>⚡</i>
-                        <span>Dashboard</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i>🔮</i>
-                        <span>Quantum Engine</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i>🧠</i>
-                        <span>AI Agents</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i>📊</i>
-                        <span>Analytics</span>
-                    </a>
-                </div>
-            </div>
-
-            <div class="nav-section">
-                <div class="nav-title">Development</div>
-                <div class="nav-items">
-                    <a href="#" class="nav-item">
-                        <i>🔧</i>
-                        <span>Code Studio</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i>📁</i>
-                        <span>Projects</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i>⚙️</i>
-                        <span>Settings</span>
-                    </a>
-                </div>
-            </div>
-
-            <div class="nav-section">
-                <div class="nav-title">System</div>
-                <div class="nav-items">
-                    <a href="#" class="nav-item">
-                        <i>🔒</i>
-                        <span>Security</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i>📈</i>
-                        <span>Performance</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i>🔔</i>
-                        <span>Notifications</span>
-                    </a>
-                </div>
-            </div>
-
-            <div class="mt-auto px-4">
-                <div class="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-4">
-                    <div class="text-sm font-semibold mb-1">System Status</div>
-                    <div class="text-xs text-gray-400 mb-2">All systems operational</div>
-                    <div class="w-full bg-gray-700 rounded-full h-1">
-                        <div class="bg-gradient-to-r from-green-400 to-blue-500 h-1 rounded-full" style="width: 92%"></div>
-                    </div>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Metrics Grid -->
-            <section class="metrics-grid">
-                <div class="metric-card glass slide-in" style="animation-delay: 0.1s">
-                    <div class="metric-header">
-                        <div class="metric-title">Quantum Processing</div>
-                        <div class="metric-change positive">+12.4%</div>
-                    </div>
-                    <div class="metric-value">84.2%</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: 84.2%"></div>
-                    </div>
-                </div>
-
-                <div class="metric-card glass slide-in" style="animation-delay: 0.2s">
-                    <div class="metric-header">
-                        <div class="metric-title">Vector Convergence</div>
-                        <div class="metric-change positive">+8.7%</div>
-                    </div>
-                    <div class="metric-value">96.5%</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: 96.5%"></div>
-                    </div>
-                </div>
-
-                <div class="metric-card glass slide-in" style="animation-delay: 0.3s">
-                    <div class="metric-header">
-                        <div class="metric-title">Token Speed</div>
-                        <div class="metric-change positive">+15.2%</div>
-                    </div>
-                    <div class="metric-value">2.4M/s</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: 78.3%"></div>
-                    </div>
-                </div>
-
-                <div class="metric-card glass slide-in" style="animation-delay: 0.4s">
-                    <div class="metric-header">
-                        <div class="metric-title">Energy Efficiency</div>
-                        <div class="metric-change positive">+5.3%</div>
-                    </div>
-                    <div class="metric-value">94.7%</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: 94.7%"></div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Agents Grid -->
-            <section class="agents-grid">
-                <div class="agent-card glass slide-in" style="animation-delay: 0.5s">
-                    <div class="agent-header">
-                        <div class="agent-title">
-                            <div class="agent-icon">
-                                <span>⚡</span>
-                            </div>
-                            <div>
-                                <div class="agent-name">Nexus Core</div>
-                                <div class="agent-role">Quantum Orchestrator</div>
-                            </div>
-                        </div>
-                        <div class="agent-status">
-                            <div class="status-dot active"></div>
-                            <span class="text-sm text-green-400">Active</span>
-                        </div>
-                    </div>
-                    <div class="agent-content">
-                        <div class="text-sm text-gray-300 mb-3">Orchestrating quantum processes with fractal optimization...</div>
-                        <div class="agent-progress">
-                            <div class="flex justify-between text-xs text-gray-400 mb-1">
-                                <span>Processing</span>
-                                <span>78%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 78%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="agent-card glass slide-in" style="animation-delay: 0.6s">
-                    <div class="agent-header">
-                        <div class="agent-title">
-                            <div class="agent-icon">
-                                <span>🔮</span>
-                            </div>
-                            <div>
-                                <div class="agent-name">Echo Matrix</div>
-                                <div class="agent-role">Output Generator</div>
-                            </div>
-                        </div>
-                        <div class="agent-status">
-                            <div class="status-dot active"></div>
-                            <span class="text-sm text-green-400">Active</span>
-                        </div>
-                    </div>
-                    <div class="agent-content">
-                        <div class="text-sm text-gray-300 mb-3">Generating optimized code across 30+ languages...</div>
-                        <div class="agent-progress">
-                            <div class="flex justify-between text-xs text-gray-400 mb-1">
-                                <span>Generation</span>
-                                <span>92%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 92%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="agent-card glass slide-in" style="animation-delay: 0.7s">
-                    <div class="agent-header">
-                        <div class="agent-title">
-                            <div class="agent-icon">
-                                <span>🧠</span>
-                            </div>
-                            <div>
-                                <div class="agent-name">Cognito AI</div>
-                                <div class="agent-role">Reasoning Engine</div>
-                            </div>
-                        </div>
-                        <div class="agent-status">
-                            <div class="status-dot active"></div>
-                            <span class="text-sm text-green-400">Active</span>
-                        </div>
-                    </div>
-                    <div class="agent-content">
-                        <div class="text-sm text-gray-300 mb-3">Executing multi-dimensional fractal reasoning...</div>
-                        <div class="agent-progress">
-                            <div class="flex justify-between text-xs text-gray-400 mb-1">
-                                <span>Analysis</span>
-                                <span>85%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 85%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="agent-card glass slide-in" style="animation-delay: 0.8s">
-                    <div class="agent-header">
-                        <div class="agent-title">
-                            <div class="agent-icon">
-                                <span>🔗</span>
-                            </div>
-                            <div>
-                                <div class="agent-name">Relay Network</div>
-                                <div class="agent-role">Data Transmitter</div>
-                            </div>
-                        </div>
-                        <div class="agent-status">
-                            <div class="status-dot active"></div>
-                            <span class="text-sm text-green-400">Active</span>
-                        </div>
-                    </div>
-                    <div class="agent-content">
-                        <div class="text-sm text-gray-300 mb-3">Managing quantum entanglement channels...</div>
-                        <div class="agent-progress">
-                            <div class="flex justify-between text-xs text-gray-400 mb-1">
-                                <span>Transmission</span>
-                                <span>96%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 96%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Right Sidebar -->
-            <aside class="right-sidebar">
-                <!-- Prompt Card -->
-                <div class="prompt-card glass slide-in" style="animation-delay: 0.9s">
-                    <div class="prompt-header">
-                        <div class="w-6 h-6 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-                            <span class="text-sm">✨</span>
-                        </div>
-                        <div>
-                            <div class="font-semibold">Quantum Prompt</div>
-                            <div class="text-xs text-gray-400">Enhanced with fractal reasoning</div>
-                        </div>
-                    </div>
-                    <textarea
-                        class="prompt-input"
-                        placeholder="Enter your command... (e.g., Create a React component for a dashboard, optimize this algorithm, explain quantum computing)"
-                        rows="4"
-                    ></textarea>
-                    <div class="prompt-actions">
-                        <button class="btn btn-primary">
-                            <span>Process</span>
-                            <span>⚡</span>
-                        </button>
-                        <button class="btn btn-secondary">
-                            <span>Clear</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Activity Feed -->
-                <div class="activity-card glass slide-in" style="animation-delay: 1.0s">
-                    <div class="prompt-header">
-                        <div class="w-6 h-6 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
-                            <span class="text-sm">📈</span>
-                        </div>
-                        <div>
-                            <div class="font-semibold">Activity Feed</div>
-                            <div class="text-xs text-gray-400">Real-time system events</div>
-                        </div>
-                    </div>
-                    <div class="activity-list">
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <span class="text-sm">⚡</span>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Quantum Process Started</div>
-                                <div class="activity-desc">Fractal reasoning initialized</div>
-                            </div>
-                            <div class="activity-time">2s ago</div>
-                        </div>
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <span class="text-sm">🔮</span>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Vector Convergence</div>
-                                <div class="activity-desc">96.5% alignment achieved</div>
-                            </div>
-                            <div class="activity-time">5s ago</div>
-                        </div>
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <span class="text-sm">🧠</span>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">AI Analysis Complete</div>
-                                <div class="activity-desc">Multi-dimensional processing done</div>
-                            </div>
-                            <div class="activity-time">12s ago</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- System Stats -->
-                <div class="stats-card glass slide-in" style="animation-delay: 1.1s">
-                    <div class="prompt-header">
-                        <div class="w-6 h-6 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
-                            <span class="text-sm">📊</span>
-                        </div>
-                        <div>
-                            <div class="font-semibold">System Stats</div>
-                            <div class="text-xs text-gray-400">Performance metrics</div>
-                        </div>
-                    </div>
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-value">2.4M</div>
-                            <div class="stat-label">Tokens/s</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">128ms</div>
-                            <div class="stat-label">Latency</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">99.8%</div>
-                            <div class="stat-label">Uptime</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">256</div>
-                            <div class="stat-label">Vectors</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Code Output -->
-                <div class="output-card glass slide-in" style="animation-delay: 1.2s">
-                    <div class="output-header">
-                        <div class="font-semibold">Code Output</div>
-                        <div class="text-xs text-gray-400">Live generation results</div>
-                    </div>
-                    <div class="output-content">
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span>generated.js</span>
-                                <span class="text-green-400">Quantum Optimized</span>
-                            </div>
-                            <div class="code-content">
-                                <pre class="text-sm"><code class="language-javascript">// Quantum-optimized React component
-import React, { useState, useEffect } from 'react';
-
-const QuantumDashboard = () => {
-    const [metrics, setMetrics] = useState([]);
-
-    useEffect(() => {
-        // Fractal-optimized data fetching
-        fetchMetrics().then(setMetrics);
-    }, []);
-
-    return (
-        &lt;div className="glass dashboard"&gt;
-            {/* Optimized rendering */}
-            {metrics.map(metric => (
-                &lt;MetricCard key={metric.id} data={metric} /&gt;
-            ))}
-        &lt;/div&gt;
-    );
-};
-
-export default QuantumDashboard;</code></pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </aside>
-        </main>
+<header>
+    <div class="left">
+        <button id="left-toggle" class="small">☰</button>
+        <div style="font-weight:800;" class="quantum-pulse">Nemodian 2244-1 :: Quantum Fractal AI</div>
     </div>
+    <div class="right">
+        <div class="ai-status">
+            <div id="ai-dot" class="ai-dot connected"></div>
+            <div id="ai-indicator" style="font-size:12px;color:#cfcfbd;">Quantum AI: Ready</div>
+        </div>
+        <button id="open-file" class="small">Open</button>
+        <button id="save-file" class="small">Save</button>
+        <button id="save-as" class="small">Save As</button>
+        <button id="render-html" class="small warn">Render HTML</button>
+        <button id="run-local-ai" class="small info">Quantum AI</button>
+        <button id="run-orchestrator" class="small success">Orchestrator</button>
+    </div>
+</header>
+<div id="status-bar" class="info">
+    <div class="quantum-threads" id="quantum-threads"></div>
+    <div id="file-meta">No File Loaded</div>
+    <div id="editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>
+</div>
+<div id="editor-stage">
+    <aside id="left-panel" class="closed">
+        <button id="btn-undo" class="small">UNDO</button>
+        <button id="btn-redo" class="small">REDO</button>
+        <button id="btn-beautify" class="small">Beautify</button>
+        <button id="btn-render" class="small warn">Render HTML</button>
 
-    <script>
-        // NEXUS Quantum AI Dashboard - Complete JavaScript Core
-        class NexusQuantumAI {
-            constructor() {
-                this.isConnected = true;
-                this.animationTimelines = new Map();
-                this.quantumProcessors = new Map();
-                this.activeProcesses = new Set();
-                this.init();
-            }
+        <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
+            <p><strong>Quantum AI Commands:</strong></p>
+            <ul style="padding-left: 15px;">
+                <li>Rewrite this function</li>
+                <li>Optimize performance</li>
+                <li>Add error handling</li>
+                <li>Convert to TypeScript</li>
+                <li>Explain this code</li>
+            </ul>
+        </div>
 
-            init() {
-                this.createThreeJSBackground();
-                this.initEventListeners();
-                this.initAnimations();
-                this.startLiveUpdates();
-                this.initQuantumProcessors();
-                this.showNotification('NEXUS Quantum AI Initialized', 'success');
-            }
+        <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
+            <p><strong>Quantum Actions:</strong></p>
+            <button id="btn-optimize" class="small" style="width:100%;margin-bottom:5px;">Quantum Optimize</button>
+            <button id="btn-document" class="small" style="width:100%;margin-bottom:5px;">Fractal Document</button>
+            <button id="btn-refactor" class="small" style="width:100%;">Hyper Refactor</button>
+            <button id="btn-orchestrate" class="small success" style="width:100%;margin-top:5px;">Multi-Agent Consensus</button>
+        </div>
 
-            // Three.js Quantum Background
-            createThreeJSBackground() {
-                if (typeof THREE === 'undefined') {
-                    console.warn('Three.js not loaded - background disabled');
-                    return;
+        <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
+            <p><strong>Quantum Settings:</strong></p>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+                <input type="checkbox" id="quantum-mode" checked>
+                <label for="quantum-mode">Quantum Fractal Mode</label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="hyperthreading" checked>
+                <label for="hyperthreading">Hyperthreading</label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 5px;">
+                <input type="checkbox" id="multi-agent-mode" checked>
+                <label for="multi-agent-mode">Multi-Agent Consensus</label>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
+            <p><strong>Orchestrator Settings:</strong></p>
+            <div style="margin-bottom: 5px;">
+                <label for="agent-count">Agent Count:</label>
+                <input type="number" id="agent-count" min="2" max="8" value="4" style="width: 60px; background: var(--status-bg); color: white; border: 1px solid var(--muted-text); padding: 2px; border-radius: 3px;">
+            </div>
+            <div style="margin-bottom: 5px;">
+                <label for="max-rounds">Max Rounds:</label>
+                <input type="number" id="max-rounds" min="1" max="10" value="3" style="width: 60px; background: var(--status-bg); color: white; border: 1px solid var(--muted-text); padding: 2px; border-radius: 3px;">
+            </div>
+        </div>
+    </aside>
+
+    <!-- Quantum Editor Container -->
+    <div class="editor-container">
+        <div class="quantum-thinking" id="quantum-thinking"></div>
+        <div class="line-numbers" id="line-numbers"></div>
+        <div
+            class="editor-content"
+            id="editor"
+            contenteditable="true"
+            spellcheck="false"
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+        >&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;Quantum Fractal AI Demo&lt;/title&gt;
+  &lt;style&gt;
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      color: white;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      max-width: 600px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #4ac94a, #5bc0de);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      font-size: 1.2rem;
+      line-height: 1.6;
+    }
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .feature {
+      background: rgba(74, 201, 74, 0.2);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid #4ac94a;
+    }
+    button {
+      background: #4ac94a;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: #3aa83a;
+      transform: translateY(-2px);
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class="container"&gt;
+    &lt;h1&gt;Welcome to Quantum Fractal AI&lt;/h1&gt;
+    &lt;p&gt;This is a demonstration of the quantum fractal AI editor's capabilities. Experience hyper-accelerated AI reasoning with fractal mathematics.&lt;/p&gt;
+    &lt;div class="features"&gt;
+      &lt;div class="feature"&gt;Quantum Editing&lt;/div&gt;
+      &lt;div class="feature"&gt;Fractal AI&lt;/div&gt;
+      &lt;div class="feature"&gt;Hyper Reasoning&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;button&gt;Experience Quantum AI&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</div>
+    </div>
+</div>
+<footer>
+    <input id="prompt-input" placeholder="Enter quantum command (e.g., 'rewrite this with fractal optimization')">
+    <button id="send-button" class="success">QUANTUM PROCESS</button>
+</footer>
+<input type="file" id="file-input" accept=".js,.html,.css,.txt,.json">
+<div id="preview-panel">
+    <div id="preview-header">
+        <span>Quantum Preview</span>
+        <button id="close-preview">×</button>
+    </div>
+    <iframe id="preview-content"></iframe>
+</div>
+<div id="ai-response-panel">
+    <button id="close-ai-panel">×</button>
+    <div id="ai-response-content">
+        <!-- Quantum 5-Agent System UI -->
+        <div class="agent-card nexus agent-nexus">
+            <div class="agent-title">Nexus</div>
+            <div class="agent-subtitle">Quantum Orchestrator (Fractal Core)</div>
+            <div class="agent-content">Idle. Awaiting quantum command.</div>
+            <div class="quantum-status">
+                <div class="quantum-dot connected"></div>
+                <span>Quantum State: Entangled</span>
+            </div>
+        </div>
+        <div class="agent-card cognito agent-cognito">
+            <div class="agent-title">Cognito</div>
+            <div class="agent-subtitle">Fractal Analyzer (Quantum Loop)</div>
+            <div class="agent-content">Ready</div>
+        </div>
+        <div class="agent-card relay agent-relay">
+            <div class="agent-title">Relay</div>
+            <div class="agent-subtitle">Quantum Communicator (2244)</div>
+            <div class="agent-content">Ready</div>
+        </div>
+        <div class="agent-card sentinel agent-sentinel">
+            <div class="agent-title">Sentinel</div>
+            <div class="agent-subtitle">Quantum Monitor (Fractal Coin)</div>
+            <div class="agent-content">Ready</div>
+        </div>
+        <div class="agent-card echo agent-echo">
+            <div class="agent-title">Echo</div>
+            <div class="agent-subtitle">Quantum Reporter (Fractal Code)</div>
+            <div class="agent-content">Awaiting quantum report...</div>
+            <!-- Action buttons will be added here dynamically -->
+        </div>
+        <!-- Consensus Panel -->
+        <div class="consensus-panel" id="consensus-panel" style="display: none;">
+            <div class="consensus-header">
+                <span>Multi-Agent Consensus Results</span>
+                <span class="entropy-badge" id="consensus-score">Score: 0</span>
+            </div>
+            <div id="candidates-list">
+                <!-- Candidate items will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GSAP for quantum animations -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+
+<script>
+    /* =========================================================================
+       Quantum Fractal StreamHighlighter — Hyper-Accelerated AI Reasoning
+       ========================================================================== */
+
+    class QuantumHighlighter {
+        constructor() {
+            this.languages = {
+                js: {
+                    rules: [
+                        {t:'comment',r:/^(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/},
+                        {t:'string',r:/^`(?:\\[\s\S]|[^`])*`|^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/},
+                        {t:'number',r:/^\b(?:0x[a-fA-F0-9]+|[0-9]+(?:\.[0-9]+)?(?:e[+-]?\d+)?)\b/},
+                        {t:'keyword',r:/^\b(?:if|else|for|while|function|return|const|let|var|class|new|in|of|switch|case|break|continue|try|catch|throw|async|await|export|import|from|default)\b/},
+                        {t:'function',r:/^\b[a-zA-Z_$][\w$]*(?=\s*\()/},
+                        {t:'bracket',r:/^[\[\]\{\}\(\)]/},
+                        {t:'op',r:/^==|===|!=|!==|<=|>=|=>|->|[-+*/%=<>!&|^~?:.,;]/},
+                        {t:'id',r:/^\b[a-zA-Z_$][\w$]*\b/},
+                        {t:'ws',r:/^\s+/}
+                    ]
+                },
+                html: {
+                    rules: [
+                        {t:'comment',r:/^&lt;!--[\s\S]*?--&gt;/},
+                        {t:'tag',r:/^&lt;\/?[^\s>\/]+/},
+                        {t:'string',r:/^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/},
+                        {t:'bracket',r:/^[\[\]\{\}\(\)]/},
+                        {t:'op',r:/^==|===|!=|!==|<=|>=|=>|->|[-+*/%=<>!&|^~?:.,;]/},
+                        {t:'ws',r:/^\s+/},
+                        {t:'text',r:/^[^<]+/}
+                    ]
+                },
+                css: {
+                    rules: [
+                        {t:'comment',r:/^(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/},
+                        {t:'string',r:/^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/},
+                        {t:'number',r:/^\b(?:0x[a-fA-F0-9]+|[0-9]+(?:\.[0-9]+)?(?:e[+-]?\d+)?)\b/},
+                        {t:'keyword',r:/^\b(?:@import|@media|@keyframes|@font-face|!important|initial|inherit|unset)\b/},
+                        {t:'property',r:/^[a-zA-Z-]+(?=\s*:)/},
+                        {t:'bracket',r:/^[\[\]\{\}\(\)]/},
+                        {t:'op',r:/^[:;,#.]/},
+                        {t:'ws',r:/^\s+/}
+                    ]
+                }
+            };
+        }
+
+        static escape(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        tokenize(text, language = 'js') {
+            const rules = this.languages[language]?.rules || this.languages.js.rules;
+            const tokens = [];
+            let position = 0;
+
+            while (position < text.length) {
+                let matched = false;
+
+                for (const rule of rules) {
+                    rule.r.lastIndex = position;
+                    const match = rule.r.exec(text);
+
+                    if (match && match.index === position) {
+                        tokens.push({
+                            type: rule.t,
+                            value: match[0],
+                            length: match[0].length
+                        });
+                        position += match[0].length;
+                        matched = true;
+                        break;
+                    }
                 }
 
-                const canvas = document.getElementById('three-canvas');
-                if (!canvas) return;
-
-                this.scene = new THREE.Scene();
-                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-
-                this.renderer.setSize(window.innerWidth, window.innerHeight);
-                this.renderer.setClearColor(0x000000, 0);
-                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-                this.camera.position.z = 3;
-                this.createQuantumParticles();
-                this.createEnergyFields();
-                this.animateBackground();
-
-                window.addEventListener('resize', () => this.handleResize());
-            }
-
-            createQuantumParticles() {
-                const particlesCount = 2000;
-                const positions = new Float32Array(particlesCount * 3);
-                const colors = new Float32Array(particlesCount * 3);
-
-                for (let i = 0; i < particlesCount * 3; i += 3) {
-                    positions[i] = (Math.random() - 0.5) * 10;
-                    positions[i + 1] = (Math.random() - 0.5) * 10;
-                    positions[i + 2] = (Math.random() - 0.5) * 10;
-
-                    colors[i] = 0.4 + Math.random() * 0.3;
-                    colors[i + 1] = 0.5 + Math.random() * 0.2;
-                    colors[i + 2] = 0.9 + Math.random() * 0.1;
+                if (!matched) {
+                    tokens.push({
+                        type: 'unknown',
+                        value: text[position],
+                        length: 1
+                    });
+                    position++;
                 }
-
-                const geometry = new THREE.BufferGeometry();
-                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-                const material = new THREE.PointsMaterial({
-                    size: 0.02,
-                    vertexColors: true,
-                    transparent: true,
-                    opacity: 0.6,
-                    blending: THREE.AdditiveBlending
-                });
-
-                this.particles = new THREE.Points(geometry, material);
-                this.scene.add(this.particles);
             }
 
-            createEnergyFields() {
-                this.energyFields = [];
-                for (let i = 0; i < 5; i++) {
-                    const geometry = new THREE.IcosahedronGeometry(0.5, 2);
-                    const material = new THREE.MeshBasicMaterial({
-                        color: new THREE.Color().setHSL(0.7 + i * 0.1, 0.8, 0.5),
-                        wireframe: true,
-                        transparent: true,
-                        opacity: 0.1
+            return tokens;
+        }
+
+        highlight(text, language = 'js') {
+            const tokens = this.tokenize(text, language);
+            return tokens.map(token =>
+                `<span class="sh-token sh-${token.type}">${QuantumHighlighter.escape(token.value)}</span>`
+            ).join('');
+        }
+
+        // Quantum highlighting for contenteditable
+        highlightElement(element, language = 'js') {
+            const text = element.textContent || '';
+            const html = this.highlight(text, language);
+
+            // Save quantum state (cursor position)
+            const selection = window.getSelection();
+            const range = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+
+            element.innerHTML = html;
+
+            // Restore quantum state
+            if (range) {
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+    }
+
+    // ----- Quantum Editor Core -----
+    class QuantumEditor {
+        constructor() {
+            this.editor = document.getElementById('editor');
+            this.lineNumbers = document.getElementById('line-numbers');
+            this.statusEditor = document.getElementById('editor-meta');
+            this.statusFile = document.getElementById('file-meta');
+            this.highlighter = new QuantumHighlighter();
+            this.quantumThinking = document.getElementById('quantum-thinking');
+
+            this.currentFileName = null;
+            this.currentFileType = 'html';
+            this.historyStack = [];
+            this.redoStack = [];
+            this.isComposing = false;
+            this.quantumMode = true;
+            this.hyperthreading = true;
+            this.multiAgentMode = true;
+
+            this.init();
+        }
+
+        init() {
+            this.bindEvents();
+            this.render(this.editor.textContent);
+            this.pushHistory();
+            this.initQuantumVisuals();
+        }
+
+        initQuantumVisuals() {
+            // Create quantum threads in status bar
+            const threadsContainer = document.getElementById('quantum-threads');
+            for (let i = 0; i < 5; i++) {
+                const thread = document.createElement('div');
+                thread.className = 'quantum-thread';
+                thread.style.left = `${20 + i * 15}%`;
+                thread.style.animationDelay = `${i * 0.3}s`;
+                threadsContainer.appendChild(thread);
+            }
+        }
+
+        createFractalNodes() {
+            if (!this.quantumMode) return;
+
+            this.quantumThinking.innerHTML = '';
+            const nodeCount = this.hyperthreading ? 12 : 6;
+
+            for (let i = 0; i < nodeCount; i++) {
+                const node = document.createElement('div');
+                node.className = 'fractal-node';
+                node.style.left = `${Math.random() * 100}%`;
+                node.style.top = `${Math.random() * 100}%`;
+                node.style.animationDelay = `${Math.random() * 2}s`;
+                node.style.background = i % 2 === 0 ? 'var(--agent-nexus)' : 'var(--agent-cognito)';
+                this.quantumThinking.appendChild(node);
+            }
+        }
+
+        bindEvents() {
+            this.editor.addEventListener('input', this.handleInput.bind(this));
+            this.editor.addEventListener('compositionstart', () => this.isComposing = true);
+            this.editor.addEventListener('compositionend', () => {
+                this.isComposing = false;
+                this.handleInput();
+            });
+
+            this.editor.addEventListener('keydown', this.handleKeydown.bind(this));
+            this.editor.addEventListener('click', this.updateStatus.bind(this));
+            this.editor.addEventListener('keyup', this.updateStatus.bind(this));
+
+            this.editor.addEventListener('scroll', this.syncScroll.bind(this));
+
+            // Quantum mode toggle
+            document.getElementById('quantum-mode').addEventListener('change', (e) => {
+                this.quantumMode = e.target.checked;
+                if (this.quantumMode) {
+                    this.createFractalNodes();
+                } else {
+                    this.quantumThinking.innerHTML = '';
+                }
+            });
+
+            document.getElementById('hyperthreading').addEventListener('change', (e) => {
+                this.hyperthreading = e.target.checked;
+                if (this.quantumMode) {
+                    this.createFractalNodes();
+                }
+            });
+
+            document.getElementById('multi-agent-mode').addEventListener('change', (e) => {
+                this.multiAgentMode = e.target.checked;
+            });
+        }
+
+        handleInput() {
+            if (this.isComposing) return;
+
+            this.pushHistory();
+            this.highlightContent();
+            this.updateLineNumbers();
+            this.updateStatus();
+
+            if (this.quantumMode) {
+                this.createFractalNodes();
+            }
+        }
+
+        handleKeydown(event) {
+            if (event.key === 'Tab') {
+                event.preventDefault();
+                this.insertText('    ');
+            }
+
+            if (event.ctrlKey || event.metaKey) {
+                if (event.key === 'z' && !event.shiftKey) {
+                    event.preventDefault();
+                    this.undo();
+                } else if (event.key === 'z' && event.shiftKey) {
+                    event.preventDefault();
+                    this.redo();
+                } else if (event.key === 'y') {
+                    event.preventDefault();
+                    this.redo();
+                } else if (event.key === 'q') {
+                    event.preventDefault();
+                    this.quantumMode = !this.quantumMode;
+                    document.getElementById('quantum-mode').checked = this.quantumMode;
+                    if (this.quantumMode) {
+                        this.createFractalNodes();
+                    }
+                } else if (event.key === 'm') {
+                    event.preventDefault();
+                    this.multiAgentMode = !this.multiAgentMode;
+                    document.getElementById('multi-agent-mode').checked = this.multiAgentMode;
+                }
+            }
+        }
+
+        insertText(text) {
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return;
+
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(document.createTextNode(text));
+
+            range.setStart(range.endContainer, range.endOffset);
+            range.setEnd(range.endContainer, range.endOffset);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            this.handleInput();
+        }
+
+        highlightContent() {
+            this.highlighter.highlightElement(this.editor, this.currentFileType);
+        }
+
+        updateLineNumbers() {
+            const text = this.editor.textContent || '';
+            const lines = text.split('\n');
+            const lineCount = lines.length;
+
+            let lineNumbersHTML = '';
+            for (let i = 1; i <= lineCount; i++) {
+                lineNumbersHTML += i + '<br>';
+            }
+
+            this.lineNumbers.innerHTML = lineNumbersHTML;
+            this.lineNumbers.style.height = this.editor.scrollHeight + 'px';
+        }
+
+        syncScroll() {
+            this.lineNumbers.scrollTop = this.editor.scrollTop;
+        }
+
+        updateStatus() {
+            const selection = window.getSelection();
+            const text = this.editor.textContent || '';
+            const lines = text.split('\n');
+
+            let lineNum = 1;
+            let colNum = 0;
+
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const preCaretRange = range.cloneRange();
+                preCaretRange.selectNodeContents(this.editor);
+                preCaretRange.setEnd(range.endContainer, range.endOffset);
+
+                const preCaretText = preCaretRange.toString();
+                const preCaretLines = preCaretText.split('\n');
+
+                lineNum = preCaretLines.length;
+                colNum = preCaretLines[preCaretLines.length - 1].length;
+            }
+
+            const quantumStatus = this.quantumMode ?
+                ` | Quantum: ${this.hyperthreading ? 'Hyperthreaded' : 'Standard'}` :
+                ' | Classical Mode';
+
+            const agentStatus = this.multiAgentMode ? ' | Multi-Agent' : ' | Single-Agent';
+
+            this.statusEditor.textContent =
+                `Cursor: ${lineNum}:${colNum} | Lines: ${lines.length} | Chars: ${text.length} | History: ${this.historyStack.length}${quantumStatus}${agentStatus}`;
+        }
+
+        pushHistory() {
+            const content = this.editor.textContent;
+            if (this.historyStack.length && this.historyStack[this.historyStack.length - 1] === content) return;
+
+            this.historyStack.push(content);
+            this.redoStack = [];
+        }
+
+        undo() {
+            if (this.historyStack.length > 1) {
+                this.redoStack.push(this.historyStack.pop());
+                this.render(this.historyStack[this.historyStack.length - 1]);
+            }
+        }
+
+        redo() {
+            if (this.redoStack.length) {
+                const content = this.redoStack.pop();
+                this.historyStack.push(content);
+                this.render(content);
+            }
+        }
+
+        render(content) {
+            this.editor.textContent = content;
+            this.highlightContent();
+            this.updateLineNumbers();
+            this.updateStatus();
+
+            if (this.quantumMode) {
+                this.createFractalNodes();
+            }
+        }
+
+        setContent(content, fileType = 'html') {
+            this.currentFileType = fileType;
+            this.render(content);
+            this.historyStack = [content];
+            this.redoStack = [];
+        }
+
+        getContent() {
+            return this.editor.textContent;
+        }
+
+        // Quantum code insertion
+        insertCodeAtCursor(code) {
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return;
+
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = code;
+
+            const fragment = document.createDocumentFragment();
+            while (tempDiv.firstChild) {
+                fragment.appendChild(tempDiv.firstChild);
+            }
+
+            range.insertNode(fragment);
+
+            range.setStartAfter(fragment.lastChild);
+            range.setEndAfter(fragment.lastChild);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            this.handleInput();
+        }
+
+        // Quantum selection replacement
+        replaceSelectionWithCode(code) {
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return;
+
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+
+            const textNode = document.createTextNode(code);
+            range.insertNode(textNode);
+
+            range.setStartAfter(textNode);
+            range.setEndAfter(textNode);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            this.handleInput();
+        }
+    }
+
+    // ----- Quantum Fractal 5-Agent System -----
+    class QuantumFractalSystem {
+        constructor() {
+            this.agents = {
+                nexus: document.querySelector('.agent-nexus .agent-content'),
+                cognito: document.querySelector('.agent-cognito .agent-content'),
+                relay: document.querySelector('.agent-relay .agent-content'),
+                sentinel: document.querySelector('.agent-sentinel .agent-content'),
+                echo: document.querySelector('.agent-echo .agent-content')
+            };
+
+            this.agentCards = {
+                nexus: document.querySelector('.agent-nexus'),
+                cognito: document.querySelector('.agent-cognito'),
+                relay: document.querySelector('.agent-relay'),
+                sentinel: document.querySelector('.agent-sentinel'),
+                echo: document.querySelector('.agent-echo')
+            };
+
+            this.quantumStatus = document.querySelector('.quantum-status');
+            this.quantumDot = document.querySelector('.quantum-dot');
+            this.consensusPanel = document.getElementById('consensus-panel');
+            this.candidatesList = document.getElementById('candidates-list');
+            this.consensusScore = document.getElementById('consensus-score');
+
+            this.isGenerating = false;
+            this.isSpeaking = false;
+            this.quantumConnected = false;
+            this.consensusStrategy = true;
+            this.fractalDepth = 3;
+
+            // Quantum configuration
+            this.quantumUrl = 'http://localhost:11434';
+            this.currentModel = 'codellama';
+            this.quantumModels = ['codellama', 'llama2', 'mistral'];
+
+            // Multi-agent orchestrator settings
+            this.agentCount = 4;
+            this.maxRounds = 3;
+
+            this.checkQuantumConnection();
+            this.initQuantumHashing();
+            this.bindOrchestratorEvents();
+        }
+
+        bindOrchestratorEvents() {
+            document.getElementById('run-orchestrator').addEventListener('click', () => {
+                this.runMultiAgentOrchestrator();
+            });
+
+            document.getElementById('btn-orchestrate').addEventListener('click', () => {
+                this.runMultiAgentOrchestrator();
+            });
+
+            document.getElementById('agent-count').addEventListener('change', (e) => {
+                this.agentCount = parseInt(e.target.value);
+            });
+
+            document.getElementById('max-rounds').addEventListener('change', (e) => {
+                this.maxRounds = parseInt(e.target.value);
+            });
+        }
+
+        initQuantumHashing() {
+            // Initialize quantum hash sequences for hyperthreaded thinking
+            this.hashSequences = {
+                nexus: this.generateFractalHash('nexus'),
+                cognito: this.generateFractalHash('cognito'),
+                relay: this.generateFractalHash('relay'),
+                sentinel: this.generateFractalHash('sentinel'),
+                echo: this.generateFractalHash('echo')
+            };
+        }
+
+        generateFractalHash(agentName, depth = 3) {
+            // Fractal hash generation for quantum reasoning
+            const base = agentName + Date.now().toString();
+            let hash = '';
+
+            for (let i = 0; i < depth; i++) {
+                let current = base;
+                for (let j = 0; j <= i; j++) {
+                    current = btoa(current).substring(0, 16);
+                }
+                hash += current;
+            }
+
+            return btoa(hash).substring(0, 32);
+        }
+
+        async checkQuantumConnection() {
+            try {
+                const response = await fetch(`${this.quantumUrl}/api/tags`);
+                if (response.ok) {
+                    this.quantumConnected = true;
+                    this.quantumDot.classList.add('connected');
+                    this.quantumStatus.innerHTML = `<div class="quantum-dot connected"></div><span>Quantum State: Entangled (${this.currentModel})</span>`;
+
+                    const data = await response.json();
+                    if (data.models && data.models.length > 0) {
+                        this.currentModel = data.models[0].name;
+                        this.quantumStatus.innerHTML = `<div class="quantum-dot connected"></div><span>Quantum State: Entangled (${this.currentModel})</span>`;
+                    }
+                } else {
+                    this.setQuantumDisconnected();
+                }
+            } catch (error) {
+                this.setQuantumDisconnected();
+            }
+        }
+
+        setQuantumDisconnected() {
+            this.quantumConnected = false;
+            this.quantumDot.classList.remove('connected');
+            this.quantumStatus.innerHTML = `<div class="quantum-dot"></div><span>Quantum State: Disentangled</span>`;
+        }
+
+        isHumanPrompt(text) {
+            return /\?$|^who|^what|^how|^when|^where|^why|^wer|^was|^wie|^wann|^wo|^warum/i.test(text.trim());
+        }
+
+        // *** FRACTAL OPTIMIZATION: Converted nested callbacks to async/await ***
+        async processQuantumPrompt(promptText, editorContext = '') {
+            if (this.isGenerating || this.isSpeaking) return;
+
+            if (!this.quantumConnected) {
+                alert("Quantum system not entangled. Please ensure Ollama is running on localhost:11434");
+                return;
+            }
+
+            this.isGenerating = true;
+            const submitBtn = document.getElementById('send-button');
+            submitBtn.disabled = true;
+
+            document.getElementById('ai-response-panel').style.display = 'block';
+
+            Object.values(this.agents).forEach(agent => { agent.innerHTML = 'Quantum initializing...'; });
+            Object.values(this.agentCards).forEach(card => { card.classList.remove('active'); });
+
+            const quantumStep = async (agentKey, statusMessage, duration = 400) => {
+                const agent = this.agents[agentKey];
+                const card = this.agentCards[agentKey];
+
+                card.classList.add('active');
+                agent.innerHTML = `<div class="quantum-spinner"></div>${statusMessage}`;
+                agent.setAttribute('data-quantum-hash', this.hashSequences[agentKey].substring(0, 8));
+
+                await new Promise(r => setTimeout(r, duration));
+            };
+
+            try {
+                const promptRect = document.getElementById('prompt-input').getBoundingClientRect();
+                
+                // Quantum Phase 1: NEXUS (Fractal Orchestration)
+                await quantumStep('nexus', 'Orchestrating quantum fractal reasoning...');
+                const nexusRect = this.agentCards.nexus.getBoundingClientRect();
+                await this.animateQuantumPacket(promptRect, nexusRect);
+
+                // Quantum Phase 2: COGNITO (Fractal Analysis)
+                await quantumStep('cognito', 'Executing hyperthreaded fractal analysis...');
+                const cognitoRect = this.agentCards.cognito.getBoundingClientRect();
+                await this.animateQuantumPacket(nexusRect, cognitoRect);
+
+                // --- Core Quantum API Call ---
+                const fullPrompt = this.applyFractalReasoning(promptText, editorContext);
+                const payload = { model: this.currentModel, prompt: fullPrompt, stream: false };
+
+                let responseData = null;
+                try {
+                    const response = await fetch(`${this.quantumUrl}/api/generate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
                     });
 
-                    const field = new THREE.Mesh(geometry, material);
-                    field.position.set(
-                        (Math.random() - 0.5) * 8,
-                        (Math.random() - 0.5) * 8,
-                        (Math.random() - 0.5) * 4
-                    );
-
-                    this.energyFields.push(field);
-                    this.scene.add(field);
-                }
-            }
-
-            animateBackground() {
-                if (!this.renderer) return;
-
-                this.backgroundTime = (this.backgroundTime || 0) + 0.01;
-
-                if (this.particles) {
-                    this.particles.rotation.x = this.backgroundTime * 0.1;
-                    this.particles.rotation.y = this.backgroundTime * 0.2;
-
-                    const positions = this.particles.geometry.attributes.position.array;
-                    for (let i = 0; i < positions.length; i += 3) {
-                        positions[i] += Math.sin(this.backgroundTime + i) * 0.001;
-                        positions[i + 1] += Math.cos(this.backgroundTime + i) * 0.001;
-                        positions[i + 2] += Math.sin(this.backgroundTime * 0.5 + i) * 0.001;
+                    if (!response.ok) {
+                        throw new Error(`Quantum error: ${response.status}`);
                     }
-                    this.particles.geometry.attributes.position.needsUpdate = true;
+                    responseData = await response.json();
+                } catch (e) {
+                    throw new Error(`Quantum API Failure: ${e.message}`);
                 }
 
-                this.energyFields?.forEach((field, index) => {
-                    field.rotation.x = this.backgroundTime * (0.2 + index * 0.1);
-                    field.rotation.y = this.backgroundTime * (0.3 + index * 0.1);
-                    field.position.x = Math.sin(this.backgroundTime * 0.5 + index) * 3;
-                    field.position.y = Math.cos(this.backgroundTime * 0.3 + index) * 2;
-                    field.scale.setScalar(1 + Math.sin(this.backgroundTime + index) * 0.3);
-                });
+                const generatedText = responseData?.response || "Error: No quantum response detected.";
+                this.agents.cognito.innerHTML = 'Fractal analysis complete. Quantum routing...';
 
-                this.renderer.render(this.scene, this.camera);
-                requestAnimationFrame(() => this.animateBackground());
+                // Quantum Phase 3: RELAY & SENTINEL (Consensus Validation)
+                const relayRect = this.agentCards.relay.getBoundingClientRect();
+                await quantumStep('relay', 'Transmitting quantum data streams...');
+                await this.animateQuantumPacket(cognitoRect, relayRect);
+
+                const sentinelRect = this.agentCards.sentinel.getBoundingClientRect();
+                await quantumStep('sentinel', 'Validating quantum consensus...');
+                await this.animateQuantumPacket(relayRect, sentinelRect);
+
+                // Quantum Phase 4: ECHO (Fractal Report)
+                const echoRect = this.agentCards.echo.getBoundingClientRect();
+                await quantumStep('echo', 'Generating quantum fractal report...');
+                await this.animateQuantumPacket(sentinelRect, echoRect);
+
+                // Process and display quantum result
+                await this.quantumEchoAnswer(promptText, generatedText, editorContext);
+
+                // Quantum final state
+                this.agents.nexus.innerHTML = 'Quantum idle. Awaiting command.';
+                this.agents.cognito.innerHTML = 'Ready';
+                this.agents.relay.innerHTML = 'Ready';
+                this.agents.sentinel.innerHTML = 'Ready';
+
+            } catch (e) {
+                console.error("Quantum system collapse:", e);
+                Object.values(this.agentCards).forEach(card => {
+                    card.style.boxShadow = '0 0 15px #ff0000';
+                });
+                this.agents.echo.innerHTML = `<span style="color: #ff4444">Quantum Error: ${e.message}</span>`;
+            } finally {
+                Object.values(this.agentCards).forEach(card => {
+                    card.classList.remove('active');
+                    card.style.boxShadow = '';
+                });
+                this.isGenerating = false;
+                submitBtn.disabled = false;
+            }
+        }
+
+        applyFractalReasoning(prompt, context) {
+            // Apply fractal mathematics and quantum reasoning to the prompt
+            const fractalLayers = [
+                "Apply recursive optimization patterns",
+                "Implement quantum efficiency algorithms",
+                "Use fractal code structure principles",
+                "Apply hyperthreaded reasoning",
+                "Implement consensus-based validation"
+            ];
+
+            let enhancedPrompt = `QUANTUM FRACTAL REASONING CONTEXT:\n`;
+            fractalLayers.forEach((layer, index) => {
+                enhancedPrompt += `Layer ${index + 1}: ${layer}\n`;
+            });
+
+            enhancedPrompt += `\nORIGINAL REQUEST: ${prompt}\n\n`;
+
+            if (context) {
+                enhancedPrompt += `CURRENT QUANTUM STATE:\n\`\`\`${quantumEditor.currentFileType}\n${context}\n\`\`\`\n\n`;
             }
 
-            handleResize() {
-                if (this.camera && this.renderer) {
-                    this.camera.aspect = window.innerWidth / window.innerHeight;
-                    this.camera.updateProjectionMatrix();
-                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+            enhancedPrompt += `QUANTUM DIRECTIVE: Provide only the optimized, fractal-enhanced code solution without explanations. Use quantum-efficient patterns.`;
+
+            return enhancedPrompt;
+        }
+
+        async quantumEchoAnswer(promptText, answer, editorContext = '') {
+            const isQuestion = this.isHumanPrompt(promptText);
+
+            if (isQuestion) {
+                this.agents.echo.innerHTML = `<p>${answer}</p>`;
+            } else {
+                try {
+                    // Quantum code extraction
+                    const codeMatch = answer.match(/```(?:[\w]*)\n?([\s\S]*?)```/) ||
+                                     [null, answer.trim()];
+                    const content = codeMatch[1] || answer.trim();
+
+                    // Apply quantum highlighting
+                    const highlighter = new QuantumHighlighter();
+                    const highlightedCode = highlighter.highlight(content, quantumEditor.currentFileType);
+
+                    // Quantum action buttons
+                    const quantumButtons = `
+                        <div class="action-buttons">
+                            <button class="small success" onclick="quantumCopyCode()">Quantum Copy</button>
+                            <button class="small info" onclick="quantumApplyCode()">Apply Quantum Code</button>
+                            <button class="small warn" onclick="quantumSaveCode()">Save Quantum File</button>
+                            <button class="small" onclick="quantumOptimizeFurther()" style="background: var(--agent-nexus);">Fractal Optimize</button>
+                        </div>
+                    `;
+
+                    this.agents.echo.innerHTML = `
+                        <div style="border-left: 3px solid var(--agent-nexus); padding-left: 10px; margin-bottom: 10px;">
+                            <strong>Quantum Fractal Solution Generated</strong>
+                        </div>
+                        <pre style="background: #1a1a1a; padding: 10px; border-radius: 4px; overflow: auto; max-height: 300px; border: 1px solid var(--agent-cognito);">${highlightedCode}</pre>
+                        ${quantumButtons}
+                    `;
+
+                    // Store quantum code
+                    this.quantumCode = content;
+
+                } catch(e) {
+                    this.agents.echo.innerHTML = `<p>Quantum raw output:</p><pre>${answer}</pre>`;
                 }
             }
+        }
 
-            // Event System
-            initEventListeners() {
-                this.delegateEvent('click', '.btn-primary', (e) => this.processQuantumPrompt());
-                this.delegateEvent('click', '.btn-secondary', (e) => this.clearPrompt());
-                this.delegateEvent('keypress', '.prompt-input', (e) => {
-                    if (e.key === 'Enter' && e.ctrlKey) this.processQuantumPrompt();
-                });
-                this.delegateEvent('click', '.agent-card', (e) => this.handleAgentInteraction(e));
-                this.delegateEvent('click', '.nav-item', (e) => this.handleNavigation(e));
-                
-                this.createMetricsToggle();
-            }
+        // *** FRACTAL OPTIMIZATION: Converted to return a Promise for async/await use ***
+        animateQuantumPacket(sourceRect, targetRect) {
+            return new Promise(resolve => {
+                const packet = document.createElement('div');
+                packet.className = 'quantum-packet';
+                document.body.appendChild(packet);
 
-            delegateEvent(event, selector, handler) {
-                document.addEventListener(event, (e) => {
-                    if (e.target.matches(selector) || e.target.closest(selector)) {
-                        handler(e);
-                    }
-                });
-            }
+                const startX = sourceRect.left + sourceRect.width / 2;
+                const startY = sourceRect.top + sourceRect.height / 2;
 
-            createMetricsToggle() {
-                const toggle = document.createElement('button');
-                toggle.className = 'btn btn-secondary metrics-toggle';
-                toggle.innerHTML = '📊 Live Metrics';
-                toggle.addEventListener('click', () => this.toggleLiveMetrics());
-                document.querySelector('.header-right')?.prepend(toggle);
-            }
+                const endX = targetRect.left + targetRect.width / 2;
+                const endY = targetRect.top + targetRect.height / 2;
 
-            // Animation System
-            initAnimations() {
-                this.initMetricsAnimations();
-                this.initAgentAnimations();
-                this.initStatusAnimations();
-                this.initSlideInAnimations();
-            }
+                // Create quantum trail (child of packet for simpler cleanup)
+                const trail = document.createElement('div');
+                trail.className = 'quantum-trail';
+                packet.appendChild(trail);
 
-            initMetricsAnimations() {
-                this.animationTimelines.set('metrics', gsap.timeline({ repeat: -1 }));
-                this.animationTimelines.get('metrics')
-                    .to('.metric-card', { y: -5, duration: 2, ease: "power1.inOut" })
-                    .to('.metric-card', { y: 0, duration: 2, ease: "power1.inOut" });
-            }
+                gsap.set(packet, { x: startX, y: startY, opacity: 1, scale: 0.3 });
 
-            initAgentAnimations() {
-                gsap.to('.agent-card', {
-                    y: -10,
-                    duration: 3,
-                    repeat: -1,
-                    yoyo: true,
-                    ease: "sine.inOut",
-                    stagger: 0.2
-                });
-            }
-
-            initStatusAnimations() {
-                gsap.to('.status-dot.active', {
+                gsap.to(packet, {
+                    x: endX,
+                    y: endY,
                     scale: 1.2,
-                    duration: 1,
-                    repeat: -1,
-                    yoyo: true,
-                    ease: "power2.inOut"
+                    opacity: 0.9,
+                    duration: 0.6,
+                    ease: "power2.inOut",
+                    onComplete: () => {
+                        packet.remove();
+                        resolve(); // Resolve the promise when animation is complete
+                    }
                 });
-            }
 
-            initSlideInAnimations() {
-                gsap.fromTo('.slide-in', 
-                    { opacity: 0, y: 20 },
-                    { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: "back.out" }
+                // Animate quantum trail
+                gsap.fromTo(trail,
+                    { scaleX: 0, opacity: 0 },
+                    { scaleX: 1, opacity: 0.7, duration: 0.3, ease: "power2.out" }
                 );
+            });
+        }
+
+        // Quantum quick actions
+        async quantumOptimize() {
+            const currentCode = quantumEditor.getContent();
+            this.processQuantumPrompt("Apply quantum fractal optimization to this code", currentCode);
+        }
+
+        async quantumDocument() {
+            const currentCode = quantumEditor.getContent();
+            this.processQuantumPrompt("Add fractal documentation with quantum clarity", currentCode);
+        }
+
+        async quantumRefactor() {
+            const currentCode = quantumEditor.getContent();
+            this.processQuantumPrompt("Refactor using quantum fractal patterns and hyperthreaded efficiency", currentCode);
+        }
+
+        async quantumOptimizeFurther() {
+            if (this.quantumCode) {
+                this.processQuantumPrompt("Apply deeper fractal optimization to this quantum code", this.quantumCode);
             }
+        }
 
-            // Quantum Processing System
-            initQuantumProcessors() {
-                this.quantumProcessors.set('javascript', this.generateJSCode.bind(this));
-                this.quantumProcessors.set('python', this.generatePythonCode.bind(this));
-                this.quantumProcessors.set('react', this.generateReactCode.bind(this));
-                this.quantumProcessors.set('java', this.generateJavaCode.bind(this));
-                this.quantumProcessors.set('cpp', this.generateCppCode.bind(this));
-            }
+        // ----- Multi-Agent Orchestrator Implementation -----
+        async runMultiAgentOrchestrator() {
+            if (this.isGenerating) return;
 
-            async processQuantumPrompt() {
-                const promptInput = document.querySelector('.prompt-input');
-                const prompt = promptInput?.value.trim();
+            this.isGenerating = true;
+            const promptInput = document.getElementById('prompt-input');
+            const promptText = promptInput.value.trim() || "Optimize this code with quantum fractal patterns";
+            const editorContext = quantumEditor.getContent();
 
-                if (!prompt) {
-                    this.showNotification('Please enter a quantum prompt', 'warning');
-                    return;
+            // Show quantum AI panel
+            document.getElementById('ai-response-panel').style.display = 'block';
+
+            // Reset agents
+            Object.values(this.agents).forEach(agent => {
+                agent.innerHTML = 'Initializing multi-agent consensus...';
+            });
+
+            Object.values(this.agentCards).forEach(card => {
+                card.classList.remove('active');
+            });
+
+            this.agents.nexus.innerHTML = '<div class="quantum-spinner"></div>Starting multi-agent orchestrator...';
+            this.agentCards.nexus.classList.add('active');
+
+            try {
+                // Generate genesis hash
+                const genesis = this.generateGenesisHash();
+                this.agents.nexus.innerHTML = `Genesis: ${genesis.substring(0, 16)}...`;
+
+                // Simulate multiple agents
+                const agents = [];
+                for (let i = 0; i < this.agentCount; i++) {
+                    agents.push({
+                        id: `agent-${i}`,
+                        origin: this.generateOriginHash(genesis, `agent-${i}`)
+                    });
                 }
 
-                const processId = `Q${Date.now()}`;
-                this.activeProcesses.add(processId);
-                
-                this.showProcessingIndicator(processId, prompt);
-                await this.simulateQuantumProcessing(processId, prompt);
-                
-                this.activeProcesses.delete(processId);
-            }
+                this.agents.cognito.innerHTML = `<div class="quantum-spinner"></div>Spawning ${this.agentCount} agents...`;
+                this.agentCards.cognito.classList.add('active');
 
-            async simulateQuantumProcessing(processId, prompt) {
-                // Simulate processing delay
-                await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1000));
-                
-                const result = this.generateQuantumResponse(prompt);
-                this.displayQuantumResult(processId, result);
-            }
+                // Simulate agent reasoning rounds
+                const allCandidates = [];
+                for (let round = 0; round < this.maxRounds; round++) {
+                    this.agents.relay.innerHTML = `<div class="quantum-spinner"></div>Round ${round + 1}/${this.maxRrounds}...`;
+                    this.agentCards.relay.classList.add('active');
 
-            generateQuantumResponse(prompt) {
-                const responseId = 'Q' + Math.random().toString(36).substr(2, 8).toUpperCase();
-                const languages = this.detectLanguages(prompt);
-                const primaryLang = languages[0] || 'javascript';
-                const complexity = this.analyzeComplexity(prompt);
-                
-                return {
-                    response_id: responseId,
-                    processing_time: (1 + Math.random() * 2).toFixed(1),
-                    quantum_optimization_applied: complexity > 3,
-                    vector_convergence: (90 + Math.random() * 8).toFixed(1),
-                    fractal_depth: Math.floor(Math.random() * 6) + 3,
-                    generated_code: this.quantumProcessors.get(primaryLang)(prompt),
-                    analysis: {
-                        detected_languages: languages,
-                        complexity_score: complexity,
-                        estimated_tokens: prompt.split(/\s+/).length,
-                        quantum_ready: complexity > 2
-                    },
-                    performance_metrics: {
-                        estimated_speedup: `${15 + Math.floor(Math.random() * 30)}%`,
-                        memory_optimization: `${20 + Math.floor(Math.random() * 40)}%`,
-                        quantum_efficiency: `${85 + Math.floor(Math.random() * 14)}%`,
-                        coherence_time: `${(Math.random() * 50 + 50).toFixed(1)}ms`
+                    // Each agent generates a candidate
+                    for (const agent of agents) {
+                        const candidate = await this.simulateAgentReasoning(agent, promptText, editorContext, round);
+                        allCandidates.push({
+                            agentId: agent.id,
+                            origin: agent.origin,
+                            round,
+                            candidate,
+                            entropy: this.calculateEntropy(agent.origin)
+                        });
+
+                        // Update origin for next round (fractal coupling)
+                        agent.origin = this.generateOriginHash(agent.origin, genesis, round);
                     }
-                };
+
+                    await new Promise(r => setTimeout(r, 500));
+                }
+
+                this.agents.sentinel.innerHTML = `<div class="quantum-spinner"></div>Validating consensus...`;
+                this.agentCards.sentinel.classList.add('active');
+
+                // Assemble consensus
+                const consensus = this.assembleConsensus(allCandidates, genesis);
+
+                this.agents.echo.innerHTML = `<div class="quantum-spinner"></div>Finalizing quantum report...`;
+                this.agentCards.echo.classList.add('active');
+
+                // Display consensus results
+                await this.displayConsensusResults(consensus, allCandidates);
+
+            } catch (e) {
+                console.error("Multi-agent orchestrator error:", e);
+                this.agents.echo.innerHTML = `<span style="color: #ff4444">Orchestrator Error: ${e.message}</span>`;
+            } finally {
+                // Final state
+                this.agents.nexus.innerHTML = 'Multi-agent consensus complete';
+                this.agents.cognito.innerHTML = 'Ready';
+                this.agents.relay.innerHTML = 'Ready';
+                this.agents.sentinel.innerHTML = 'Ready';
+
+                Object.values(this.agentCards).forEach(card => {
+                    card.classList.remove('active');
+                });
+                this.isGenerating = false;
             }
-
-            detectLanguages(prompt) {
-                const patterns = {
-                    javascript: /\b(function|const|let|var|=>|import|export|console\.log|react|useState|useEffect)\b/i,
-                    python: /\b(def|class|import|from|print|__|lambda|numpy|pandas)\b/i,
-                    java: /\b(public|class|static|void|import|System\.out|String|int)\b/i,
-                    react: /\b(import React|useState|useEffect|component|JSX|props)\b/i,
-                    cpp: /\b(#include|using namespace|cout|cin|std::|vector|string)\b/i
-                };
-
-                return Object.entries(patterns)
-                    .filter(([_, pattern]) => pattern.test(prompt))
-                    .map(([lang]) => lang);
-            }
-
-            analyzeComplexity(prompt) {
-                const factors = [
-                    (prompt.match(/\b(function|def|class|interface)\b/gi) || []).length,
-                    (prompt.match(/\b(if|for|while|switch|case)\b/gi) || []).length,
-                    (prompt.match(/\b(algorithm|optimize|efficient|complex|quantum)\b/gi) || []).length,
-                    (prompt.match(/[{}[\]()]/g) || []).length / 10,
-                    prompt.split(/\s+/).length / 50
-                ];
-
-                return Math.min(10, Math.floor(factors.reduce((a, b) => a + b, 0)));
-            }
-
-            // Code Generators
-            generateJSCode(prompt) {
-                return `// Quantum-optimized JavaScript solution
-// Generated by NEXUS Quantum AI
-// Prompt: "${prompt}"
-
-class QuantumOptimizedProcessor {
-    constructor() {
-        this.quantumState = this.initializeQuantumField();
-        this.fractalDepth = 7;
-        this.vectorSize = 256;
-    }
-
-    initializeQuantumField() {
-        return Array.from({length: this.vectorSize}, (_, i) => 
-            Math.sin(i * 0.1) * Math.cos(i * 0.01)
-        );
-    }
-
-    process(input) {
-        console.log('🔮 Processing quantum request...');
-        const vector = this.transformToVectorSpace(input);
-        const optimized = this.applyFractalOptimization(vector);
-        return this.collapseQuantumState(optimized);
-    }
-
-    transformToVectorSpace(data) {
-        return Array.from(data).map((char, index) => 
-            char.charCodeAt(0) * Math.sin(index * 0.1)
-        );
-    }
-
-    applyFractalOptimization(vector) {
-        let state = [...vector];
-        for (let depth = 0; depth < this.fractalDepth; depth++) {
-            state = state.map((val, idx) => 
-                Math.abs(Math.sin(val * idx * 0.1)) * Math.cos(val * depth * 0.2)
-            );
-        }
-        return state;
-    }
-
-    collapseQuantumState(state) {
-        const solution = state.reduce((acc, val) => acc + Math.abs(val), 0);
-        const confidence = (state.length / this.vectorSize) * 100;
-        
-        return {
-            solution: Math.round(solution * 1000) / 1000,
-            confidence: Math.round(confidence * 10) / 10,
-            quantumSignature: state.slice(0, 8).map(v => v.toFixed(3)).join('-'),
-            timestamp: new Date().toISOString(),
-            fractalDepth: this.fractalDepth
-        };
-    }
-}
-
-// Usage example
-const quantumAI = new QuantumOptimizedProcessor();
-const result = quantumAI.process("${prompt}");
-console.log('🎯 Quantum Result:', result);
-console.log('⚡ Processing complete!');
-
-export default QuantumOptimizedProcessor;`;
-            }
-
-            generatePythonCode(prompt) {
-                return `"""
-Quantum-optimized Python solution
-Generated by NEXUS Quantum AI
-Prompt: "${prompt}"
-"""
-
-import math
-import numpy as np
-from datetime import datetime
-from typing import Dict, Any, List
-
-class QuantumProcessor:
-    def __init__(self):
-        self.vector_size = 256
-        self.fractal_depth = 7
-        self.quantum_state = self._initialize_quantum_state()
-    
-    def _initialize_quantum_state(self) -> List[float]:
-        """Initialize quantum state vector"""
-        return [math.sin(i * 0.1) * math.cos(i * 0.01) 
-                for i in range(self.vector_size)]
-    
-    def process(self, input_data: str) -> Dict[str, Any]:
-        """Main quantum processing method"""
-        print("🔮 Processing quantum request...")
-        
-        vector = self._transform_to_vector_space(input_data)
-        optimized = self._apply_fractal_optimization(vector)
-        result = self._collapse_quantum_state(optimized)
-        
-        return result
-    
-    def _transform_to_vector_space(self, data: str) -> List[float]:
-        """Transform input to quantum vector space"""
-        return [ord(char) * math.sin(idx * 0.1) 
-                for idx, char in enumerate(data)]
-    
-    def _apply_fractal_optimization(self, vector: List[float]) -> List[float]:
-        """Apply fractal transformation for quantum optimization"""
-        state = vector.copy()
-        for depth in range(self.fractal_depth):
-            for i in range(len(state)):
-                state[i] = (abs(math.sin(state[i] * i * 0.1)) 
-                          * math.cos(state[i] * depth * 0.2))
-        return state
-    
-    def _collapse_quantum_state(self, state: List[float]) -> Dict[str, Any]:
-        """Collapse quantum state to classical solution"""
-        solution = sum(abs(x) for x in state)
-        confidence = (len(state) / self.vector_size) * 100
-        
-        return {
-            "solution": round(solution, 3),
-            "confidence": round(confidence, 1),
-            "quantum_signature": "-".join(f"{x:.3f}" for x in state[:8]),
-            "timestamp": datetime.now().isoformat(),
-            "fractal_depth": self.fractal_depth,
-            "vector_convergence": round(np.mean(np.abs(state)) * 100, 1)
         }
 
-# Usage example
-if __name__ == "__main__":
-    processor = QuantumProcessor()
-    result = processor.process("${prompt}")
-    print("🎯 Quantum Result:", result)
-    print("⚡ Processing complete!")`;
+        generateGenesisHash() {
+            const timestamp = Date.now().toString();
+            const random = Math.random().toString(36).substring(2);
+            return this.sha256('GENESIS', timestamp, random);
+        }
+
+        generateOriginHash(genesis, agentId, round = 0) {
+            const nonce = Math.random().toString(36).substring(2, 10);
+            return this.sha256(genesis, agentId, nonce, round.toString());
+        }
+
+        sha256(...inputs) {
+            // Simple SHA-256 simulation for browser environment
+            const str = inputs.join('');
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return Math.abs(hash).toString(36) + Math.random().toString(36).substring(2, 10);
+        }
+
+        calculateEntropy(hash) {
+            // Simplified entropy calculation
+            const uniqueChars = new Set(hash).size;
+            return (uniqueChars / hash.length) * 8; // bits per byte approximation
+        }
+
+        async simulateAgentReasoning(agent, prompt, context, round) {
+            // Simulate agent reasoning - in real implementation, this would call Ollama
+            const reasoningStrategies = [
+                "Apply recursive optimization",
+                "Use fractal code patterns",
+                "Implement quantum algorithms",
+                "Apply hyperthreaded reasoning",
+                "Use entropy-based selection"
+            ];
+
+            const strategy = reasoningStrategies[round % reasoningStrategies.length];
+            const seed = agent.origin.substring(0, 8);
+
+            // Simulate API call delay
+            await new Promise(r => setTimeout(r, 300 + Math.random() * 300));
+
+            return `// ${agent.id} - Round ${round + 1} - ${strategy}
+// Seed: ${seed}
+// Entropy: ${this.calculateEntropy(agent.origin).toFixed(2)}
+
+function quantum_${agent.id.replace('-', '_')}() {
+    // ${strategy.toLowerCase()} applied
+    ${context.split('\n').slice(0, 3).join('\n    ')}
+    // ... additional optimized code
+}`;
+        }
+
+        assembleConsensus(candidates, genesis) {
+            // Group identical candidates
+            const candidateMap = new Map();
+
+            for (const candidate of candidates) {
+                const key = candidate.candidate.trim();
+                const existing = candidateMap.get(key) || { candidate: key, agents: [], count: 0, totalEntropy: 0 };
+                existing.agents.push(candidate.agentId);
+                existing.count++;
+                existing.totalEntropy += candidate.entropy;
+                candidateMap.set(key, existing);
             }
 
-            generateReactCode(prompt) {
-                return `// Quantum-optimized React component
-// Generated by NEXUS Quantum AI
-// Prompt: "${prompt}"
+            // Calculate scores
+            const scored = Array.from(candidateMap.values()).map(item => ({
+                ...item,
+                avgEntropy: item.totalEntropy / item.count,
+                score: item.count + (item.avgEntropy * 0.1) // Weight entropy
+            }));
 
-import React, { useState, useEffect, useMemo } from 'react';
+            // Sort by score
+            scored.sort((a, b) => b.score - a.score);
 
-const QuantumDashboard = () => {
-    const [quantumData, setQuantumData] = useState(null);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [metrics, setMetrics] = useState({
-        quantumEfficiency: 0,
-        vectorConvergence: 0,
-        processingSpeed: 0
+            const topCandidate = scored[0];
+
+            // Find highest entropy agent
+            let rootAgent = null;
+            let bestEntropy = -1;
+            for (const candidate of candidates) {
+                if (topCandidate.agents.includes(candidate.agentId) && candidate.entropy > bestEntropy) {
+                    bestEntropy = candidate.entropy;
+                    rootAgent = candidate.agentId;
+                }
+            }
+
+            return {
+                genesis,
+                selectedCandidate: topCandidate.candidate,
+                score: topCandidate.score.toFixed(2),
+                count: topCandidate.count,
+                avgEntropy: topCandidate.avgEntropy.toFixed(2),
+                rootAgent,
+                allCandidates: scored
+            };
+        }
+
+        async displayConsensusResults(consensus, allCandidates) {
+            // Show consensus panel
+            this.consensusPanel.style.display = 'block';
+            this.consensusScore.textContent = `Score: ${consensus.score}`;
+
+            // Display all candidates
+            this.candidatesList.innerHTML = '';
+
+            consensus.allCandidates.forEach((candidate, index) => {
+                const isSelected = index === 0;
+                const candidateEl = document.createElement('div');
+                candidateEl.className = `candidate-item ${isSelected ? 'selected-candidate' : ''}`;
+                candidateEl.innerHTML = `
+                    <div class="candidate-meta">
+                        <span>${candidate.agents.join(', ')}</span>
+                        <span>Count: ${candidate.count} | Entropy: ${candidate.avgEntropy}</span>
+                    </div>
+                    <div class="candidate-content">${candidate.candidate.substring(0, 200)}${candidate.candidate.length > 200 ? '...' : ''}</div>
+                `;
+                this.candidatesList.appendChild(candidateEl);
+            });
+
+            // Display selected candidate in echo agent
+            const highlighter = new QuantumHighlighter();
+            const highlightedCode = highlighter.highlight(consensus.selectedCandidate, quantumEditor.currentFileType);
+
+            const quantumButtons = `
+                <div class="action-buttons">
+                    <button class="small success" onclick="quantumCopyConsensus()">Copy Consensus</button>
+                    <button class="small info" onclick="quantumApplyConsensus()">Apply Consensus</button>
+                    <button class="small" onclick="quantumRerunOrchestrator()" style="background: var(--agent-nexus);">Rerun Orchestrator</button>
+                </div>
+            `;
+
+            this.agents.echo.innerHTML = `
+                <div style="border-left: 3px solid var(--agent-nexus); padding-left: 10px; margin-bottom: 10px;">
+                    <strong>Multi-Agent Consensus Complete</strong><br>
+                    <small>Root Agent: ${consensus.rootAgent} | Score: ${consensus.score} | Entropy: ${consensus.avgEntropy}</small>
+                </div>
+                <pre style="background: #1a1a1a; padding: 10px; border-radius: 4px; overflow: auto; max-height: 300px; border: 1px solid var(--agent-cognito);">${highlightedCode}</pre>
+                ${quantumButtons}
+            `;
+
+            // Store consensus code
+            this.quantumCode = consensus.selectedCandidate;
+        }
+    }
+
+    // Quantum global functions
+    function quantumCopyCode() {
+        if (quantumFractalSystem.quantumCode) {
+            navigator.clipboard.writeText(quantumFractalSystem.quantumCode).then(() => {
+                quantumNotify('Quantum code copied to clipboard!', 'success');
+            });
+        }
+    }
+
+    function quantumApplyCode() {
+        if (quantumFractalSystem.quantumCode) {
+            quantumEditor.setContent(quantumFractalSystem.quantumCode, quantumEditor.currentFileType);
+            quantumNotify('Quantum code applied!', 'success');
+        }
+    }
+
+    function quantumSaveCode() {
+        if (quantumFractalSystem.quantumCode) {
+            const blob = new Blob([quantumFractalSystem.quantumCode], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = quantumEditor.currentFileName || 'quantum_code.' + quantumEditor.currentFileType;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+            quantumNotify('Quantum code saved!', 'success');
+        }
+    }
+
+    function quantumOptimizeFurther() {
+        quantumFractalSystem.quantumOptimizeFurther();
+    }
+
+    // Consensus functions
+    function quantumCopyConsensus() {
+        if (quantumFractalSystem.quantumCode) {
+            navigator.clipboard.writeText(quantumFractalSystem.quantumCode).then(() => {
+                quantumNotify('Consensus code copied to clipboard!', 'success');
+            });
+        }
+    }
+
+    function quantumApplyConsensus() {
+        if (quantumFractalSystem.quantumCode) {
+            quantumEditor.setContent(quantumFractalSystem.quantumCode, quantumEditor.currentFileType);
+            quantumNotify('Consensus code applied!', 'success');
+        }
+    }
+
+    function quantumRerunOrchestrator() {
+        quantumFractalSystem.runMultiAgentOrchestrator();
+    }
+
+    function quantumNotify(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? 'var(--accent)' : 'var(--info)'};
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            z-index: 1000;
+            font-size: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        `;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 3000);
+    }
+
+    // ----- Initialize Quantum Editor and Fractal System -----
+    let quantumEditor;
+    let quantumFractalSystem;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        quantumEditor = new QuantumEditor();
+        quantumFractalSystem = new QuantumFractalSystem();
+
+        // Quantum viewport handling
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', handleQuantumViewportResize);
+        }
+
+        // Initialize quantum components
+        initQuantumFileHandling();
+        initQuantumAI();
+        initQuantumPreview();
+        initQuantumLeftPanel();
+        initQuantumQuickActions();
     });
 
-    useEffect(() => {
-        initializeQuantumProcessing();
-    }, []);
+    function handleQuantumViewportResize() {
+        const visualViewport = window.visualViewport;
+        if (visualViewport) {
+            document.body.style.height = visualViewport.height + 'px';
+        }
+    }
 
-    const initializeQuantumProcessing = async () => {
-        setIsProcessing(true);
+    function initQuantumFileHandling() {
+        document.getElementById('open-file').onclick = () => {
+            document.getElementById('file-input').click();
+        };
+
+        document.getElementById('file-input').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const fileName = file.name;
+                const fileType = detectQuantumLanguage(fileName);
+
+                quantumEditor.setContent(ev.target.result, fileType);
+                document.getElementById('file-meta').textContent = fileName;
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('save-file').onclick = quantumSaveFile;
+        document.getElementById('save-as').onclick = quantumSaveAsFile;
+    }
+
+    function detectQuantumLanguage(fileName) {
+        const ext = fileName?.split('.').pop().toLowerCase();
+        return {
+            'js': 'js',
+            'html': 'html',
+            'htm': 'html',
+            'css': 'css',
+            'json': 'js',
+            'txt': 'js'
+        }[ext] || 'html';
+    }
+
+    function quantumSaveFile() {
+        if (!quantumEditor.currentFileName) {
+            quantumSaveAsFile();
+            return;
+        }
+
+        const blob = new Blob([quantumEditor.getContent()], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = quantumEditor.currentFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+    }
+
+    function quantumSaveAsFile() {
+        const fileName = prompt('Enter quantum file name', quantumEditor.currentFileName || 'quantum_code.html');
+        if (fileName) {
+            quantumEditor.currentFileName = fileName;
+            quantumEditor.currentFileType = detectQuantumLanguage(fileName);
+            document.getElementById('file-meta').textContent = fileName;
+            quantumSaveFile();
+        }
+    }
+
+    function initQuantumAI() {
+        document.getElementById('send-button').onclick = runQuantumAI;
+        document.getElementById('run-local-ai').onclick = runQuantumAI;
+
+        document.getElementById('prompt-input').addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runQuantumAI();
+            }
+        });
+
+        document.getElementById('close-ai-panel').onclick = () => {
+            document.getElementById('ai-response-panel').style.display = 'none';
+        };
+    }
+
+    function runQuantumAI() {
+        const promptInput = document.getElementById('prompt-input');
+        const prompt = promptInput.value.trim();
+        if (!prompt) return;
+
+        // Get current quantum editor content as context
+        const editorContent = quantumEditor.getContent();
+
+        if (quantumEditor.multiAgentMode) {
+            quantumFractalSystem.runMultiAgentOrchestrator();
+        } else {
+            quantumFractalSystem.processQuantumPrompt(prompt, editorContent);
+        }
+
+        promptInput.value = '';
+    }
+
+    function initQuantumPreview() {
+        document.getElementById('btn-render').onclick = renderQuantumHTML;
+        document.getElementById('render-html').onclick = renderQuantumHTML;
+
+        document.getElementById('close-preview').onclick = () => {
+            document.getElementById('preview-panel').style.display = 'none';
+            const previewContent = document.getElementById('preview-content');
+            if (previewContent.src.startsWith('blob:')) {
+                URL.revokeObjectURL(previewContent.src);
+            }
+        };
+    }
+
+    function renderQuantumHTML() {
         try {
-            const result = await simulateQuantumProcess("${prompt}");
-            setQuantumData(result);
-            updateLiveMetrics();
-        } catch (error) {
-            console.error('Quantum processing error:', error);
-        } finally {
-            setIsProcessing(false);
+            const blob = new Blob([quantumEditor.getContent()], { type: 'text/html' });
+            const previewContent = document.getElementById('preview-content');
+            previewContent.src = URL.createObjectURL(blob);
+            document.getElementById('preview-panel').style.display = 'flex';
+        } catch (e) {
+            alert('Quantum rendering error: ' + e.message);
         }
-    };
+    }
 
-    const simulateQuantumProcess = (input) => {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({
-                    input: input,
-                    output: "Quantum processed result",
-                    confidence: ${(Math.random() * 30 + 70).toFixed(1)},
-                    vectorConvergence: ${(85 + Math.random() * 15).toFixed(1)},
-                    timestamp: new Date().toISOString(),
-                    quantumSignature: \`Q-\${Math.random().toString(36).substr(2, 8).toUpperCase()}\`
-                });
-            }, 1500);
-        });
-    };
-
-    const updateLiveMetrics = () => {
-        setMetrics({
-            quantumEfficiency: ${(80 + Math.random() * 20).toFixed(1)},
-            vectorConvergence: ${(85 + Math.random() * 15).toFixed(1)},
-            processingSpeed: ${(Math.random() * 2 + 1).toFixed(1)}
-        });
-    };
-
-    const processedData = useMemo(() => {
-        if (!quantumData) return null;
-        return {
-            ...quantumData,
-            optimized: true,
-            fractalDepth: 7,
-            quantumOptimization: "applied"
+    function initQuantumLeftPanel() {
+        document.getElementById('left-toggle').onclick = () => {
+            const isOpen = document.getElementById('editor-stage').classList.toggle('left-panel-open');
+            document.getElementById('left-toggle').textContent = isOpen ? '✕' : '☰';
         };
-    }, [quantumData]);
 
-    return (
-        <div className="quantum-glass dashboard">
-            <div className="quantum-header">
-                <h2>🔮 Quantum React Dashboard</h2>
-                <div className="status-indicator">
-                    {isProcessing ? '⚡ Processing...' : '✅ Ready'}
-                </div>
-            </div>
-
-            {isProcessing && (
-                <div className="quantum-loader">
-                    <div className="quantum-spinner"></div>
-                    <p>Quantum processing in progress...</p>
-                </div>
-            )}
-
-            {processedData && (
-                <div className="quantum-results">
-                    <div className="result-card">
-                        <h3>🎯 Processing Result</h3>
-                        <pre>{JSON.stringify(processedData, null, 2)}</pre>
-                    </div>
-                    
-                    <div className="metrics-grid">
-                        <div className="metric">
-                            <span className="value">{metrics.quantumEfficiency}%</span>
-                            <span className="label">Quantum Efficiency</span>
-                        </div>
-                        <div className="metric">
-                            <span className="value">{metrics.vectorConvergence}%</span>
-                            <span className="label">Vector Convergence</span>
-                        </div>
-                        <div className="metric">
-                            <span className="value">{metrics.processingSpeed}s</span>
-                            <span className="label">Processing Speed</span>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-// Quantum optimization hooks
-export const useQuantumState = (initialValue) => {
-    const [state, setState] = useState(initialValue);
-    
-    const quantumSetState = (newValue) => {
-        // Apply quantum superposition principle
-        const superposedValue = Array.isArray(newValue) 
-            ? newValue.map(v => v * Math.sqrt(-Math.log(Math.random())))
-            : newValue * Math.sqrt(-Math.log(Math.random()));
-        
-        setState(superposedValue);
-    };
-
-    return [state, quantumSetState];
-};
-
-export default QuantumDashboard;`;
-            }
-
-            generateJavaCode(prompt) {
-                return `// Quantum-optimized Java solution
-// Generated by NEXUS Quantum AI
-// Prompt: "${prompt}"
-
-package com.nexus.quantum;
-
-import java.util.*;
-import java.time.LocalDateTime;
-
-public class QuantumProcessor {
-    private final double[] quantumState;
-    private final int fractalDepth;
-    private final int vectorSize;
-    
-    public QuantumProcessor() {
-        this.vectorSize = 256;
-        this.fractalDepth = 7;
-        this.quantumState = new double[vectorSize];
-        initializeQuantumState();
+        document.getElementById('btn-undo').onclick = () => quantumEditor.undo();
+        document.getElementById('btn-redo').onclick = () => quantumEditor.redo();
+        document.getElementById('btn-beautify').onclick = quantumBeautify;
     }
-    
-    private void initializeQuantumState() {
-        for (int i = 0; i < vectorSize; i++) {
-            quantumState[i] = Math.sin(i * 0.1) * Math.cos(i * 0.01);
-        }
+
+    function initQuantumQuickActions() {
+        document.getElementById('btn-optimize').onclick = () => quantumFractalSystem.quantumOptimize();
+        document.getElementById('btn-document').onclick = () => quantumFractalSystem.quantumDocument();
+        document.getElementById('btn-refactor').onclick = () => quantumFractalSystem.quantumRefactor();
     }
-    
-    public QuantumResult process(String input) {
-        System.out.println("🔮 Processing quantum request...");
-        
-        double[] vector = transformToVectorSpace(input);
-        double[] optimized = applyFractalOptimization(vector);
-        QuantumResult result = collapseQuantumState(optimized);
-        
-        return result;
+
+    function quantumBeautify() {
+        quantumNotify('Quantum beautification would apply fractal code patterns', 'info');
     }
-    
-    private double[] transformToVectorSpace(String data) {
-        double[] vector = new double[data.length()];
-        for (int i = 0; i < data.length(); i++) {
-            vector[i] = data.charAt(i) * Math.sin(i * 0.1);
-        }
-        return vector;
-    }
-    
-    private double[] applyFractalOptimization(double[] vector) {
-        double[] state = Arrays.copyOf(vector, vector.length);
-        for (int depth = 0; depth < fractalDepth; depth++) {
-            for (int i = 0; i < state.length; i++) {
-                state[i] = Math.abs(Math.sin(state[i] * i * 0.1)) 
-                         * Math.cos(state[i] * depth * 0.2);
-            }
-        }
-        return state;
-    }
-    
-    private QuantumResult collapseQuantumState(double[] state) {
-        double solution = 0.0;
-        for (double value : state) {
-            solution += Math.abs(value);
-        }
-        
-        double confidence = (state.length / (double) vectorSize) * 100.0;
-        
-        // Generate quantum signature
-        StringBuilder signature = new StringBuilder();
-        for (int i = 0; i < Math.min(8, state.length); i++) {
-            if (i > 0) signature.append("-");
-            signature.append(String.format("%.3f", state[i]));
-        }
-        
-        return new QuantumResult(
-            Math.round(solution * 1000.0) / 1000.0,
-            Math.round(confidence * 10.0) / 10.0,
-            signature.toString(),
-            LocalDateTime.now(),
-            fractalDepth
-        );
-    }
-    
-    // Result container class
-    public static class QuantumResult {
-        private final double solution;
-        private final double confidence;
-        private final String quantumSignature;
-        private final LocalDateTime timestamp;
-        private final int fractalDepth;
-        
-        public QuantumResult(double solution, double confidence, 
-                           String quantumSignature, LocalDateTime timestamp, 
-                           int fractalDepth) {
-            this.solution = solution;
-            this.confidence = confidence;
-            this.quantumSignature = quantumSignature;
-            this.timestamp = timestamp;
-            this.fractalDepth = fractalDepth;
-        }
-        
-        // Getters
-        public double getSolution() { return solution; }
-        public double getConfidence() { return confidence; }
-        public String getQuantumSignature() { return quantumSignature; }
-        public LocalDateTime getTimestamp() { return timestamp; }
-        public int getFractalDepth() { return fractalDepth; }
-        
-        @Override
-        public String toString() {
-            return String.format(
-                "QuantumResult{solution=%.3f, confidence=%.1f%%, signature=%s, depth=%d}",
-                solution, confidence, quantumSignature, fractalDepth
-            );
-        }
-    }
-    
-    // Usage example
-    public static void main(String[] args) {
-        QuantumProcessor processor = new QuantumProcessor();
-        QuantumResult result = processor.process("${prompt}");
-        
-        System.out.println("🎯 Quantum Result: " + result);
-        System.out.println("⚡ Processing complete!");
-    }
-}`;
-            }
 
-            generateCppCode(prompt) {
-                return `// Quantum-optimized C++ solution
-// Generated by NEXUS Quantum AI
-// Prompt: "${prompt}"
+    // Quantum keyboard handling
+    document.getElementById('prompt-input').addEventListener('focus', () => {
+        setTimeout(handleQuantumViewportResize, 100);
+    });
 
-#include <iostream>
-#include <vector>
-#include <cmath>
-#include <string>
-#include <chrono>
-#include <iomanip>
-#include <sstream>
-
-class QuantumProcessor {
-private:
-    std::vector<double> quantum_state;
-    int fractal_depth;
-    const int vector_size = 256;
-    
-public:
-    QuantumProcessor() : fractal_depth(7) {
-        initialize_quantum_state();
-    }
-    
-    void initialize_quantum_state() {
-        quantum_state.resize(vector_size);
-        for (int i = 0; i < vector_size; ++i) {
-            quantum_state[i] = std::sin(i * 0.1) * std::cos(i * 0.01);
-        }
-    }
-    
-    struct QuantumResult {
-        double solution;
-        double confidence;
-        std::string quantum_signature;
-        std::string timestamp;
-        int fractal_depth;
-        
-        std::string to_string() const {
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(3);
-            oss << "QuantumResult{solution: " << solution 
-                << ", confidence: " << std::setprecision(1) << confidence << "%"
-                << ", signature: " << quantum_signature
-                << ", depth: " << fractal_depth << "}";
-            return oss.str();
-        }
-    };
-    
-    QuantumResult process(const std::string& input) {
-        std::cout << "🔮 Processing quantum request..." << std::endl;
-        
-        auto vector = transform_to_vector_space(input);
-        auto optimized = apply_fractal_optimization(vector);
-        auto result = collapse_quantum_state(optimized);
-        
-        return result;
-    }
-    
-private:
-    std::vector<double> transform_to_vector_space(const std::string& data) {
-        std::vector<double> vector;
-        for (size_t i = 0; i < data.length(); ++i) {
-            vector.push_back(data[i] * std::sin(i * 0.1));
-        }
-        return vector;
-    }
-    
-    std::vector<double> apply_fractal_optimization(const std::vector<double>& vector) {
-        auto state = vector;
-        for (int depth = 0; depth < fractal_depth; ++depth) {
-            for (size_t i = 0; i < state.size(); ++i) {
-                state[i] = std::abs(std::sin(state[i] * i * 0.1)) 
-                         * std::cos(state[i] * depth * 0.2);
-            }
-        }
-        return state;
-    }
-    
-    QuantumResult collapse_quantum_state(const std::vector<double>& state) {
-        double solution = 0.0;
-        for (const auto& value : state) {
-            solution += std::abs(value);
-        }
-        
-        double confidence = (state.size() / static_cast<double>(vector_size)) * 100.0;
-        
-        // Generate quantum signature
-        std::ostringstream signature;
-        for (size_t i = 0; i < std::min(size_t(8), state.size()); ++i) {
-            if (i > 0) signature << "-";
-            signature << std::fixed << std::setprecision(3) << state[i];
-        }
-        
-        // Get current timestamp
-        auto now = std::chrono::system_clock::now();
-        auto time_t = std::chrono::system_clock::to_time_t(now);
-        std::ostringstream timestamp;
-        timestamp << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
-        
-        return {
-            std::round(solution * 1000.0) / 1000.0,
-            std::round(confidence * 10.0) / 10.0,
-            signature.str(),
-            timestamp.str(),
-            fractal_depth
-        };
-    }
-};
-
-// Usage example
-int main() {
-    QuantumProcessor processor;
-    auto result = processor.process("${prompt}");
-    
-    std::cout << "🎯 Quantum Result: " << result.to_string() << std::endl;
-    std::cout << "⚡ Processing complete!" << std::endl;
-    
-    return 0;
-}`;
-            }
-
-            // UI Management
-            showProcessingIndicator(processId, prompt) {
-                const activityList = document.querySelector('.activity-list');
-                if (!activityList) return;
-
-                const processingItem = document.createElement('div');
-                processingItem.className = 'activity-item slide-in processing';
-                processingItem.innerHTML = `
-                    <div class="activity-icon">
-                        <span class="text-sm">⚡</span>
-                    </div>
-                    <div class="activity-content">
-                        <div class="activity-title">Quantum Processing</div>
-                        <div class="activity-desc">${prompt.substring(0, 50)}...</div>
-                    </div>
-                    <div class="activity-time">
-                        <div class="processing-spinner"></div>
-                    </div>
-                `;
-
-                activityList.insertBefore(processingItem, activityList.firstChild);
-                this.animateElement(processingItem, { x: -20 }, { x: 0 });
-            }
-
-            displayQuantumResult(processId, result) {
-                this.removeProcessingIndicator();
-                this.addActivityItem({
-                    title: 'Quantum Processing Complete',
-                    description: `Result ${result.response_id} generated`,
-                    time: 'now',
-                    icon: '🔮'
-                });
-
-                this.updateCodeOutput(result);
-                this.updatePerformanceMetrics(result.performance_metrics);
-                this.updateSystemMetrics(result.analysis);
-
-                this.showNotification(
-                    `Quantum processing completed in ${result.processing_time}s`,
-                    'success'
-                );
-            }
-
-            updateCodeOutput(result) {
-                const outputContent = document.querySelector('.output-content');
-                if (!outputContent) return;
-
-                const codeBlock = document.createElement('div');
-                codeBlock.className = 'code-block';
-                codeBlock.innerHTML = `
-                    <div class="code-header">
-                        <span>quantum_response_${result.response_id}.js</span>
-                        <span class="text-green-400">Quantum Optimized</span>
-                    </div>
-                    <div class="code-content">
-                        <pre><code class="language-javascript">${result.generated_code}</code></pre>
-                    </div>
-                `;
-
-                outputContent.innerHTML = '';
-                outputContent.appendChild(codeBlock);
-
-                if (window.Prism) {
-                    Prism.highlightAll();
-                }
-
-                this.animateElement(codeBlock, { y: 20 }, { y: 0 });
-            }
-
-            updatePerformanceMetrics(metrics) {
-                const statsGrid = document.querySelector('.stats-grid');
-                if (!statsGrid) return;
-
-                statsGrid.innerHTML = `
-                    <div class="stat-item">
-                        <div class="stat-value">${metrics.estimated_speedup}</div>
-                        <div class="stat-label">Speed Up</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${metrics.memory_optimization}</div>
-                        <div class="stat-label">Memory Saved</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${metrics.quantum_efficiency}</div>
-                        <div class="stat-label">Quantum Efficiency</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${metrics.coherence_time}</div>
-                        <div class="stat-label">Coherence Time</div>
-                    </div>
-                `;
-            }
-
-            updateSystemMetrics(analysis) {
-                // Update complexity indicator
-                const complexityElement = document.querySelector('.complexity-indicator') || 
-                                        this.createComplexityIndicator();
-                complexityElement.textContent = `Complexity: ${analysis.complexity_score}/10`;
-                complexityElement.style.background = analysis.complexity_score > 7 ? 
-                    'var(--warning)' : analysis.complexity_score > 4 ? 
-                    'var(--primary)' : 'var(--secondary)';
-            }
-
-            createComplexityIndicator() {
-                const indicator = document.createElement('div');
-                indicator.className = 'complexity-indicator';
-                document.querySelector('.header-left')?.appendChild(indicator);
-                return indicator;
-            }
-
-            // Activity System
-            addActivityItem(activity) {
-                const activityList = document.querySelector('.activity-list');
-                if (!activityList) return;
-
-                const activityItem = document.createElement('div');
-                activityItem.className = 'activity-item slide-in';
-                activityItem.innerHTML = `
-                    <div class="activity-icon">
-                        <span class="text-sm">${activity.icon}</span>
-                    </div>
-                    <div class="activity-content">
-                        <div class="activity-title">${activity.title}</div>
-                        <div class="activity-desc">${activity.description}</div>
-                    </div>
-                    <div class="activity-time">${activity.time}</div>
-                `;
-
-                activityList.insertBefore(activityItem, activityList.firstChild);
-                this.limitActivityItems(activityList);
-                this.animateElement(activityItem, { x: -20 }, { x: 0 });
-            }
-
-            limitActivityItems(container, maxItems = 10) {
-                const items = container.querySelectorAll('.activity-item');
-                if (items.length > maxItems) {
-                    items[items.length - 1].remove();
-                }
-            }
-
-            removeProcessingIndicator() {
-                document.querySelector('.activity-item.processing')?.remove();
-            }
-
-            // Notification System
-            showNotification(message, type = 'info') {
-                const container = document.querySelector('.notification-container') || 
-                                 this.createNotificationContainer();
-
-                const notification = document.createElement('div');
-                notification.className = `notification notification-${type} slide-in`;
-                notification.innerHTML = `
-                    <div class="notification-icon">
-                        ${this.getNotificationIcon(type)}
-                    </div>
-                    <div class="notification-message">${message}</div>
-                    <button class="notification-close">×</button>
-                `;
-
-                container.appendChild(notification);
-                this.setupNotificationEvents(notification);
-                this.animateElement(notification, { x: 100 }, { x: 0 });
-            }
-
-            getNotificationIcon(type) {
-                const icons = {
-                    success: '✅',
-                    warning: '⚠️',
-                    error: '❌',
-                    info: 'ℹ️'
-                };
-                return icons[type] || icons.info;
-            }
-
-            setupNotificationEvents(notification) {
-                // Auto-remove after 5 seconds
-                setTimeout(() => this.removeNotification(notification), 5000);
-
-                // Close button
-                notification.querySelector('.notification-close').addEventListener('click', () => {
-                    this.removeNotification(notification);
-                });
-            }
-
-            removeNotification(notification) {
-                if (notification.parentNode) {
-                    this.animateElement(notification, { x: 0 }, { x: 100, opacity: 0 }, () => {
-                        notification.remove();
-                    });
-                }
-            }
-
-            createNotificationContainer() {
-                const container = document.createElement('div');
-                container.className = 'notification-container';
-                document.body.appendChild(container);
-                return container;
-            }
-
-            // Live Updates System
-            startLiveUpdates() {
-                this.updateMetricsInterval = setInterval(() => this.updateLiveMetrics(), 3000);
-                this.activityUpdateInterval = setInterval(() => this.updateActivityTimes(), 60000);
-                this.systemStatusInterval = setInterval(() => this.updateSystemStatus(), 5000);
-            }
-
-            updateLiveMetrics() {
-                const metrics = document.querySelectorAll('.metric-value');
-                metrics.forEach(metric => {
-                    const current = parseFloat(metric.textContent);
-                    if (!isNaN(current)) {
-                        const change = (Math.random() - 0.5) * 2;
-                        const newValue = Math.max(0, Math.min(100, current + change));
-                        const suffix = metric.textContent.includes('%') ? '%' : 'M/s';
-                        
-                        this.animateValueChange(metric, newValue.toFixed(1) + suffix);
-
-                        const progressBar = metric.parentElement.querySelector('.progress-fill');
-                        if (progressBar) {
-                            this.animateProgressBar(progressBar, newValue);
-                        }
-                    }
-                });
-            }
-
-            animateValueChange(element, newValue) {
-                gsap.to(element, {
-                    textContent: newValue,
-                    duration: 0.8,
-                    snap: { textContent: 0.1 }
-                });
-            }
-
-            animateProgressBar(progressBar, newValue) {
-                gsap.to(progressBar, {
-                    width: `${newValue}%`,
-                    duration: 0.8,
-                    ease: "power2.out"
-                });
-            }
-
-            updateActivityTimes() {
-                document.querySelectorAll('.activity-time').forEach(timeElement => {
-                    const text = timeElement.textContent;
-                    if (text.includes('s ago')) {
-                        const seconds = parseInt(text);
-                        if (seconds < 60) {
-                            timeElement.textContent = `${seconds + 1}s ago`;
-                        } else {
-                            timeElement.textContent = `${Math.floor(seconds / 60)}m ago`;
-                        }
-                    }
-                });
-            }
-
-            updateSystemStatus() {
-                // Simulate system status updates
-                const statusDots = document.querySelectorAll('.status-dot');
-                statusDots.forEach(dot => {
-                    if (Math.random() < 0.1) { // 10% chance to flicker
-                        dot.style.opacity = '0.5';
-                        setTimeout(() => dot.style.opacity = '1', 200);
-                    }
-                });
-            }
-
-            // Utility Methods
-            animateElement(element, from, to, onComplete = null) {
-                gsap.fromTo(element, from, { ...to, duration: 0.4, onComplete });
-            }
-
-            clearPrompt() {
-                const promptInput = document.querySelector('.prompt-input');
-                if (promptInput) promptInput.value = '';
-            }
-
-            handleAgentInteraction(event) {
-                const agentCard = event.target.closest('.agent-card');
-                if (agentCard) {
-                    this.animateElement(agentCard, { scale: 1 }, { scale: 1.05, duration: 0.2 });
-                    setTimeout(() => {
-                        this.animateElement(agentCard, { scale: 1.05 }, { scale: 1, duration: 0.2 });
-                    }, 200);
-                }
-            }
-
-            handleNavigation(event) {
-                event.preventDefault();
-                const navItem = event.target.closest('.nav-item');
-                if (navItem) {
-                    // Update active state
-                    document.querySelectorAll('.nav-item').forEach(item => {
-                        item.classList.remove('active');
-                    });
-                    navItem.classList.add('active');
-                    
-                    this.showNotification(`Navigating to ${navItem.textContent.trim()}`, 'info');
-                }
-            }
-
-            toggleLiveMetrics() {
-                const metricsGrid = document.querySelector('.metrics-grid');
-                if (metricsGrid) {
-                    const isPaused = metricsGrid.classList.toggle('paused');
-                    
-                    if (isPaused) {
-                        this.animationTimelines.get('metrics')?.pause();
-                        this.showNotification('Live metrics paused', 'info');
-                    } else {
-                        this.animationTimelines.get('metrics')?.play();
-                        this.showNotification('Live metrics resumed', 'success');
-                    }
-                }
-            }
-
-            // Cleanup
-            destroy() {
-                this.activeProcesses.clear();
-                this.animationTimelines.forEach(timeline => timeline.kill());
-                this.animationTimelines.clear();
-                
-                clearInterval(this.updateMetricsInterval);
-                clearInterval(this.activityUpdateInterval);
-                clearInterval(this.systemStatusInterval);
-                
-                if (this.renderer) {
-                    this.renderer.dispose();
-                }
-            }
-        }
-
-        // Initialize NEXUS Quantum AI when DOM is ready
-        document.addEventListener('DOMContentLoaded', () => {
-            window.NexusAI = new NexusQuantumAI();
-            
-            // Initialize Prism for syntax highlighting
-            if (window.Prism) {
-                Prism.highlightAll();
-            }
-
-            console.log('🚀 NEXUS Quantum AI Dashboard initialized');
-            console.log('🔮 Ready for quantum processing');
-        });
-    </script>
+    document.getElementById('prompt-input').addEventListener('blur', () => {
+        setTimeout(handleQuantumViewportResize, 100);
+    });
+</script>
 </body>
 </html>

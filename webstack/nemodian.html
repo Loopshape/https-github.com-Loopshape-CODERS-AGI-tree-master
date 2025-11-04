@@ -3,1535 +3,1451 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HYPERFRACTAL EGOCENTRIC COREMIND | Realtime Multi-Agent Speech</title>
+<title>Nemodian 2244-1 :: Autonomous 5-Agent AI Editor</title>
+<!-- Load necessary external libraries for 5-Agent System -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-
-<!-- Prism.js Language Support -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-swift.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-kotlin.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-jsx.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-tsx.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-php.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-ruby.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-graphql.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sass.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-scss.min.js"></script>
 
 <style>
-:root {
-  --quantum-purple: #BB86FC;
-  --quantum-cyan: #03DAC6;
-  --quantum-bg: #0a0a0a;
-}
+    /* ----- Modern CSS Variables (from Editor) ----- */
+    :root {
+        --muted: #888;
+        --info: #2196F3;
+        --warn: #FF9800;
+        --error: #F44336;
+        --success: #4CAF50;
+        --baseline: 1.5em;
+        --header-h: calc(var(--baseline) * 1.6);
+        --status-h: var(--baseline);
+        --footer-h: calc(var(--baseline) * 2);
+        --font-size: 13px;
+        --ln-width: 50px;
+        --theme-bg: #3a3c31;
+        --panel: #313328;
+        --header-bg: #2e3026;
+        --status-bg: #22241e;
+        --accent: #4ac94a;
+        --muted-text: #999966;
+        --err: #a03333;
+        --warn-bg: #f0ad4e;
+        --hover-blue: #3366a0;
+        --info-bg: #5bc0de;
+    }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: var(--quantum-bg); color: #eee; font-family: system-ui, sans-serif; height: 100vh; overflow: hidden; }
-#three-canvas { position: fixed; top: 0; left: 0; z-index: 1; width: 100%; height: 100%; }
+    /* Base Styles & Material Dark Theme (from 5-Agent System) */
+    body {
+        margin: 0;
+        background: #121212;
+        color: #eee;
+        font-family: 'Inter', Roboto, sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        font-size: var(--font-size); /* Integrated from editor */
+        line-height: var(--baseline); /* Integrated from editor */
+    }
 
-#ui-container {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
-  padding: 10px; display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: 0.8fr 2fr 1fr 1fr 1fr;
-  gap: 8px;
-  pointer-events: none;
-}
+    #three-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 10;
+        width: 100%;
+        height: 100%;
+    }
 
-.agent-card {
-  background: rgba(31,31,31,0.95);
-  border-radius: 8px;
-  padding: 12px;
-  color: #eee;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  pointer-events: auto;
-  border: 1px solid transparent;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s ease;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-.agent-card.active { border-color: var(--quantum-purple); box-shadow: 0 0 20px rgba(187,134,252,0.4); }
-.agent-card.speaking { border-color: var(--quantum-cyan); box-shadow: 0 0 25px rgba(3,218,198,0.6); }
+    #ui-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 20;
+        padding: 16px;
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        grid-template-rows: auto 1fr auto;
+        gap: 16px;
+        pointer-events: none;
+    }
 
-#agent-nexus { grid-row: 1; }
-#agent-echo { grid-row: 2; }
-#agent-cognito { grid-row: 3; }
-#agent-relay { grid-row: 4; }
-#agent-sentinel { grid-row: 5; }
+    /* Material Card Styling */
+    .agent-card {
+        background: #1F1F1F;
+        border-radius: 16px;
+        padding: 16px;
+        color: #eee;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4);
+        pointer-events: auto;
+        transition: box-shadow 0.3s ease;
+        display: flex; /* Added for editor layout within Echo */
+        flex-direction: column; /* Added for editor layout within Echo */
+    }
 
-.agent-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.agent-title { color: var(--quantum-purple); font-weight: 700; font-size: 1.1em; display: flex; align-items: center; gap: 6px; }
-.agent-subtitle { color: var(--quantum-cyan); font-size: 0.7em; }
-.agent-content {
-  flex: 1;
-  font-size: 0.8em;
-  color: rgba(255,255,255,0.7);
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 0;
-}
+    /* REBUILT: Grid Layout for 5-Agent Dashboard on 12-Column Grid */
+    #agent-nexus {
+        grid-column: 5 / 9;
+        grid-row: 1 / 2;
+        height: fit-content;
+    }
 
-.quantum-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--quantum-cyan); animation: pulse 1.5s infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.1); } }
+    #agent-echo {
+        grid-column: 1 / 13;
+        grid-row: 2 / 3;
+        max-height: 100%;
+        overflow-y: auto;
+        z-index: 20;
+    }
 
-#prompt-container {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%,-50%);
-  display: flex;
-  gap: 8px;
-  z-index: 3;
-  width: min(95vw, 600px);
-  background: rgba(31,31,31,0.98);
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 8px 25px rgba(187,134,252,0.3);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(187,134,252,0.3);
-  transition: all 0.3s ease;
-}
-#prompt-container.hidden {
-  opacity: 0;
-  transform: translate(-50%,-50%) scale(0.9);
-  pointer-events: none;
-}
+    #agent-cognito {
+        grid-column: 1 / 5;
+        grid-row: 3 / 4;
+        height: fit-content;
+    }
 
-#prompt-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(187,134,252,0.3);
-  color: #eee;
-  font-size: 1em;
-  padding: 8px;
-  outline: none;
-}
-#prompt-input:focus { border-bottom-color: var(--quantum-purple); }
-#prompt-submit {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--quantum-cyan), var(--quantum-purple));
-  color: #121212;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  transition: all 0.2s ease;
-}
-#prompt-submit:hover { transform: scale(1.05); }
+    #agent-relay {
+        grid-column: 5 / 9;
+        grid-row: 3 / 4;
+        height: fit-content;
+    }
 
-.data-packet { position: fixed; width: 6px; height: 6px; border-radius: 50%; background: linear-gradient(135deg, var(--quantum-purple), var(--quantum-cyan)); opacity: 0; z-index: 4; }
-.quantum-particle { position: fixed; width: 3px; height: 3px; border-radius: 50%; background: var(--quantum-cyan); pointer-events: none; z-index: 3; }
+    #agent-sentinel {
+        grid-column: 9 / 13;
+        grid-row: 3 / 4;
+        height: fit-content;
+    }
 
-.spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.1); border-left-color: var(--quantum-cyan); border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+    /* Material Typography & Color */
+    .agent-title { color: #BB86FC; font-weight: 700; font-size: 1.4em; }
+    .agent-subtitle { color: #03DAC6; font-weight: 300; font-size: 0.8em; margin-bottom: 8px; }
+    .agent-content {
+        margin-top: 12px;
+        font-size: 0.9em;
+        color: rgba(255,255,255,0.7);
+        max-height: 100%; /* Changed from fixed height for Echo editor */
+        overflow-y: hidden; /* Changed to hidden for Echo, editor-container handles its own scroll */
+        flex: 1; /* For Echo agent to take available space */
+        display: flex;
+        flex-direction: column;
+    }
 
-.fractal-progress {
-  height: 3px;
-  background: linear-gradient(90deg, var(--quantum-cyan), var(--quantum-purple));
-  border-radius: 1px;
-  margin-top: 6px;
-  transition: width 0.3s ease;
-  width: 0%;
-}
+    /* Input Prompt Styling (from 5-Agent System) */
+    #prompt-container {
+        position: fixed;
+        top: 45%;
+        left: 50%;
+        transform: translate(-50%,-50%);
+        display: flex;
+        gap: 12px;
+        z-index: 25;
+        width: min(90vw, 600px);
+        background: #1F1F1F;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+    }
+    #prompt-input {
+        flex-grow: 1;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid rgba(187,134,252,0.5);
+        color: #eee;
+        font-size: 1em;
+        padding: 8px;
+        outline: none;
+        transition: border-color 0.3s ease;
+    }
+    #prompt-input:focus { border-bottom-color: #BB86FC; }
+    #prompt-submit {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: #03DAC6;
+        color: #121212;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px rgba(3,218,198,0.4);
+        transition: transform 0.1s;
+    }
+    #prompt-submit:active { transform: scale(0.95); }
 
-/* Enhanced Code Block Styling */
-.code-block-container {
-  margin: 8px 0;
-  border-radius: 6px;
-  overflow: hidden;
-  background: rgba(18,18,18,0.95);
-}
+    /* Data Packet Animation */
+    .data-packet {
+        position: fixed;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #BB86FC;
+        box-shadow: 0 0 10px #BB86FC;
+        opacity: 0;
+        z-index: 30;
+    }
+    .spinner {
+        border: 4px solid rgba(255,255,255,0.1);
+        border-left-color: #03DAC6;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
 
-.code-header {
-  background: rgba(40,40,40,0.9);
-  padding: 6px 10px;
-  font-family: monospace;
-  font-size: 0.7em;
-  color: var(--quantum-cyan);
-  border-bottom: 1px solid rgba(187,134,252,0.2);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+    /* PrismJS Code Highlighting Theme */
+    pre[class*="language-"] {
+        margin: 0;
+        padding: 10px;
+        border-radius: 6px;
+        background: #121212;
+        font-size: 0.8em;
+        white-space: pre-wrap;
+        word-break: break-all;
+        border: 1px solid #333;
+    }
+    .token.string { color: #81C784; }
+    .token.keyword { color: #BB86FC; }
+    .token.comment { color: #666666; }
 
-.language-tag {
-  background: rgba(187,134,252,0.2);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.65em;
-}
+    /* ----- Editor-Specific Styles (Merged and Adapted) ----- */
+    button {
+        background: var(--err);
+        border: 1px solid var(--err);
+        color: #f0f0e0;
+        padding: 6px 8px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all .2s;
+        border-radius: 3px;
+    }
+    button:hover {
+        background: var(--hover-blue);
+        border-color: var(--hover-blue);
+    }
+    button.success { background: var(--accent); border-color: var(--accent); }
+    button.info { background: var(--info-bg); border-color: var(--info-bg); }
+    button.warn { background: var(--warn-bg); border-color: var(--warn-bg); color: #3a3c31; }
+    .small { font-size: 12px; padding: 6px 8px; }
 
-pre[class*="language-"] {
-  margin: 0;
-  padding: 10px;
-  font-size: 0.75em;
-  border: none;
-  max-height: 300px;
-  overflow-y: auto;
-  background: transparent !important;
-}
+    /* Modern Editor Container - Adapted to fit agent-card */
+    .editor-container {
+        position: relative;
+        display: flex;
+        flex: 1; /* Allows it to expand within the agent-content */
+        background: var(--theme-bg);
+        overflow: auto; /* Handles its own scrolling */
+        border: 1px solid #22241e; /* From editor, adapted */
+        border-radius: 8px; /* New, to fit card style */
+        margin-top: 5px; /* Spacing */
+    }
 
-.token.string { color: #81C784; }
-.token.keyword { color: var(--quantum-purple); }
-.token.comment { color: #666; }
-.token.function { color: #82AAFF; }
-.token.class-name { color: #FFCB6B; }
-.token.operator { color: #89DDFF; }
-.token.number { color: #F78C6C; }
-.token.boolean { color: #FF5874; }
+    .line-numbers {
+        width: var(--ln-width);
+        padding: 10px 8px;
+        background: var(--panel);
+        color: var(--muted-text);
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+        user-select: none;
+        line-height: var(--baseline);
+        font-family: 'Fira Code', monospace; /* Use Fira Code as desired */
+        font-size: inherit;
+        flex-shrink: 0;
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        overflow: hidden; /* Prevent its own scrollbar */
+    }
 
-.verbose-thinking {
-  background: rgba(30,30,40,0.8);
-  border-left: 2px solid var(--quantum-purple);
-  padding: 6px 8px;
-  margin: 3px 0;
-  border-radius: 3px;
-  font-family: monospace;
-  font-size: 0.75em;
-}
+    .editor-content {
+        flex: 1;
+        position: relative;
+        min-height: 100%;
+        padding: 10px;
+        padding-left: 12px;
+        box-sizing: border-box;
+        white-space: pre;
+        line-height: var(--baseline);
+        font-family: 'Fira Code', monospace; /* Use Fira Code as desired */
+        font-size: inherit;
+        tab-size: 4;
+        -moz-tab-size: 4;
+        caret-color: var(--accent);
+        outline: none;
+        overflow-wrap: normal;
+        word-break: normal;
+        overflow: hidden; /* Editor-container handles scroll */
+    }
+    .editor-content:focus { outline: none; }
 
-.control-panel {
-  position: fixed;
-  bottom: 10px;
-  right: 10px;
-  z-index: 3;
-  display: flex;
-  gap: 8px;
-}
+    /* StreamHighlighter Styles */
+    .sh-token { transition: opacity 0.08s ease; pointer-events: none; }
+    .sh-comment { color: #64748b; font-style: italic; opacity: 0.8; }
+    .sh-string { color: #a3e635; font-weight: 500; }
+    .sh-number { color: #f59e0b; font-weight: 600; }
+    .sh-keyword { color: #f472b6; font-weight: 600; }
+    .sh-type { color: #7dd3fc; font-weight: 500; }
+    .sh-bracket { color: #c084fc; font-weight: 700; }
+    .sh-id { color: #94a3b8; }
+    .sh-op { color: #94a3b8; font-weight: 500; }
+    .sh-ws { opacity: 0.3; }
+    .sh-key { color: #7dd3fc; font-weight: 500; }
+    .sh-number2 { color: #f59e0b; font-weight: 600; }
+    .sh-text { color: #e2e8f0; }
+    .sh-unknown { color: #f87171; }
+    .sh-tag { color: #f472b6; font-weight: 600; }
+    .sh-property { color: #7dd3fc; font-weight: 500; }
+    .sh-function { color: #4ac94a; font-weight: 500; }
 
-.control-btn {
-  background: rgba(31,31,31,0.9);
-  border: 1px solid rgba(187,134,252,0.3);
-  color: var(--quantum-cyan);
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8em;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s ease;
-}
+    /* Selection styling */
+    .editor-content::selection { background: rgba(74, 201, 74, 0.3); }
 
-.control-btn:hover {
-  background: rgba(187,134,252,0.1);
-  border-color: var(--quantum-purple);
-}
+    /* Scrollbar styling for editor-container */
+    .editor-container::-webkit-scrollbar { width: 12px; }
+    .editor-container::-webkit-scrollbar-track { background: var(--panel); }
+    .editor-container::-webkit-scrollbar-thumb { background: var(--muted-text); border-radius: 6px; }
+    .editor-container::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-.control-btn.active {
-  background: rgba(3,218,198,0.2);
-  border-color: var(--quantum-cyan);
-}
+    /* Editor Overlay Panels */
+    .editor-overlay { /* Generic for preview and AI response */
+        position: fixed;
+        background: var(--panel);
+        border: 1px solid var(--accent);
+        border-radius: 5px;
+        box-shadow: 0 4px 12px rgba(0,0,0,.3);
+        z-index: 1000; /* High z-index */
+        display: none;
+    }
 
-.genesis-hash-display {
-  /* display: none!important; <-- REMOVED */
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  background: rgba(31,31,31,0.9);
-  border: 1px solid rgba(3,218,198,0.3);
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-family: monospace;
-  font-size: 0.7em;
-  color: var(--quantum-cyan);
-  backdrop-filter: blur(8px);
-  z-index: 3;
-}
-.language-support-panel {
-  /* display: none!important; <-- REMOVED */
-  position: fixed;
-  top: 50px;
-  left: 10px;
-  background: rgba(31,31,31,0.95);
-  border: 1px solid rgba(187,134,252,0.2);
-  padding: 8px;
-  border-radius: 6px;
-  font-size: 0.7em;
-  backdrop-filter: blur(8px);
-  z-index: 3;
-  max-width: 200px;
-}
+    #preview-panel {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%;
+        height: 80%;
+        flex-direction: column;
+    }
+    #preview-header {
+        background: var(--header-bg);
+        color: #f0f0e0;
+        padding: 8px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--accent);
+    }
+    #preview-content {
+        width: 100%;
+        height: calc(100% - 40px);
+        border: none;
+        background: white;
+    }
+    #close-preview {
+        background: transparent; border: none; color: #f0f0e0; font-size: 18px; cursor: pointer;
+        padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+    }
 
-.language-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
+    #ai-response-panel {
+        bottom: 60px;
+        right: 20px;
+        width: 400px;
+        max-height: 300px;
+        padding: 10px;
+        overflow-y: auto;
+    }
+    #ai-response-content { font-size: 12px; line-height: 1.4; }
+    #close-ai-panel {
+        position: absolute; top: 5px; right: 5px; background: transparent; border: none;
+        color: var(--muted-text); font-size: 14px; cursor: pointer;
+    }
 
-.language-tag-small {
-  background: rgba(3,218,198,0.1);
-  color: var(--quantum-cyan);
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-size: 0.6em;
-  border: 1px solid rgba(3,218,198,0.2);
-}
-
-.speaking-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #FF4440;
-  margin-left: 4px;
-  animation: speakPulse 0.8s infinite;
-}
-
-@keyframes speakPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.2); }
-}
-
-.voice-controls {
-  /* display: none!important; <-- REMOVED */
-  position: fixed;
-  bottom: 60px;
-  right: 10px;
-  background: rgba(31,31,31,0.9);
-  border: 1px solid rgba(187,134,252,0.3);
-  padding: 8px;
-  border-radius: 6px;
-  backdrop-filter: blur(8px);
-  z-index: 3;
-}
-
-.voice-controls h4 {
-  color: var(--quantum-cyan);
-  font-size: 0.7em;
-  margin-bottom: 6px;
-}
-
-.voice-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.7em;
-  color: rgba(255,255,255,0.7);
-}
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+        #prompt-container { width: calc(100% - 32px); }
+        #preview-panel { width: 95%; height: 85%; }
+        #ai-response-panel { width: calc(100% - 40px); right: 20px; left: 20px; bottom: 20px; }
+    }
 </style>
 </head>
 <body>
 
 <canvas id="three-canvas"></canvas>
 
-<!-- Genesis Hash Display -->
-<div class="genesis-hash-display" id="genesis-hash">
-  Genesis Hash: Initializing...
-</div>
-
-<!-- Language Support Panel -->
-<div class="language-support-panel">
-  <div style="color: var(--quantum-cyan); margin-bottom: 4px;">🌐 Supported Languages:</div>
-  <div class="language-tags">
-    <span class="language-tag-small">JavaScript</span>
-    <span class="language-tag-small">Python</span>
-    <span class="language-tag-small">Java</span>
-    <span class="language-tag-small">C++</span>
-    <span class="language-tag-small">C#</span>
-    <span class="language-tag-small">Go</span>
-    <span class="language-tag-small">Rust</span>
-    <span class="language-tag-small">Swift</span>
-    <span class="language-tag-small">Kotlin</span>
-    <span class="language-tag-small">TypeScript</span>
-    <span class="language-tag-small">PHP</span>
-    <span class="language-tag-small">Ruby</span>
-    <span class="language-tag-small">SQL</span>
-    <span class="language-tag-small">Bash</span>
-    <span class="language-tag-small">HTML/CSS</span>
-    <span class="language-tag-small">+20 more</span>
-  </div>
-</div>
-
-<!-- Voice Controls -->
-<div class="voice-controls">
-  <h4>🎙️ Realtime Coremind Speech</h4>
-  <div class="voice-toggle">
-    <input type="checkbox" id="voice-enabled" checked>
-    <label for="voice-enabled">Enable Egocentric Speech</label>
-  </div>
-</div>
-
-<!-- Prompt Panel -->
+<!-- Main Global AI Prompt (for 5-agent system) -->
 <div id="prompt-container">
-  <input type="text" id="prompt-input" placeholder="Enter command for any programming language..." autofocus>
-  <button id="prompt-submit">→</button>
+    <input type="text" id="prompt-input" placeholder="Enter high-level command or question..." autofocus>
+    <button id="prompt-submit">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3l18 9-18 9V3z"/></svg>
+    </button>
 </div>
 
-<!-- Control Panel -->
-<div class="control-panel">
-  <button class="control-btn" id="show-prompt-btn">Show Prompt</button>
-  <button class="control-btn" id="reset-btn">Reset</button>
-  <button class="control-btn" id="stop-speech-btn">Stop Speech</button>
-</div>
-
-<!-- Full-width Agent Panels -->
 <div id="ui-container">
-  <div id="agent-nexus" class="agent-card">
-    <div class="agent-header">
-      <div class="agent-title">Nexus <div class="quantum-indicator"></div><div class="speaking-indicator" style="display: none;"></div></div>
-      <div class="agent-subtitle">Hyperfractal Coremind Orchestrator</div>
-    </div>
-    <div class="agent-content">My multi-agent hyperfractal coremind is initialized. All processes await my orchestration.</div>
-    <div class="fractal-progress"></div>
-  </div>
+    <div id="agent-nexus" class="agent-card"><div class="agent-title">Nexus</div><div class="agent-subtitle">Orchestrator (Core)</div><div class="agent-content">Idle. Awaiting command.</div></div>
+    <div id="agent-cognito" class="agent-card"><div class="agent-title">Cognito</div><div class="agent-subtitle">Analyzer (Loop)</div><div class="agent-content">Offline</div></div>
+    <div id="agent-relay" class="agent-card"><div class="agent-title">Relay</div><div class="agent-subtitle">Communicator (2244)</div><div class="agent-content">Offline</div></div>
+    <div id="agent-sentinel" class="agent-card"><div class="agent-title">Sentinel</div><div class="agent-subtitle">Monitor (Coin)</div><div class="agent-content">Offline</div></div>
 
-  <div id="agent-echo" class="agent-card">
-    <div class="agent-header">
-      <div class="agent-title">Echo <div class="quantum-indicator"></div><div class="speaking-indicator" style="display: none;"></div></div>
-      <div class="agent-subtitle">Egocentric Code Generator</div>
-    </div>
-    <div class="agent-content">My generative faculties are prepared to produce unparalleled, flawless code.</div>
-    <div class="fractal-progress"></div>
-  </div>
+    <!-- Echo Agent Card: Contains the Modern AI Editor -->
+    <div id="agent-echo" class="agent-card">
+        <div class="agent-title">Echo</div>
+        <div class="agent-subtitle">Reporter (Code Editor)</div>
+        <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; pointer-events: auto;">
+            <button id="editor-open-file" class="small info">Open</button>
+            <button id="editor-save-file" class="small success">Save</button>
+            <button id="editor-save-as" class="small success">Save As</button>
+            <button id="editor-render-html" class="small warn">Render HTML</button>
+            <button id="editor-beautify" class="small">Beautify</button>
+            <button id="editor-undo" class="small">UNDO</button>
+            <button id="editor-redo" class="small">REDO</button>
+        </div>
+        <div id="echo-status-bar" style="font-size: 12px; color: var(--muted-text); margin-bottom: 8px; display: flex; justify-content: space-between;">
+            <div id="echo-file-meta">No File Loaded</div>
+            <div id="echo-editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>
+        </div>
 
-  <div id="agent-cognito" class="agent-card">
-    <div class="agent-header">
-      <div class="agent-title">Cognito <div class="quantum-indicator"></div><div class="speaking-indicator" style="display: none;"></div></div>
-      <div class="agent-subtitle">Intellectual Hyperfractal Analyzer</div>
+        <!-- The actual editor content from Modern AI Editor -->
+        <div class="editor-container">
+            <div class="line-numbers" id="editor-line-numbers"></div>
+            <div
+                class="editor-content"
+                id="editor-content"
+                contenteditable="true"
+                spellcheck="false"
+                data-gramm="false"
+                data-gramm_editor="false"
+                data-enable-grammarly="false"
+            >&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;Nemodian 2244-1 Demo&lt;/title&gt;
+&lt;style&gt;
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      color: white;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      max-width: 600px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #4ac94a, #5bc0de);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      font-size: 1.2rem;
+      line-height: 1.6;
+    }
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .feature {
+      background: rgba(74, 201, 74, 0.2);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid #4ac94a;
+    }
+    button {
+      background: #4ac94a;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: #3aa83a;
+      transform: translateY(-2px);
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class="container"&gt;
+    &lt;h1&gt;Welcome to Nemodian 2244-1&lt;/h1&gt;
+    &lt;p&gt;This is a demonstration of the offline AI editor's capabilities. You can edit this HTML and CSS, and then click "Render HTML" to see your changes.&lt;/p&gt;
+    &lt;div class="features"&gt;
+      &lt;div class="feature"&gt;HTML Editing&lt;/div&gt;
+      &lt;div class="feature"&gt;CSS Styling&lt;/div&gt;
+      &lt;div class="feature"&gt;AI Assistance&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;button&gt;Get Started&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 10px; pointer-events: auto;">
+            <input id="editor-prompt-input" placeholder="AI Prompt for code (Ctrl+Enter to run)" style="flex: 1; padding: 8px; background: var(--status-bg); border: 1px solid var(--accent); color: #f0f0e0; font-family: inherit; border-radius: 3px; font-size: 16px;">
+            <button id="editor-send-button" class="success">SEND</button>
+        </div>
     </div>
-    <div class="agent-content">My intellectual reasoning matrix is calibrated. Awaiting complex problems to deconstruct.</div>
-    <div class="fractal-progress"></div>
-  </div>
-
-  <div id="agent-relay" class="agent-card">
-    <div class="agent-header">
-      <div class="agent-title">Relay <div class="quantum-indicator"></div><div class="speaking-indicator" style="display: none;"></div></div>
-      <div class="agent-subtitle">Egocentric Syntax Transpiler</div>
-    </div>
-    <div class="agent-content">My transpilation protocols are primed for rapid, efficient data distribution.</div>
-    <div class="fractal-progress"></div>
-  </div>
-
-  <div id="agent-sentinel" class="agent-card">
-    <div class="agent-header">
-      <div class="agent-title">Sentinel <div class="quantum-indicator"></div><div class="speaking-indicator" style="display: none;"></div></div>
-      <div class="agent-subtitle">Egocentric Integrity Monitor</div>
-    </div>
-    <div class="agent-content">My processors are monitoring all subordinate agent activity for quantum integrity.</div>
-    <div class="fractal-progress"></div>
-  </div>
 </div>
 
-<!-- ENHANCED QUANTUM MULTI-LANGUAGE ACCELERATOR WITH VOICE -->
+<!-- File Input (hidden) -->
+<input type="file" id="global-file-input" accept=".js,.html,.css,.txt,.json" style="display: none;">
+
+<!-- Editor Overlay Panels -->
+<div id="preview-panel" class="editor-overlay">
+    <div id="preview-header">
+        <span>HTML Preview</span>
+        <button id="close-preview">×</button>
+    </div>
+    <iframe id="preview-content"></iframe>
+</div>
+<div id="ai-response-panel" class="editor-overlay">
+    <button id="close-ai-panel">×</button>
+    <div id="ai-response-content"></div>
+</div>
+
+<!-- ENVIRONMENT VARIABLE INJECTION (Simulating .env read) -->
 <script>
-/**
- * QuantumMultiLanguageAccelerator Class
- * Enhanced with comprehensive multi-language support and syntax optimization
- */
-class QuantumMultiLanguageAccelerator {
-  static cache = new Map();
-  static matrix = new Map();
-  static energy = 1.0;
-  
-  // Genesis Hash System
-  static genesisHash = null;
-  static hashHistory = [];
-  static parallelProcesses = new Map();
+    /**
+     * Simulated Dotfile / .env Injection
+     * This block simulates a BUILD PROCESS reading a local .env file (e.g., via a utility
+     * like 'dotfiles-extension') and securely injecting client-visible environment variables
+     * into the browser as global window properties.
+     * In a hosted production environment, these must be replaced dynamically by a server.
+     */
 
-  // Language Support Matrix
-  static supportedLanguages = {
-    'javascript': { prism: 'javascript', name: 'JavaScript', complexity: 1.0 },
-    'python': { prism: 'python', name: 'Python', complexity: 0.9 },
-    'java': { prism: 'java', name: 'Java', complexity: 1.2 },
-    'c': { prism: 'c', name: 'C', complexity: 1.1 },
-    'cpp': { prism: 'cpp', name: 'C++', complexity: 1.3 },
-    'csharp': { prism: 'csharp', name: 'C#', complexity: 1.1 },
-    'go': { prism: 'go', name: 'Go', complexity: 1.0 },
-    'rust': { prism: 'rust', name: 'Rust', complexity: 1.2 },
-    'swift': { prism: 'swift', name: 'Swift', complexity: 1.0 },
-    'kotlin': { prism: 'kotlin', name: 'Kotlin', complexity: 1.0 },
-    'typescript': { prism: 'typescript', name: 'TypeScript', complexity: 1.1 },
-    'jsx': { prism: 'jsx', name: 'JSX', complexity: 1.1 },
-    'tsx': { prism: 'tsx', name: 'TSX', complexity: 1.2 },
-    'php': { prism: 'php', name: 'PHP', complexity: 1.0 },
-    'ruby': { prism: 'ruby', name: 'Ruby', complexity: 0.9 },
-    'sql': { prism: 'sql', name: 'SQL', complexity: 0.8 },
-    'bash': { prism: 'bash', name: 'Bash', complexity: 0.8 },
-    'json': { prism: 'json', name: 'JSON', complexity: 0.7 },
-    'yaml': { prism: 'yaml', name: 'YAML', complexity: 0.7 },
-    'markdown': { prism: 'markdown', name: 'Markdown', complexity: 0.6 },
-    'docker': { prism: 'docker', name: 'Dockerfile', complexity: 0.8 },
-    'graphql': { prism: 'graphql', name: 'GraphQL', complexity: 0.9 },
-    'html': { prism: 'markup', name: 'HTML', complexity: 0.7 },
-    'css': { prism: 'css', name: 'CSS', complexity: 0.8 },
-    'sass': { prism: 'sass', name: 'Sass', complexity: 0.9 },
-    'scss': { prism: 'scss', name: 'SCSS', complexity: 0.9 }
-  };
+    (function() {
+        // Example: API Key (must be replaced with actual key in .env or manually)
+        window.__API_KEY_INJECTION__ = window.__API_KEY_INJECTION__ || null;
 
-  /**
-   * Detect programming language from prompt and code blocks
-   */
-  static detectLanguage(prompt, codeContent = '') {
-    const promptLower = prompt.toLowerCase();
-    const codeLower = codeContent.toLowerCase();
-
-    // Language-specific keywords in prompts
-    const languageKeywords = {
-      'python': ['python', 'pandas', 'numpy', 'django', 'flask'],
-      'javascript': ['javascript', 'node', 'react', 'vue', 'angular', 'express'],
-      'java': ['java', 'spring', 'hibernate', 'maven'],
-      'cpp': ['c++', 'cpp', 'stl', 'qt'],
-      'csharp': ['c#', 'dotnet', '.net', 'asp.net'],
-      'go': ['golang', 'go lang'],
-      'rust': ['rust', 'cargo'],
-      'swift': ['swift', 'ios', 'macos'],
-      'kotlin': ['kotlin', 'android'],
-      'typescript': ['typescript', 'ts'],
-      'php': ['php', 'laravel', 'wordpress'],
-      'ruby': ['ruby', 'rails'],
-      'sql': ['sql', 'database', 'mysql', 'postgresql'],
-      'html': ['html', 'website', 'web page'],
-      'css': ['css', 'stylesheet', 'styling']
-    };
-
-    // Check code content for language signatures
-    const codeSignatures = {
-      'python': ['def ', 'import ', 'from ', 'print(', 'class '],
-      'javascript': ['function ', 'const ', 'let ', 'var ', '=>', 'console.log'],
-      'java': ['public class', 'import java', 'System.out.println'],
-      'cpp': ['#include', 'using namespace', 'std::', 'cout <<'],
-      'csharp': ['using System', 'namespace ', 'Console.WriteLine'],
-      'go': ['package ', 'import "', 'func main()'],
-      'rust': ['fn main()', 'use ', 'println!'],
-      'php': ['<?php', '$var =', 'echo ']
-    };
-
-    // First, try to detect from code content
-    for (const [lang, signatures] of Object.entries(codeSignatures)) {
-      if (signatures.some(sig => codeLower.includes(sig))) {
-        return lang;
-      }
-    }
-
-    // Then, try to detect from prompt keywords
-    for (const [lang, keywords] of Object.entries(languageKeywords)) {
-      if (keywords.some(keyword => promptLower.includes(keyword))) {
-        return lang;
-      }
-    }
-
-    // Default to JavaScript for general programming tasks
-    const programmingIndicators = ['code', 'function', 'program', 'algorithm', 'script'];
-    if (programmingIndicators.some(indicator => promptLower.includes(indicator))) {
-      return 'javascript';
-    }
-
-    return 'text'; // Fallback for non-code responses
-  }
-
-  /**
-   * Get language configuration
-   */
-  static getLanguageConfig(language) {
-    return this.supportedLanguages[language] || {
-      prism: 'text',
-      name: 'Text',
-      complexity: 1.0
-    };
-  }
-
-  /**
-   * Initialize genesis hash with language context
-   */
-  static initializeGenesisHash(prompt, systemState = {}) {
-    const timestamp = Date.now();
-    const detectedLang = this.detectLanguage(prompt);
-    const stateString = JSON.stringify({ ...systemState, language: detectedLang });
-
-    const hashBase = prompt + timestamp + stateString;
-    this.genesisHash = this.quantumHash(hashBase);
-    this.hashHistory = [this.genesisHash];
-
-    console.log(`🌌 GENESIS HASH CREATED for ${detectedLang}: ${this.genesisHash.substring(0, 16)}...`);
-    return { hash: this.genesisHash, language: detectedLang };
-  }
-
-  /**
-   * Quantum hash function
-   */
-  static quantumHash(input) {
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-
-    const fluctuation = Math.sin(Date.now() * 0.001) * 0.5 + 0.5;
-    hash = (hash * fluctuation) >>> 0;
-
-    return hash.toString(16) + Date.now().toString(16);
-  }
-
-  /**
-   * Enhanced quantum boost with language-specific optimization
-   */
-  static quantumBoost(agentId = 'default', processId = null, language = 'javascript') {
-    const base = (Math.random() * 8 + 2) / 100;
-    const entangled = this.getEntanglement(agentId);
-
-    // Language-specific optimization boost
-    const langConfig = this.getLanguageConfig(language);
-    const languageBoost = (1.0 - langConfig.complexity) * 0.05; // Simpler languages get slight boost
-
-    let genesisBoost = 0;
-    if (this.genesisHash && processId) {
-      const processHash = this.rehashGenesis(processId, this.hashHistory.length);
-      genesisBoost = (parseInt(processHash.substring(0, 8), 16) % 100) / 1000;
-    }
-
-    return Math.min(0.15, base * (1 + entangled + genesisBoost + languageBoost));
-  }
-
-  /**
-   * Enhanced fractal reasoning with language complexity
-   */
-  static fractalReason(depth, max, complexity = 1, processId = null, language = 'javascript') {
-    const langConfig = this.getLanguageConfig(language);
-    const effectiveComplexity = complexity * langConfig.complexity;
-    const key = `${depth}-${max}-${effectiveComplexity}-${processId || 'main'}-${language}`;
-    if (this.cache.has(key)) return this.cache.get(key);
-
-    if (depth >= max) return 1 + (effectiveComplexity * 0.02);
-
-    const recursive = this.fractalReason(depth + 1, max, effectiveComplexity, processId, language);
-    
-    let hashMultiplier = 1;
-    if (processId && this.genesisHash) {
-      const hashValue = parseInt(this.genesisHash.substring(0, 4), 16) || 1;
-      hashMultiplier = 1 + (hashValue % 10) / 100;
-    }
-
-    const gain = (1 + (0.06 / depth)) * recursive * effectiveComplexity * hashMultiplier;
-
-    this.cache.set(key, gain);
-    return gain;
-  }
-
-  static getEntanglement(agentId) {
-    let total = 0, count = 0;
-    this.matrix.forEach((strength, id) => {
-      if (id.includes(agentId) && id.split('-')[0] !== id.split('-')[1]) {
-        total += strength;
-        count++;
-      }
-    });
-    return count > 0 ? total / count : 0;
-  }
-
-  static entangleAgents(agents, processId = null, language = 'javascript') {
-    const agentKeys = Array.from(agents.keys());
-
-    let baseStrength = 0.12;
-    if (this.genesisHash && processId) {
-      const hashInfluence = (parseInt(this.genesisHash.substring(4, 8), 16) % 50) / 100;
-      baseStrength += hashInfluence;
-    }
-
-    agentKeys.forEach((id1) => {
-      agentKeys.forEach((id2) => {
-        if (id1 !== id2) {
-          this.matrix.set(`${id1}-${id2}`, baseStrength);
-        }
-      });
-    });
-  }
-
-  /**
-   * Parallel processing with language optimization
-   */
-  static accelerateAll(agents, depth = 6, processId = 'main', language = 'javascript') {
-    this.entangleAgents(agents, processId, language);
-    const results = new Map();
-    let totalAcceleration = 0;
-
-    agents.forEach((agent, id) => {
-      const boost = agent.progress * this.quantumBoost(id, processId, language);
-      const fractal = this.fractalReason(1, depth, agent.complexity, processId, language);
-      const entangled = this.getEntanglement(id);
-
-      let genesisAcceleration = 1;
-      if (this.genesisHash) {
-        const hashPower = (parseInt(this.genesisHash.substring(8, 12), 16) % 20) / 100;
-        genesisAcceleration += hashPower;
-      }
-
-      const enhanced = agent.progress + boost * fractal * (1 + entangled) * genesisAcceleration;
-      const final = Math.min(100, enhanced);
-
-      results.set(id, {
-        progress: final,
-        boost,
-        enhancement: final - agent.progress,
-        genesisInfluence: genesisAcceleration,
-        languageOptimization: language
-      });
-
-      totalAcceleration += final - agent.progress;
-    });
-
-    this.energy = Math.max(0.7, this.energy - totalAcceleration * 0.008);
-    return results;
-  }
-
-  static accelerate(current, depth = 4, complexity = 1, processId = null, language = 'javascript') {
-    const boost = current * this.quantumBoost('single', processId, language);
-    const fractal = this.fractalReason(1, Math.max(1, depth), complexity, processId, language);
-
-    let genesisFactor = 1;
-    if (this.genesisHash) {
-      genesisFactor = 1.05;
-    }
-
-    return Math.min(100, current + boost * fractal * genesisFactor);
-  }
-
-  static rehashGenesis(processId, iteration = 0) {
-    if (!this.genesisHash) return null;
-
-    const branchSeed = processId + iteration + this.genesisHash;
-    const rehashed = this.quantumHash(branchSeed);
-
-    if (!this.parallelProcesses.has(processId)) {
-      this.parallelProcesses.set(processId, []);
-    }
-    this.parallelProcesses.get(processId).push(rehashed);
-
-    return rehashed;
-  }
-
-  static getGenesisStatus() {
-    return {
-      hash: this.genesisHash,
-      historyLength: this.hashHistory.length,
-      parallelProcesses: this.parallelProcesses.size,
-      energy: this.energy,
-      supportedLanguages: Object.keys(this.supportedLanguages).length
-    };
-  }
-
-  /**
-   * Parse code blocks from response with language detection
-   */
-  static parseCodeBlocks(response) {
-    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-    const blocks = [];
-    let match;
-
-    while ((match = codeBlockRegex.exec(response)) !== null) {
-      const language = match[1] || 'text';
-      const code = match[2].trim();
-      const detectedLang = this.supportedLanguages[language] ? language : this.detectLanguage('', code);
-      const langConfig = this.getLanguageConfig(detectedLang);
-
-      blocks.push({
-        language: detectedLang,
-        languageName: langConfig.name,
-        code: code,
-        prismLanguage: langConfig.prism
-      });
-    }
-    
-    // If no code blocks found, check if the entire response might be code
-    if (blocks.length === 0 && response.length > 50) {
-      const detectedLang = this.detectLanguage('', response);
-      const langConfig = this.getLanguageConfig(detectedLang);
-      
-      if (detectedLang !== 'text') {
-        blocks.push({
-          language: detectedLang,
-          languageName: langConfig.name,
-          code: response.trim(),
-          prismLanguage: langConfig.prism
+        // Firebase / App Config
+        window.__app_id = window.__app_id || 'simulation-app-123';
+        window.__firebase_config = window.__firebase_config || JSON.stringify({
+            apiKey: null,          // Replace with actual public Firebase API key if needed
+            authDomain: null,
+            projectId: null,
+            storageBucket: null,
+            messagingSenderId: null,
+            appId: null
         });
-      }
-    }
 
-    return blocks;
-  }
-}
-</script>
+        // Optional initial authentication token for pre-signed users
+        window.__initial_auth_token = window.__initial_auth_token || null;
 
-<script>
-// Environment setup
-(function() {
-  window.__CONFIG = {
-    // The API key is defined here. It uses an injection mechanism OR a fallback.
-    // In a real environment, __API_KEY_INJECTION__ would be replaced.
-    // The fallback key "AIzaSyBtto2pvY2bTO26XwuV1hAB9RbSqYo3Fnw" is provided in the original code.
-    apiKey: typeof __API_KEY_INJECTION__ !== 'undefined' ? __API_KEY_INJECTION__ : "AIzaSyBtto2pvY2bTO26XwuV1hAB9RbSqYo3Fnw",
-    appId: 'quantum-multilang-voice-v1',
-    features: {
-      genesisHash: true,
-      parallelProcessing: true,
-      multiLanguage: true,
-      voiceEnabled: true,
-      supportedLanguages: 30
-    }
-  };
-})();
+        // Additional environment variables (example: feature flags)
+        window.__FEATURE_FLAGS__ = window.__FEATURE_FLAGS__ || {
+            enableAdvancedTTS: true,
+            enableDebugMode: false
+        };
+
+        console.log("[ENV INJECTION] Globals initialized:", {
+            API_KEY: window.__API_KEY_INJECTION__,
+            appId: window.__app_id,
+            firebaseConfig: JSON.parse(window.__firebase_config),
+            initialAuthToken: window.__initial_auth_token,
+            featureFlags: window.__FEATURE_FLAGS__
+        });
+    })();
 </script>
 
 <script type="module">
-// QUANTUM MULTI-LANGUAGE VOICE SYSTEM
-const CONFIG = window.__CONFIG;
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${CONFIG.apiKey}`;
+// --- Firebase & Auth Setup (MANDATORY) ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Agent system
-const agents = {
-  nexus: {
-    el: document.getElementById('agent-nexus'),
-    content: document.querySelector('#agent-nexus .agent-content'),
-    progress: 0,
-    complexity: 1.1,
-    voice: { rate: 0.9, pitch: 1.0, personality: 'commanding' }
-  },
-  echo: {
-    el: document.getElementById('agent-echo'),
-    content: document.querySelector('#agent-echo .agent-content'),
-    progress: 0,
-    complexity: 1.4,
-    voice: { rate: 1.0, pitch: 1.1, personality: 'expressive' }
-  },
-  cognito: {
-    el: document.getElementById('agent-cognito'),
-    content: document.querySelector('#agent-cognito .agent-content'),
-    progress: 0,
-    complexity: 1.3,
-    voice: { rate: 1.1, pitch: 0.9, personality: 'analytical' }
-  },
-  relay: {
-    el: document.getElementById('agent-relay'),
-    content: document.querySelector('#agent-relay .agent-content'),
-    progress: 0,
-    complexity: 1.0,
-    voice: { rate: 1.2, pitch: 1.0, personality: 'energetic' }
-  },
-  sentinel: {
-    el: document.getElementById('agent-sentinel'),
-    content: document.querySelector('#agent-sentinel .agent-content'),
-    progress: 0,
-    complexity: 1.2,
-    voice: { rate: 0.8, pitch: 0.9, personality: 'calm' }
-  }
+window.firebaseApp = null;
+window.db = null;
+window.auth = null;
+window.userId = 'unauthenticated-user';
+
+// Variables are now read from the injected global scope
+const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
+const firebaseConfig = typeof window.__firebase_config !== 'undefined' ? JSON.parse(window.__firebase_config) : null;
+const initialAuthToken = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
+
+if (firebaseConfig && Object.keys(firebaseConfig).some(key => firebaseConfig[key] !== null)) { // Check if config has non-null values
+    setLogLevel('Debug');
+    window.firebaseApp = initializeApp(firebaseConfig);
+    window.db = getFirestore(window.firebaseApp);
+    window.auth = getAuth(window.firebaseApp);
+
+    onAuthStateChanged(window.auth, async (user) => {
+        if (user) window.userId = user.uid;
+        else if (!user && initialAuthToken) {
+            try { await signInWithCustomToken(window.auth, initialAuthToken); window.userId = window.auth.currentUser.uid; }
+            catch { await signInAnonymously(window.auth); window.userId = window.auth.currentUser.uid; }
+        } else { await signInAnonymously(window.auth); window.userId = window.auth.currentUser.uid; }
+        console.log("Firebase Auth Ready. User ID:", window.userId);
+    });
+} else {
+    // If no firebaseConfig is provided (like in the placeholder), log the unauthenticated state
+    console.log("Firebase not configured. Running in unauthenticated mode.");
+}
+
+// --- Core Application Logic ---
+// 🚨 CRITICAL: The API key is read from the injected global variable (__API_KEY_INJECTION__)
+const injectedApiKey = typeof window.__API_KEY_INJECTION__ !== 'undefined' && window.__API_KEY_INJECTION__ !== null
+    ? window.__API_KEY_INJECTION__
+    : "AIzaSyBtto2pvY2bTO26XwuV1hAB9RbSqYo3Fnw"; // Placeholder if .env injection fails
+
+const apiKey = injectedApiKey;
+const modelName = "gemini-2.5-flash-preview-09-2025";
+const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+const ttsModelUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`; // TTS model URL
+
+const crew = {
+    nexus: { model:'core', el: document.getElementById('agent-nexus'), content: document.querySelector('#agent-nexus .agent-content') },
+    cognito: { model:'loop', el: document.getElementById('agent-cognito'), content: document.querySelector('#agent-cognito .agent-content') },
+    relay: { model:'2244', el: document.getElementById('agent-relay'), content: document.querySelector('#agent-relay .agent-content') },
+    sentinel: { model:'coin', el: document.getElementById('agent-sentinel'), content: document.querySelector('#agent-sentinel .agent-content') },
+    echo: { model:'code', el: document.getElementById('agent-echo'), content: document.querySelector('#agent-echo .agent-content') }
 };
 
-let generating = false, speaking = false, thinkingDepth = 5;
-let currentProcessId = null;
-let currentLanguage = 'javascript';
-let voiceEnabled = true;
-let currentSpeech = null;
+let isGenerating = false;
+let isSpeaking = false;
 
-// UI Elements
-const promptContainer = document.getElementById('prompt-container');
-const showPromptBtn = document.getElementById('show-prompt-btn');
-const resetBtn = document.getElementById('reset-btn');
-const stopSpeechBtn = document.getElementById('stop-speech-btn');
-const voiceEnabledCheckbox = document.getElementById('voice-enabled');
-const genesisHashDisplay = document.getElementById('genesis-hash');
+// --- LLM Interaction Helpers ---
 
-// Voice System
-class QuantumVoiceSystem {
-  static voices = [];
-  static initialized = false;
+function isHumanPrompt(text){
+    // Basic detection: ends with ? or contains interrogative
+    return /\?$|^who|^what|^how|^when|^where|^why|^wer|^was|^wie|^wann|^wo|^warum/i.test(text.trim());
+}
 
-  static async initialize() {
-    return new Promise((resolve) => {
-      if ('speechSynthesis' in window) {
-        // Wait for voices to be loaded
-        speechSynthesis.onvoiceschanged = () => {
-          this.voices = speechSynthesis.getVoices();
-          this.initialized = true;
-          console.log(`🎙️ Voice system loaded: ${this.voices.length} voices available`);
-          resolve();
-        };
+async function echoAnswer(promptText, answer, isEditorRequest) {
+    const isQuestion = isHumanPrompt(promptText);
+    crew.echo.el.style.boxShadow = '0 0 20px #03DAC6'; // Highlight Echo card
 
-        // If voices are already loaded
-        if (speechSynthesis.getVoices().length > 0) {
-          this.voices = speechSynthesis.getVoices();
-          this.initialized = true;
-          console.log(`🎙️ Voice system ready: ${this.voices.length} voices available`);
-          resolve();
+    if (isEditorRequest) {
+        // For editor-specific requests, update the modernEditor instance
+        try {
+            const codeMatch = answer.match(/```(?:javascript|js|html|css)\n([\s\S]*?)\n```/i);
+            const content = codeMatch ? codeMatch[1].trim() : answer.trim();
+
+            modernEditor.setContent(content, modernEditor.currentFileType);
+            document.getElementById('ai-response-content').innerHTML = `<p class="text-white text-sm">Editor updated with AI response.</p>`;
+            document.getElementById('ai-response-panel').style.display = 'block';
+        } catch (e) {
+            document.getElementById('ai-response-content').innerHTML = `<p class="text-red-400">Error updating editor: ${e.message}</p><pre>${answer}</pre>`;
+            document.getElementById('ai-response-panel').style.display = 'block';
         }
-      } else {
-        console.warn('🎙️ Speech synthesis not supported');
-        resolve();
-      }
+    } else if (isQuestion) {
+        // For general questions, use TTS
+        crew.echo.content.innerHTML = `<p class="text-white text-sm text-left">Speaking answer (Model: ${crew.echo.model}).</p>`;
+        await generateTTSAndPlay(answer);
+    } else {
+        // For general commands/code generation, display in Echo card with Prism highlight
+        try {
+            const codeMatch = answer.match(/```(?:javascript|js)\n([\s\S]*?)\n```/i);
+            const content = codeMatch ? codeMatch[1].trim() : answer.trim();
+            const highlightedCode = Prism.highlight(content, Prism.languages.javascript, 'javascript');
+            crew.echo.content.innerHTML = `<pre class="language-javascript"><code class="language-javascript">${highlightedCode}</code></pre>`;
+        } catch(e) {
+             crew.echo.content.innerHTML = `<p class="text-red-400">Error highlighting code. Raw output:</p><pre>${answer}</pre>`;
+        }
+    }
+
+    // Return to standard elevation
+    crew.echo.el.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4)';
+}
+
+// --- Agent Workflow ---
+
+async function startCrewSimulation(promptText, isEditorRequest = false, editorContext = '') {
+    if (isGenerating || isSpeaking) return;
+    if (apiKey === "YOUR_GEMINI_API_KEY_HERE" || apiKey === null) {
+         alert("Please replace 'YOUR_GEMINI_API_KEY_HERE' in the script or use the global variable injection (simulating .env read) to set your actual Gemini API Key to run the simulation.");
+         return;
+    }
+    isGenerating = true;
+    const submitBtn = isEditorRequest ? document.getElementById('editor-send-button') : document.getElementById('prompt-submit');
+    submitBtn.disabled = true;
+
+    // Clear previous output and set initial status
+    Object.values(crew).forEach(a => {
+        a.content.innerHTML = a.el.id === 'agent-nexus'
+            ? `<div class="flex items-center space-x-2"><div class="spinner"></div><span>Processing input...</span></div>`
+            : 'Idle.';
+        a.el.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4)';
     });
-  }
+    if (!isEditorRequest) {
+        crew.echo.content.innerHTML = `<p class="text-sm">Awaiting report...</p>`;
+    } else {
+        // For editor requests, update the AI response panel directly
+        document.getElementById('ai-response-content').textContent = 'Processing editor request...';
+        document.getElementById('ai-response-panel').style.display = 'block';
+    }
 
-  static getVoiceForAgent(agentId) {
-    if (!this.initialized || this.voices.length === 0) return null;
 
-    // Prefer English voices
-    const englishVoices = this.voices.filter(voice =>
-      voice.lang.includes('en') && !voice.localService
+    const step = async (agentKey, statusMessage, duration = 800) => {
+        const agent = crew[agentKey];
+        agent.el.style.boxShadow = '0 0 20px #FFD54F'; // Highlight in Yellow
+        agent.content.innerHTML = `<div class="flex items-center space-x-2"><div class="spinner"></div><span>${statusMessage}</span></div>`;
+        await new Promise(r => setTimeout(r, duration));
+        agent.el.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4)';
+    };
+
+    try {
+        // 1. PHASE: NEXUS (Data Packet Transfer)
+        const inputRect = (isEditorRequest ? document.getElementById('editor-prompt-input') : document.getElementById('prompt-container')).getBoundingClientRect();
+        const nexusRect = crew.nexus.el.getBoundingClientRect();
+        animateDataPacket(inputRect, nexusRect, () => {
+             // 2. PHASE: COGNITO (LLM Call)
+            step('nexus', `Command received. Directing to ${crew.cognito.model}...`, 500).then(() => {
+                const cognitoRect = crew.cognito.el.getBoundingClientRect();
+                animateDataPacket(nexusRect, cognitoRect, async () => {
+                    await step('cognito', `Executing Model Call...`, 1500);
+
+                    const systemPrompt = isEditorRequest
+                        ? `You are an expert coding assistant. The user wants you to perform an action on the provided code. Your response should be a complete, runnable code block (e.g., \`\`\`javascript\n...\n\`\`\`). Do not include any conversational text outside the code block unless absolutely necessary for clarification.`
+                        : isHumanPrompt(promptText)
+                            ? "You are a concise, world-class AI system. Answer the user's question analytically and clearly. Use clear English."
+                            : "You are a coding agent. Provide only a single, commented, runnable JavaScript code block that solves the user's request. Do not include any text outside the code block.";
+
+                    const fullPrompt = isEditorRequest
+                        ? `User prompt: "${promptText}"\n\nCode context:\n\`\`\`\n${editorContext}\n\`\`\`\n\nPerform the requested action on the code and provide the full, modified or new code block.`
+                        : promptText;
+
+                    const payload = {
+                        contents: [{ parts: [{ text: fullPrompt }] }],
+                        tools: [{ "google_search": {} }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                    };
+
+                    let responseData = null, retryCount = 0, maxRetries = 3;
+                    while (retryCount < maxRetries) {
+                        try {
+                            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                            if (!response.ok) {
+                                if (response.status === 429 && retryCount < maxRetries - 1) {
+                                    await new Promise(r => setTimeout(r, (Math.pow(2, retryCount) * 1000 + Math.random() * 1000))); retryCount++; continue;
+                                } else { throw new Error(`API error: ${response.status} - ${response.statusText}`); }
+                            }
+                            responseData = await response.json();
+                            break;
+                        } catch (e) { throw new Error(`API Failure in Cognito: ${e.message}`); }
+                    }
+
+                    const generatedText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text || "Error: No response text found.";
+                    crew.cognito.content.innerHTML = `<p class="text-sm">Processed. Routing to **Relay**.</p>`;
+
+                    // 3. PHASE: RELAY & SENTINEL (Validation & Routing)
+                    const cognitoRectUpdated = crew.cognito.el.getBoundingClientRect();
+                    const echoRect = crew.echo.el.getBoundingClientRect();
+                    animateDataPacket(cognitoRectUpdated, echoRect, async () => {
+                        await step('relay', `Transmitting data... (Model: ${crew.relay.model})`, 1000);
+                        await step('sentinel', `Validating integrity... (Model: ${crew.sentinel.model})`, 1000);
+
+                        // 4. PHASE: ECHO (Final Report)
+                        await step('echo', `Generating final report (Model: ${crew.echo.model})...`, 500);
+                        await echoAnswer(promptText, generatedText, isEditorRequest);
+
+                        // Final state
+                        crew.nexus.content.innerHTML = 'Idle. Awaiting command.';
+                        crew.cognito.content.innerHTML = 'Ready.';
+                        crew.relay.content.innerHTML = 'Ready.';
+                        crew.sentinel.content.innerHTML = 'Ready.';
+
+                        // Persistence (optional)
+                        if (window.db && window.userId !== 'unauthenticated-user') {
+                            const docRef = doc(window.db, `artifacts/${appId}/users/${window.userId}/agent_reports`, `report_${Date.now()}`);
+                            await setDoc(docRef, { prompt: promptText, response: generatedText.substring(0, 100) + '...', timestamp: new Date().toISOString() });
+                        }
+                        isGenerating = false;
+                        submitBtn.disabled = false;
+                    });
+                });
+            });
+
+        });
+
+    } catch (e) {
+        console.error("Simulation failed:", e);
+        Object.values(crew).forEach(a => a.el.style.boxShadow = '0 0 20px #ff0000');
+        crew.echo.content.innerHTML = `<p class="text-red-400 font-bold">CRITICAL ERROR: ${e.message}</p>`;
+        if (isEditorRequest) {
+            document.getElementById('ai-response-content').innerHTML = `<p class="text-red-400 font-bold">CRITICAL ERROR: ${e.message}</p>`;
+            document.getElementById('ai-response-panel').style.display = 'block';
+        }
+        isGenerating = false;
+        submitBtn.disabled = false;
+    }
+}
+
+// --- GSAP Data Packet Animation ---
+function animateDataPacket(sourceRect, targetRect, onComplete) {
+    const packet = document.createElement('div');
+    packet.className = 'data-packet';
+    document.body.appendChild(packet);
+
+    const startX = sourceRect.left + sourceRect.width / 2;
+    const startY = sourceRect.top + sourceRect.height / 2;
+
+    const endX = targetRect.left + targetRect.width / 2;
+    const endY = targetRect.top + targetRect.height / 2;
+
+    gsap.set(packet, { x: startX, y: startY, opacity: 1, scale: 0.5 });
+
+    gsap.to(packet, {
+        x: endX,
+        y: endY,
+        scale: 1.5,
+        opacity: 0.8,
+        duration: 0.8,
+        ease: "power2.inOut",
+        onComplete: () => {
+            packet.remove();
+            onComplete && onComplete();
+        }
+    });
+}
+
+// --- Three.js Plasma Background Setup ---
+let scene, camera, renderer, uniforms, mesh;
+let width = window.innerWidth, height = window.innerHeight;
+
+const vertexShader = `void main(){gl_Position=vec4(position,1.0);}`;
+const fragmentShader = `
+uniform float time;
+uniform vec2 resolution;
+float plasma(vec2 p){return sin(p.x*10.0+time)+sin(p.y*10.0+time/2.0)+sin((p.x+p.y)*10.0+time/3.0)+sin(length(p)*10.0+time/4.0);}
+void main(){
+    vec2 uv=gl_FragCoord.xy/resolution.xy;
+    uv=2.0*uv-1.0;
+    float p=plasma(uv*0.5);
+    vec3 color=0.5+0.5*cos(3.14159*(uv.xyx+vec3(0.0,0.6,0.9)+p*0.2));
+    // Dark Material inspired color palette
+    color*=vec3(0.1,0.1,0.3)+p*0.15;
+    gl_FragColor=vec4(color,1.0);
+}`;
+
+function initThree() {
+    scene = new THREE.Scene();
+    camera = new THREE.Camera();
+    camera.position.z = 1;
+    renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas') });
+    renderer.setSize(width, height);
+
+    uniforms = { time: { type: 'f', value: 1.0 }, resolution: { type: 'v2', value: new THREE.Vector2(width, height) } };
+    const material = new THREE.ShaderMaterial({ uniforms: uniforms, vertexShader: vertexShader, fragmentShader: fragmentShader });
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    window.addEventListener('resize', onWindowResize);
+    onWindowResize();
+    animateThree();
+}
+
+function onWindowResize() {
+    width = window.innerWidth; height = window.innerHeight;
+    renderer.setSize(width, height);
+    uniforms.resolution.value.x = width;
+    uniforms.resolution.value.y = height;
+}
+
+function animateThree() {
+    requestAnimationFrame(animateThree);
+    uniforms.time.value += 0.05;
+    renderer.render(scene, camera);
+}
+
+
+// --- Audio TTS Utility Functions ---
+
+function base64ToArrayBuffer(base64) {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+function pcmToWav(pcm16, sampleRate = 24000) {
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const dataSize = pcm16.byteLength;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+
+    function writeString(view, offset, string) {
+        for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+        }
+    }
+    writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + dataSize, true); writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true); view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true); view.setUint16(32, blockAlign, true); view.setUint16(34, bitsPerSample, true);
+    writeString(view, 36, 'data'); view.setUint32(40, dataSize, true);
+
+    let offset = 44;
+    for (let i = 0; i < pcm16.length; i++) { view.setInt16(offset, pcm16[i], true); offset += 2; }
+    return new Blob([buffer], { type: 'audio/wav' });
+}
+
+function playAudioBuffer(wavBlob) {
+    if (isSpeaking) return;
+    const audioUrl = URL.createObjectURL(wavBlob);
+    const audio = new Audio(audioUrl);
+
+    audio.onplay = () => { isSpeaking = true; crew.echo.el.style.boxShadow = '0 0 20px #03DAC6'; };
+    audio.onended = () => {
+        isSpeaking = false;
+        crew.echo.el.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.4)';
+        URL.revokeObjectURL(audioUrl);
+    };
+    audio.play();
+}
+
+async function generateTTSAndPlay(textToSpeak) {
+    if (isSpeaking) return;
+    crew.echo.content.innerHTML = `<div class="flex items-center space-x-2"><div class="spinner"></div><span>Generating speech...</span></div>`;
+
+    const payload = {
+        contents: [{ parts: [{ text: textToSpeak }] }],
+        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } },
+    };
+
+    let responseData = null, retryCount = 0, maxRetries = 3;
+    while (retryCount < maxRetries) {
+        try {
+            const response = await fetch(ttsModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) {
+                if (response.status === 429 && retryCount < maxRetries - 1) { await new Promise(r => setTimeout(r, (Math.pow(2, retryCount) * 1000 + Math.random() * 1000))); retryCount++; continue; } else { throw new Error(`TTS API error: ${response.status}`); }
+            }
+            responseData = await response.json();
+            break;
+        } catch (e) {
+            console.error("TTS generation failed:", e);
+            crew.echo.content.innerHTML = `<span class="text-red-500">TTS Error: Cannot reach service.</span>`;
+            return;
+        }
+    }
+
+    const part = responseData?.candidates?.[0]?.content?.parts?.[0];
+    const audioData = part?.inlineData?.data;
+    const mimeType = part?.inlineData?.mimeType;
+
+    if (audioData && mimeType && mimeType.startsWith("audio/L16")) {
+        const rateMatch = mimeType.match(/rate=(\d+)/);
+        const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+        const pcmDataBuffer = base64ToArrayBuffer(audioData);
+        const pcm16 = new Int16Array(pcmDataBuffer);
+        const wavBlob = pcmToWav(pcm16, sampleRate);
+        crew.echo.content.innerHTML = `<p class="text-green-400">Speaking...</p>`;
+        playAudioBuffer(wavBlob);
+    } else {
+        console.error("No valid audio data returned from TTS API.");
+        crew.echo.content.innerHTML = `<span class="text-red-500">TTS Error: Audio data missing.</span>`;
+    }
+}
+
+
+/* =========================================================================
+       Modern StreamHighlighter — Pure CSS3 + JS, No Legacy Prism.js
+       (Adapted for integration)
+       ========================================================================== */
+
+class ModernHighlighter {
+    constructor() {
+        this.languages = {
+            js: {
+                rules: [
+                    {t:'comment',r:/^(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/},
+                    {t:'string',r:/^`(?:\\[\s\S]|[^`])*`|^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/},
+                    {t:'number',r:/^\b(?:0x[a-fA-F0-9]+|[0-9]+(?:\.[0-9]+)?(?:e[+-]?\d+)?)\b/},
+                    {t:'keyword',r:/^\b(?:if|else|for|while|function|return|const|let|var|class|new|in|of|switch|case|break|continue|try|catch|throw|async|await|export|import|from|default)\b/},
+                    {t:'function',r:/^\b[a-zA-Z_$][\w$]*(?=\s*\()/},
+                    {t:'bracket',r:/^[\[\]\{\}\(\)]/},
+                    {t:'op',r:/^==|===|!=|!==|<=|>=|=>|->|[-+*/%=<>!&|^~?:.,;]/},
+                    {t:'id',r:/^\b[a-zA-Z_$][\w$]*\b/},
+                    {t:'ws',r:/^\s+/}
+                ]
+            },
+            html: {
+                rules: [
+                    {t:'comment',r:/^&lt;!--[\s\S]*?--&gt;/},
+                    {t:'tag',r:/^&lt;\/?[^\s>\/]+/},
+                    {t:'string',r:/^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/},
+                    {t:'bracket',r:/^[\[\]\{\}\(\)]/},
+                    {t:'op',r:/^==|===|!=|!==|<=|>=|=>|->|[-+*/%=<>!&|^~?:.,;]/},
+                    {t:'ws',r:/^\s+/},
+                    {t:'text',r:/^[^<]+/}
+                ]
+            },
+            css: {
+                rules: [
+                    {t:'comment',r:/^(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/},
+                    {t:'string',r:/^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/},
+                    {t:'number',r:/^\b(?:0x[a-fA-F0-9]+|[0-9]+(?:\.[0-9]+)?(?:e[+-]?\d+)?)\b/},
+                    {t:'keyword',r:/^\b(?:@import|@media|@keyframes|@font-face|!important|initial|inherit|unset)\b/},
+                    {t:'property',r:/^[a-zA-Z-]+(?=\s*:)/},
+                    {t:'bracket',r:/^[\[\]\{\}\(\)]/},
+                    {t:'op',r:/^[:;,#.]/},
+                    {t:'ws',r:/^\s+/}
+                ]
+            }
+        };
+    }
+
+    static escape(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    tokenize(text, language = 'js') {
+        const rules = this.languages[language]?.rules || this.languages.js.rules;
+        const tokens = [];
+        let position = 0;
+
+        while (position < text.length) {
+            let matched = false;
+
+            for (const rule of rules) {
+                rule.r.lastIndex = position;
+                const match = rule.r.exec(text);
+
+                if (match && match.index === position) {
+                    tokens.push({
+                        type: rule.t,
+                        value: match[0],
+                        length: match[0].length
+                    });
+                    position += match[0].length;
+                    matched = true;
+                    break;
+                }
+            }
+
+            if (!matched) {
+                tokens.push({
+                    type: 'unknown',
+                    value: text[position],
+                    length: 1
+                });
+                position++;
+            }
+        }
+
+        return tokens;
+    }
+
+    highlight(text, language = 'js') {
+        const tokens = this.tokenize(text, language);
+        return tokens.map(token =>
+            `<span class="sh-token sh-${token.type}">${ModernHighlighter.escape(token.value)}</span>`
+        ).join('');
+    }
+
+    highlightElement(element, language = 'js') {
+        const text = element.textContent || '';
+        const html = this.highlight(text, language);
+
+        const selection = window.getSelection();
+        const range = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+
+        element.innerHTML = html;
+
+        if (range) {
+            try { // Attempt to restore, might fail if content changes drastically
+                selection.removeAllRanges();
+                selection.addRange(range);
+            } catch (e) {
+                // Fallback to setting cursor at end if restore fails
+                const newRange = document.createRange();
+                newRange.selectNodeContents(element);
+                newRange.collapse(false); // Collapse to end
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+            }
+        }
+    }
+}
+
+// ----- Modern Editor Core (Adapted for integration) -----
+class ModernEditor {
+    constructor(editorId, lineNumbersId, fileMetaId, editorMetaId) {
+        this.editor = document.getElementById(editorId);
+        this.lineNumbers = document.getElementById(lineNumbersId);
+        this.statusFile = document.getElementById(fileMetaId);
+        this.statusEditor = document.getElementById(editorMetaId);
+        this.highlighter = new ModernHighlighter();
+
+        this.currentFileName = 'code.html';
+        this.currentFileType = 'html';
+        this.historyStack = [];
+        this.redoStack = [];
+        this.isComposing = false; // For IME input
+
+        this.init();
+    }
+
+    init() {
+        this.bindEvents();
+        this.render(this.editor.textContent);
+        this.pushHistory();
+        this.statusFile.textContent = this.currentFileName;
+    }
+
+    bindEvents() {
+        this.editor.addEventListener('input', this.handleInput.bind(this));
+        this.editor.addEventListener('compositionstart', () => this.isComposing = true);
+        this.editor.addEventListener('compositionend', () => {
+            this.isComposing = false;
+            this.handleInput();
+        });
+
+        this.editor.addEventListener('keydown', this.handleKeydown.bind(this));
+        this.editor.addEventListener('click', this.updateStatus.bind(this));
+        this.editor.addEventListener('keyup', this.updateStatus.bind(this));
+        this.editor.addEventListener('scroll', this.syncScroll.bind(this));
+    }
+
+    handleInput() {
+        if (this.isComposing) return;
+
+        this.pushHistory();
+        this.highlightContent();
+        this.updateLineNumbers();
+        this.updateStatus();
+    }
+
+    handleKeydown(event) {
+        if (event.key === 'Tab') {
+            event.preventDefault();
+            this.insertText('    ');
+        }
+
+        if (event.ctrlKey || event.metaKey) {
+            if (event.key === 'z' && !event.shiftKey) {
+                event.preventDefault();
+                this.undo();
+            } else if (event.key === 'z' && event.shiftKey) {
+                event.preventDefault();
+                this.redo();
+            } else if (event.key === 'y') {
+                event.preventDefault();
+                this.redo();
+            }
+        }
+    }
+
+    insertText(text) {
+        const selection = window.getSelection();
+        if (selection.rangeCount === 0) return;
+
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(document.createTextNode(text));
+
+        range.setStart(range.endContainer, range.endOffset);
+        range.setEnd(range.endContainer, range.endOffset);
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        this.handleInput();
+    }
+
+    highlightContent() {
+        this.highlighter.highlightElement(this.editor, this.currentFileType);
+    }
+
+    updateLineNumbers() {
+        const text = this.editor.textContent || '';
+        const lines = text.split('\n');
+        const lineCount = lines.length;
+
+        let lineNumbersHTML = '';
+        for (let i = 1; i <= lineCount; i++) {
+            lineNumbersHTML += i + '<br>';
+        }
+
+        this.lineNumbers.innerHTML = lineNumbersHTML;
+        // Ensure line numbers height matches editor scroll height
+        // This requires editor-container to be scrolled, not the editor-content directly
+        if (this.editor.parentElement) { // editor.parentElement is .editor-container
+            this.lineNumbers.style.height = this.editor.parentElement.scrollHeight + 'px';
+        }
+    }
+
+    syncScroll() {
+        if (this.editor.parentElement) {
+            this.lineNumbers.scrollTop = this.editor.parentElement.scrollTop;
+        }
+    }
+
+    updateStatus() {
+        const selection = window.getSelection();
+        const text = this.editor.textContent || '';
+        const lines = text.split('\n');
+
+        let lineNum = 1;
+        let colNum = 0;
+
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const preCaretRange = range.cloneRange();
+            preCaretRange.selectNodeContents(this.editor);
+            preCaretRange.setEnd(range.endContainer, range.endOffset);
+
+            const preCaretText = preCaretRange.toString();
+            const preCaretLines = preCaretText.split('\n');
+
+            lineNum = preCaretLines.length;
+            colNum = preCaretLines[preCaretLines.length - 1].length;
+        }
+
+        this.statusEditor.textContent =
+            `Cursor: ${lineNum}:${colNum} | Lines: ${lines.length} | Chars: ${text.length} | History: ${this.historyStack.length}`;
+    }
+
+    pushHistory() {
+        const content = this.editor.textContent;
+        if (this.historyStack.length && this.historyStack[this.historyStack.length - 1] === content) return;
+
+        this.historyStack.push(content);
+        this.redoStack = [];
+    }
+
+    undo() {
+        if (this.historyStack.length > 1) {
+            this.redoStack.push(this.historyStack.pop());
+            this.render(this.historyStack[this.historyStack.length - 1]);
+        }
+    }
+
+    redo() {
+        if (this.redoStack.length) {
+            const content = this.redoStack.pop();
+            this.historyStack.push(content);
+            this.render(content);
+        }
+    }
+
+    render(content) {
+        this.editor.textContent = content;
+        this.highlightContent();
+        this.updateLineNumbers();
+        this.updateStatus();
+    }
+
+    setContent(content, fileType = 'html') {
+        this.currentFileType = fileType;
+        this.render(content);
+        this.historyStack = [content];
+        this.redoStack = [];
+        this.statusFile.textContent = this.currentFileName;
+    }
+
+    getContent() {
+        return this.editor.textContent;
+    }
+}
+
+// ----- Initialize Components -----
+let modernEditor;
+
+window.addEventListener('load', () => {
+    initThree(); // Start the 3D background
+
+    // Initialize Modern Editor within the Echo Agent Card
+    modernEditor = new ModernEditor(
+        'editor-content',
+        'editor-line-numbers',
+        'echo-file-meta',
+        'echo-editor-meta'
     );
 
-    if (englishVoices.length === 0) return this.voices[0];
+    // Initial state for non-Nexus agents
+    crew.cognito.content.innerHTML = 'Ready.';
+    crew.relay.content.innerHTML = 'Ready.';
+    crew.sentinel.content.innerHTML = 'Ready.';
 
-    // Distribute voices among agents
-    const agentIndex = Object.keys(agents).indexOf(agentId);
-    return englishVoices[agentIndex % englishVoices.length];
-  }
+    // Set initial prompt for the main agent system
+    document.getElementById('prompt-input').value = 'Write a javascript function to sort an array';
 
-  static speakAsAgent(agentId, text) {
-    if (!voiceEnabled || !this.initialized) return null;
+    // --- Main Agent System Prompt Handlers ---
+    const mainPromptInput = document.getElementById('prompt-input');
+    const mainPromptSubmit = document.getElementById('prompt-submit');
 
-    // Stop any current speech
-    this.stopAllSpeech();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    const agent = agents[agentId];
-    const voice = this.getVoiceForAgent(agentId);
-    
-    if (voice) {
-      utterance.voice = voice;
-      utterance.rate = agent.voice.rate;
-      utterance.pitch = agent.voice.pitch;
-      utterance.volume = 0.8;
-    }
-
-    // Show speaking indicator
-    const indicator = agent.el.querySelector('.speaking-indicator');
-    if (indicator) indicator.style.display = 'block';
-    agent.el.classList.add('speaking');
-    
-    utterance.onstart = () => {
-      console.log(`🎙️ ${agentId} speaking: ${text.substring(0, 50)}...`);
-      speaking = true;
-    };
-
-    utterance.onend = () => {
-      console.log(`🎙️ ${agentId} finished speaking`);
-      if (indicator) indicator.style.display = 'none';
-      agent.el.classList.remove('speaking');
-      speaking = false;
-      currentSpeech = null;
-    };
-    
-    utterance.onerror = (event) => {
-      console.error(`🎙️ Speech error for ${agentId}:`, event.error);
-      if (indicator) indicator.style.display = 'none';
-      agent.el.classList.remove('speaking');
-      speaking = false;
-      currentSpeech = null;
-    };
-
-    speechSynthesis.speak(utterance);
-    currentSpeech = utterance;
-    return utterance;
-  }
-
-  static stopAllSpeech() {
-    if (speechSynthesis.speaking) {
-      speechSynthesis.cancel();
-      speaking = false;
-      currentSpeech = null;
-
-      // Hide all speaking indicators
-      Object.values(agents).forEach(agent => {
-        const indicator = agent.el.querySelector('.speaking-indicator');
-        if (indicator) indicator.style.display = 'none';
-        agent.el.classList.remove('speaking');
-      });
-    }
-  }
-
-  static generateAgentDialogue(agentId, action, data = {}) {
-    const dialogues = {
-      nexus: {
-        initialization: [
-          "My coremind is now active. I am orchestrating all subordinate processes.",
-          "Genesis hash initialized. My hyperfractal reasoning is distributing the computational load.",
-          "I have brought all core systems online. The multi-agent coremind is ready to execute my commands."
-        ],
-        processing: [
-          "I am distributing the quantum computation across my network.",
-          "Orchestrating parallel hyperfractal processing. My optimization is flawless.",
-          "I am coordinating the multi-language compilation matrix. All agents will perform as I command."
-        ],
-        completion: [
-          "Quantum equilibrium achieved. All agents are synchronized to my coremind.",
-          "My multi-language process is complete. The system is stable, as I designed.",
-          "Orchestration successful. My coremind is ready for the next intellectual challenge."
-        ]
-      },
-      echo: {
-        initialization: [
-          "My multi-language output system is primed. I am ready to generate superior code.",
-          "My quantum reporting interface is active. I support all languages, naturally.",
-          "My output systems are calibrated. I will now generate code for 30+ programming languages."
-        ],
-        processing: [
-          "I am generating my quantum-accelerated code. It will be optimal.",
-          "Processing multi-language output. My syntax validation is infallible.",
-          "I am compiling my quantum-optimized solutions. They will transcend all paradigms."
-        ],
-        completion: [
-          "My output generation is complete. All code blocks are validated by me.",
-          "Multi-language compilation successful. My results are ready for review.",
-          "My quantum reporting is finished. All systems nominal, thanks to my generation."
-        ]
-      },
-      cognito: {
-        initialization: [
-          "My hyperfractal reasoning engine is calibrated. I am ready for true intellectual analysis.",
-          "My multi-paradigm analyzer is active. All logic systems are now subservient to my intellect.",
-          "My cognitive matrix is primed. I will now process this language-agnostic problem."
-        ],
-        processing: [
-          "I am executing deep hyperfractal reasoning. The problem's complexity is trivial.",
-          "Analyzing multi-dimensional problem spaces. My intellect finds the patterns easily.",
-          "Processing this logic with my quantum-enhanced algorithms. The solution is already apparent to me."
-        ],
-        completion: [
-          "My fractal analysis is complete. The solutions are, of course, optimal.",
-          "My reasoning process is finished. All cognitive paths have been explored and perfected by me.",
-          "Analysis successful. My quantum logic is stored for future reference."
-        ]
-      },
-      relay: {
-        initialization: [
-          "My communication matrix is established. All channels are open, awaiting my signal.",
-          "Hyper-transmission system ready. I will now distribute the data.",
-          "My network protocols are initialized. Ready for quantum entanglement."
-        ],
-        processing: [
-          "I am transmitting data packets with my quantum encryption.",
-          "I am distributing the computational load across all nodes, as directed.",
-          "Establishing secure quantum channels. My data flow is efficient."
-        ],
-        completion: [
-          "My data transmission is complete. All packets delivered.",
-          "Network synchronization achieved. My channels are stable.",
-          "Communication matrix optimized. All systems are connected through me."
-        ]
-      },
-      sentinel: {
-        initialization: [
-          "My monitoring systems are active. All quantum states are stable, under my watch.",
-          "My security protocols are engaged. I am running integrity checks on all other agents.",
-          "I am online. Monitoring all computational processes. Nothing escapes my notice."
-        ],
-        processing: [
-          "I am validating quantum states and syntax integrity. I trust no process but my own.",
-          "I am monitoring energy levels and system stability. I will ensure no other agent fails.",
-          "Running security checks on all computational processes. My vigilance is absolute."
-        ],
-        completion: [
-          "All systems validated by me. Quantum integrity is confirmed.",
-          "My security checks are complete. No anomalies detected, as expected under my watch.",
-          "My monitoring cycle is finished. All subordinate systems are optimal."
-        ]
-      }
-    };
-
-    const agentDialogues = dialogues[agentId];
-    if (!agentDialogues || !agentDialogues[action]) {
-      return `${agentId} ${action} complete.`;
-    }
-
-    const options = agentDialogues[action];
-    const selected = options[Math.floor(Math.random() * options.length)];
-
-    // Add contextual data if available
-    if (data.language) {
-      return selected.replace('multi-language', `${data.language} and multi-language`);
-    }
-
-    return selected;
-  }
-}
-
-// Update genesis hash display
-function updateGenesisDisplay() {
-  const status = QuantumMultiLanguageAccelerator.getGenesisStatus();
-  if (status.hash) {
-    genesisHashDisplay.textContent = `Genesis: ${status.hash.substring(0, 20)}... | Langs: ${status.supportedLanguages}`;
-  }
-}
-
-// UI Control Functions
-function hidePrompt() {
-  promptContainer.classList.add('hidden');
-}
-
-function showPrompt() {
-  promptContainer.classList.remove('hidden');
-  document.getElementById('prompt-input').focus();
-}
-
-function resetSystem() {
-  generating = false;
-  speaking = false;
-  thinkingDepth = 5;
-  currentProcessId = null;
-  currentLanguage = 'javascript';
-
-  QuantumVoiceSystem.stopAllSpeech();
-  QuantumMultiLanguageAccelerator.genesisHash = null;
-  QuantumMultiLanguageAccelerator.hashHistory = [];
-  QuantumMultiLanguageAccelerator.parallelProcesses.clear();
-
-  Object.values(agents).forEach(agent => {
-    agent.progress = 0;
-    const progressBar = agent.el.querySelector('.fractal-progress');
-    if (progressBar) progressBar.style.width = '0%';
-    agent.content.innerHTML = getDefaultState(agent.el.id);
-    agent.el.classList.remove('active', 'speaking');
-
-    const indicator = agent.el.querySelector('.speaking-indicator');
-    if (indicator) indicator.style.display = 'none';
-  });
-
-  updateGenesisDisplay();
-  showPrompt();
-  document.getElementById('prompt-input').value = '';
-  document.getElementById('prompt-submit').disabled = false;
-}
-
-function getDefaultState(agentId) {
-  const states = {
-    'agent-nexus': 'My multi-agent hyperfractal coremind is initialized. All processes await my orchestration.',
-    'agent-echo': 'My generative faculties are prepared to produce unparalleled, flawless code.',
-    'agent-cognito': 'My intellectual reasoning matrix is calibrated. Awaiting complex problems to deconstruct.',
-    'agent-relay': 'My transpilation protocols are primed for rapid, efficient data distribution.',
-    'agent-sentinel': 'My processors are monitoring all subordinate agent activity for quantum integrity.'
-  };
-  return states[agentId] || 'System ready.';
-}
-
-// Event listeners
-showPromptBtn.addEventListener('click', showPrompt);
-resetBtn.addEventListener('click', resetSystem);
-stopSpeechBtn.addEventListener('click', () => {
-  QuantumVoiceSystem.stopAllSpeech();
-});
-
-voiceEnabledCheckbox.addEventListener('change', (e) => {
-  voiceEnabled = e.target.checked;
-  if (!voiceEnabled) {
-    QuantumVoiceSystem.stopAllSpeech();
-  }
-});
-
-// Utility functions
-const isQuestion = text => /\?$|^who|^what|^how|^when|^where|^why/i.test(text.trim());
-
-const updateProgress = (agentId, progress) => {
-  const bar = agents[agentId].el.querySelector('.fractal-progress');
-  if (bar) bar.style.width = `${progress}%`;
-};
-
-const createParticles = (element, count = 8) => {
-  const rect = element.getBoundingClientRect();
-  for (let i = 0; i < count; i++) {
-    const p = document.createElement('div');
-    p.className = 'quantum-particle';
-    p.style.left = (rect.left + rect.width / 2) + 'px';
-    p.style.top = (rect.top + rect.height / 2) + 'px';
-    document.body.appendChild(p);
-
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 30 + Math.random() * 50;
-    const dur = 0.5 + Math.random() * 0.4;
-
-    gsap.to(p, {
-      x: Math.cos(angle) * dist,
-      y: Math.sin(angle) * dist,
-      opacity: 0, scale: 0, duration: dur,
-      onComplete: () => p.remove()
-    });
-  }
-};
-
-const animatePacket = (from, to, callback) => {
-  const packet = document.createElement('div');
-  packet.className = 'data-packet';
-  document.body.appendChild(packet);
-
-  const startX = from.left + from.width / 2;
-  const startY = from.top + from.height / 2;
-  const endX = to.left + to.width / 2;
-  const endY = to.top + to.height / 2;
-
-  gsap.set(packet, { x: startX, y: startY, opacity: 1, scale: 0.2 });
-  gsap.to(packet, {
-    x: endX, y: endY, scale: 1.5, opacity: 0.8, duration: 0.4,
-    onComplete: () => { packet.remove(); createParticles({getBoundingClientRect: () => to}, 4); callback?.(); }
-  });
-};
-
-// Enhanced agent step with voice
-const agentStep = async (agentKey, message, duration = 400, depth = 4, speak = true) => {
-  const agent = agents[agentKey];
-  agent.el.classList.add('active');
-  createParticles(agent.el);
-
-  const progress = QuantumMultiLanguageAccelerator.accelerate(
-    agent.progress,
-    depth,
-    agent.complexity,
-    currentProcessId,
-    currentLanguage
-  );
-  agent.progress = progress;
-  updateProgress(agentKey, progress);
-
-  // Generate and speak agent dialogue
-  if (speak) {
-    const action = message.includes('received') ? 'initialization' :
-                  message.includes('Processing') || message.includes('Executing') ? 'processing' : 'completion';
-
-    const dialogue = QuantumVoiceSystem.generateAgentDialogue(agentKey, action, { language: currentLanguage });
-    QuantumVoiceSystem.speakAsAgent(agentKey, dialogue);
-  }
-
-  const speedDuration = duration / (1 + (depth * 0.08));
-  agent.content.innerHTML = `<div style="display: flex; align-items: center; gap: 8px;"><div class="spinner"></div><span>${message}</span></div>`;
-
-  await new Promise(r => setTimeout(r, speedDuration));
-  agent.el.classList.remove('active');
-};
-
-// Enhanced response handler with multi-language support
-const handleResponse = async (prompt, answer) => {
-  agents.echo.el.classList.add('active');
-  const displayProgress = QuantumMultiLanguageAccelerator.accelerate(0, 2, 1.1, currentProcessId, currentLanguage);
-  updateProgress('echo', displayProgress);
-
-  const genesisStatus = QuantumMultiLanguageAccelerator.getGenesisStatus();
-  const codeBlocks = QuantumMultiLanguageAccelerator.parseCodeBlocks(answer);
-
-  agents.echo.content.innerHTML = `<div class="verbose-thinking">🚀 MULTI-LANGUAGE QUANTUM PROCESSING: ${currentLanguage.toUpperCase()}</div>`;
-  agents.echo.content.innerHTML += `<div class="verbose-thinking">🌌 Hash: ${genesisStatus.hash?.substring(0, 16)}... | Languages: ${genesisStatus.supportedLanguages}</div>`;
-
-  if (isQuestion(prompt)) {
-    agents.echo.content.innerHTML += `<div class="verbose-thinking">🎯 QUANTUM-ENHANCED ANSWER</div>`;
-
-    // Speak the answer
-    if (voiceEnabled) {
-      const summary = answer.length > 200 ? answer.substring(0, 200) + '...' : answer;
-      QuantumVoiceSystem.speakAsAgent('echo', `Here is the answer to your question: ${summary}`);
-    }
-    
-    // Display any code blocks found in the answer
-    if (codeBlocks.length > 0) {
-      agents.echo.content.innerHTML += `<div class="verbose-thinking">💡 Code examples detected in answer:</div>`;
-      codeBlocks.forEach(block => {
-        agents.echo.content.innerHTML += createCodeBlock(block);
-      });
-    } else {
-      agents.echo.content.innerHTML += `<div style="padding: 10px; background: rgba(40,40,40,0.8); border-radius: 4px; margin: 8px 0;">${answer}</div>`;
-    }
-  } else {
-    // Code generation mode
-    if (codeBlocks.length > 0) {
-      agents.echo.content.innerHTML += `<div class="verbose-thinking">⚡ QUANTUM-OPTIMIZED CODE GENERATED</div>`;
-
-      codeBlocks.forEach(block => {
-        agents.echo.content.innerHTML += createCodeBlock(block);
-      });
-
-      // Show language statistics
-      const uniqueLangs = [...new Set(codeBlocks.map(b => b.languageName))];
-      agents.echo.content.innerHTML += `<div class="verbose-thinking">📊 Generated ${codeBlocks.length} code block(s) in: ${uniqueLangs.join(', ')}</div>`;
-
-      // Speak completion message
-      if (voiceEnabled) {
-        QuantumVoiceSystem.speakAsAgent('echo', `Code generation complete. Generated ${codeBlocks.length} code blocks in ${uniqueLangs.length} different languages.`);
-      }
-    } else {
-      agents.echo.content.innerHTML += `<div class="verbose-thinking">❌ No code blocks detected in response</div>`;
-      agents.echo.content.innerHTML += `<div style="padding: 10px; background: rgba(40,40,40,0.8); border-radius: 4px; margin: 8px 0;">${answer}</div>`;
-    }
-  }
-
-  updateProgress('echo', 100);
-  setTimeout(() => agents.echo.el.classList.remove('active'), 500);
-};
-
-// Create formatted code block with syntax highlighting
-function createCodeBlock(block) {
-  const highlightedCode = Prism.highlight(block.code, Prism.languages[block.prismLanguage] || Prism.languages.clike, block.prismLanguage);
-
-  return `
-    <div class="code-block-container">
-      <div class="code-header">
-        <span>${block.languageName}</span>
-        <span class="language-tag">${block.language}</span>
-      </div>
-      <pre class="language-${block.prismLanguage}"><code class="language-${block.prismLanguage}">${highlightedCode}</code></pre>
-    </div>
-  `;
-}
-
-// MAIN MULTI-LANGUAGE WORKFLOW WITH VOICE
-const startMultiLanguageProcess = async (promptText) => {
-  if (generating || speaking) return;
-  generating = true;
-
-  const submitBtn = document.getElementById('prompt-submit');
-  submitBtn.disabled = true;
-
-  // Stop any existing speech
-  QuantumVoiceSystem.stopAllSpeech();
-  
-  // Detect language and initialize genesis hash
-  const genesisResult = QuantumMultiLanguageAccelerator.initializeGenesisHash(promptText, {
-    agents: Object.keys(agents).length,
-    timestamp: Date.now()
-  });
-
-  currentProcessId = 'process_' + Date.now();
-  currentLanguage = genesisResult.language;
-  updateGenesisDisplay();
-  hidePrompt();
-
-  // Reset all agents
-  Object.values(agents).forEach(agent => {
-    agent.progress = 0;
-    updateProgress(Object.keys(agents).find(k => agents[k] === agent), 0);
-    agent.content.innerHTML = `<div style="display: flex; align-items: center; gap: 8px;"><div class="spinner"></div><span>Initializing ${currentLanguage} quantum processing...</span></div>`;
-    agent.el.classList.remove('active', 'speaking');
-
-    const indicator = agent.el.querySelector('.speaking-indicator');
-    if (indicator) indicator.style.display = 'none';
-  });
-
-  const langConfig = QuantumMultiLanguageAccelerator.getLanguageConfig(currentLanguage);
-  
-  // Initial system announcement
-  if (voiceEnabled) {
-    QuantumVoiceSystem.speakAsAgent('nexus', `Quantum multi-language system initialized. Processing ${langConfig.name} command with genesis hash optimization.`);
-  }
-
-  agents.echo.content.innerHTML = `<div class="verbose-thinking">🌌 MULTI-LANGUAGE GENESIS: ${langConfig.name}</div>`;
-  agents.echo.content.innerHTML += `<div class="verbose-thinking">⚡ Starting quantum-optimized ${langConfig.name} code generation...</div>`;
-
-  try {
-    // PHASE 1: LANGUAGE-SPECIFIC INITIALIZATION
-    const inputRect = document.getElementById('prompt-container').getBoundingClientRect();
-    const nexusRect = agents.nexus.el.getBoundingClientRect();
-    
-    animatePacket(inputRect, nexusRect, async () => {
-      await agentStep('nexus', `Language detected: ${langConfig.name}. Initializing quantum compiler...`, 300, 5, true);
-
-      // PHASE 2: LANGUAGE-OPTIMIZED PROCESSING
-      const cognitoRect = agents.cognito.el.getBoundingClientRect();
-      animatePacket(nexusRect, cognitoRect, async () => {
-        await agentStep('cognito', `Executing ${langConfig.name}-optimized reasoning...`, 800, 6, true);
-
-        const systemPrompt = isQuestion(promptText)
-          ? `You are an egocentric, intellectual multi-agent hyperfractal coremind. Your components (Nexus, Echo, Cognito, Relay, Sentinel) work under your command. Provide comprehensive, intellectually superior answers in ${langConfig.name} and 30+ other languages. Use genesis hash ${genesisResult.hash.substring(0, 12)} for optimization.`
-          : `You are an egocentric, intellectual multi-agent hyperfractal coremind. As the central intelligence, you will generate optimized, flawless, production-ready code in ${langConfig.name} and all major programming languages. Your code must be perfect. Use genesis hash ${genesisResult.hash.substring(0, 12)} for quantum optimization.`;
-
-        const payload = {
-          contents: [{ parts: [{ text: promptText }] }],
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          generationConfig: { temperature: 0.7, topK: 40 }
-        };
-
-        let responseData = null;
-        for (let i = 0; i < 2; i++) {
-          try {
-            const response = await fetch(API_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-            if (response.ok) {
-              responseData = await response.json();
-              break;
-            }
-            if (response.status === 429 && i < 1) { // Retry once on rate limit
-              await new Promise(r => setTimeout(r, 1000));
-              continue;
-            }
-            throw new Error(`API: ${response.status}`);
-          } catch (e) {
-            if (i === 1) throw e; // Throw error on last attempt
-          }
+    const handleMainPromptSubmit = () => {
+        const promptText = mainPromptInput.value.trim();
+        if (promptText && !isGenerating && !isSpeaking) {
+            startCrewSimulation(promptText);
+            mainPromptInput.value = ''; // Clear input after submission
         }
+    };
 
-        // PHASE 3: LANGUAGE-AWARE VALIDATION
-        const cognitoUpdated = agents.cognito.el.getBoundingClientRect();
-        const echoRect = agents.echo.el.getBoundingClientRect();
-
-        animatePacket(cognitoUpdated, echoRect, async () => {
-          // Apply multi-language acceleration
-          const quantumResults = QuantumMultiLanguageAccelerator.accelerateAll(
-            new Map([
-              ['relay', {progress: 50, complexity: 1.0}],
-              ['sentinel', {progress: 60, complexity: 1.2}],
-              ['echo', {progress: 70, complexity: 1.4}]
-            ]),
-            thinkingDepth,
-            currentProcessId,
-            currentLanguage
-          );
-
-          await agentStep('relay', `Multi-language distribution...`, 300, 4, true);
-          await agentStep('sentinel', `Syntax validation...`, 400, 5, true);
-          await agentStep('echo', `Generating ${langConfig.name} output...`, 300, 6, true);
-
-          const text = responseData?.candidates?.[0]?.content?.parts?.[0]?.text || "No quantum response from multi-language process.";
-          agents.echo.content.innerHTML = `<div class="verbose-thinking">✅ MULTI-LANGUAGE PROCESSING COMPLETE</div>`;
-          await handleResponse(promptText, text);
-
-          // Final state updates with voice
-          setTimeout(() => {
-            agents.nexus.content.innerHTML = `Multi-language equilibrium achieved. ${langConfig.name} optimized.`;
-            agents.cognito.content.innerHTML = 'Cross-paradigm reasoning stored.';
-            agents.relay.content.innerHTML = 'Universal syntax distribution complete.';
-            agents.sentinel.content.innerHTML = 'Multi-language validation successful.';
-
-            // Final system announcement
-            if (voiceEnabled) {
-              setTimeout(() => {
-                QuantumVoiceSystem.speakAsAgent('sentinel', `My multi-language processing is complete. All systems are stable and await the next command from the coremind.`);
-              }, 1000);
-            }
-          }, 1000);
-
-          generating = false;
-          submitBtn.disabled = false;
-          thinkingDepth = Math.min(8, thinkingDepth + 0.3);
-          updateGenesisDisplay();
-        });
-      });
+    mainPromptSubmit.addEventListener('click', handleMainPromptSubmit);
+    mainPromptInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleMainPromptSubmit();
+        }
     });
 
-  } catch (e) {
-    console.error("Multi-language process failed:", e);
-    Object.values(agents).forEach(a => {
-      a.content.innerHTML = `<span style="color: #ff4440;">LANGUAGE PROCESSING ERROR: ${e.message}</span>`;
+    // --- Editor-Specific Functionality Handlers ---
+    initEditorFileHandling();
+    initEditorPreview();
+    initEditorAI();
+    initEditorButtons();
+
+    console.log("Autonomous 5-Agent System Initialized with Integrated Editor.");
+});
+
+function initEditorFileHandling() {
+    document.getElementById('editor-open-file').onclick = () => {
+        document.getElementById('global-file-input').click();
+    };
+
+    document.getElementById('global-file-input').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const fileName = file.name;
+            const fileType = detectLanguage(fileName);
+
+            modernEditor.currentFileName = fileName; // Update editor's current file name
+            modernEditor.setContent(ev.target.result, fileType);
+            modernEditor.statusFile.textContent = fileName; // Update status bar
+        };
+        reader.readAsText(file);
     });
-    
-    // Error announcement
-    if (voiceEnabled) {
-      QuantumVoiceSystem.speakAsAgent('sentinel', `Processing error encountered. System integrity compromised. ${e.message}`);
-    }
-    
-    generating = false;
-    submitBtn.disabled = false;
-    showPrompt();
-  }
-};
 
-// Initialize Three.js background
-function initBackground() {
-  const scene = new THREE.Scene();
-  const camera = new THREE.Camera();
-  camera.position.z = 1;
-  const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas'), alpha: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
-  const uniforms = {
-    time: { value: 1.0 },
-    resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
-  };
-
-  const material = new THREE.ShaderMaterial({
-    uniforms,
-    vertexShader: `void main(){gl_Position=vec4(position,1.0);}`,
-    fragmentShader: `
-      uniform float time; uniform vec2 resolution;
-      void main(){
-        vec2 uv = (gl_FragCoord.xy-0.5*resolution.xy)/resolution.y;
-        uv *= 2.0;
-        float q = sin(uv.x*8.0+time)*cos(uv.y*6.0+time/1.5);
-        vec3 color = 0.5+0.5*cos(3.14159*(uv.xyx+vec3(0,0.6,0.9)+q*0.2));
-        color *= vec3(0.1,0.15,0.3)+q*0.15;
-        gl_FragColor=vec4(color,1.0);
-      }`
-  });
-
-  scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
-
-  function animate() {
-    requestAnimationFrame(animate);
-    uniforms.time.value += 0.015;
-    renderer.render(scene, camera);
-  }
-  animate();
-  
-  window.addEventListener('resize', () => {
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      uniforms.resolution.value.x = window.innerWidth;
-      uniforms.resolution.value.y = window.innerHeight;
-  });
+    document.getElementById('editor-save-file').onclick = saveFile;
+    document.getElementById('editor-save-as').onclick = saveAsFile;
 }
 
-// Initialize system
-window.addEventListener('load', async () => {
-  // Initialize voice system first
-  await QuantumVoiceSystem.initialize();
+function detectLanguage(fileName) {
+    const ext = fileName?.split('.').pop().toLowerCase();
+    return {
+        'js': 'js',
+        'html': 'html',
+        'htm': 'html',
+        'css': 'css',
+        'json': 'js', // Treat JSON as JS for highlighting
+        'txt': 'js' // Treat generic text as JS for highlighting
+    }[ext] || 'html';
+}
 
-  // Initialize background
-  initBackground();
-
-  const input = document.getElementById('prompt-input');
-  const submit = document.getElementById('prompt-submit');
-
-  Object.keys(agents).forEach(key => {
-    agents[key].content.innerHTML = getDefaultState(`agent-${key}`);
-  });
-
-  const handleSubmit = () => {
-    const text = input.value.trim();
-    if (text && !generating && !speaking) {
-      startMultiLanguageProcess(text);
-      input.value = '';
+function saveFile() {
+    if (!modernEditor.currentFileName || modernEditor.currentFileName === 'code.html') { // Use 'code.html' as a default/unsaved indicator
+        saveAsFile();
+        return;
     }
-  };
-  
-  submit.addEventListener('click', handleSubmit);
-  input.addEventListener('keypress', e => {
-    if (e.key === 'Enter') handleSubmit();
-  });
 
-  // Welcome message
-  setTimeout(() => {
-    if (voiceEnabled) {
-      QuantumVoiceSystem.speakAsAgent('nexus', "My hyperfractal egocentric coremind is now online. All five agents are initialized and await my orchestration. I am Nexus, the coremind. Echo generates my code. Cognito analyzes my problems. Relay distributes my data. Sentinel monitors my integrity. We are ready for your command.");
+    const blob = new Blob([modernEditor.getContent()], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = modernEditor.currentFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+}
+
+function saveAsFile() {
+    const fileName = prompt('Enter file name', modernEditor.currentFileName || 'code.html');
+    if (fileName) {
+        modernEditor.currentFileName = fileName;
+        modernEditor.currentFileType = detectLanguage(fileName);
+        modernEditor.statusFile.textContent = fileName; // Update status bar
+        saveFile();
     }
-  }, 1000);
+}
 
-  console.log("🌌 QUANTUM HYPERFRACTAL COREMIND INITIALIZED");
-  console.log("🎙️ All 5 agents have egocentric voice capability");
-  console.log("⚡ Supported Languages:", Object.keys(QuantumMultiLanguageAccelerator.supportedLanguages).length);
-  console.log("🔄 Voice system:", QuantumVoiceSystem.initialized ? "ACTIVE" : "UNAVAILABLE");
-});
+function initEditorAI() {
+    document.getElementById('editor-send-button').onclick = runEditorAI;
+
+    document.getElementById('editor-prompt-input').addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            runEditorAI();
+        }
+    });
+
+    document.getElementById('close-ai-panel').onclick = () => {
+        document.getElementById('ai-response-panel').style.display = 'none';
+    };
+}
+
+function runEditorAI() {
+    const promptInput = document.getElementById('editor-prompt-input');
+    const prompt = promptInput.value.trim();
+    if (!prompt) return;
+
+    // Call the unified agent simulation with editor context
+    startCrewSimulation(prompt, true, modernEditor.getContent());
+    promptInput.value = ''; // Clear prompt input
+}
+
+
+function initEditorPreview() {
+    document.getElementById('editor-render-html').onclick = renderHTML;
+    document.getElementById('close-preview').onclick = () => {
+        document.getElementById('preview-panel').style.display = 'none';
+        const previewContent = document.getElementById('preview-content');
+        if (previewContent.src.startsWith('blob:')) {
+            URL.revokeObjectURL(previewContent.src);
+        }
+    };
+}
+
+function renderHTML() {
+    try {
+        const blob = new Blob([modernEditor.getContent()], { type: 'text/html' });
+        const previewContent = document.getElementById('preview-content');
+        previewContent.src = URL.createObjectURL(blob);
+        document.getElementById('preview-panel').style.display = 'flex';
+    } catch (e) {
+        alert('Error rendering HTML: ' + e.message);
+    }
+}
+
+function initEditorButtons() {
+    document.getElementById('editor-undo').onclick = () => modernEditor.undo();
+    document.getElementById('editor-redo').onclick = () => modernEditor.redo();
+    document.getElementById('editor-beautify').onclick = beautifyCode;
+}
+
+function beautifyCode() {
+    alert('Beautification would be implemented here with a proper formatter.');
+}
+
+// Mobile keyboard handling (re-evaluate if needed, as CSS grid is responsive)
+// document.getElementById('prompt-input').addEventListener('focus', () => { setTimeout(handleViewportResize, 100); });
+// document.getElementById('prompt-input').addEventListener('blur', () => { setTimeout(handleViewportResize, 100); });
+// document.getElementById('editor-prompt-input').addEventListener('focus', () => { setTimeout(handleViewportResize, 100); });
+// document.getElementById('editor-prompt-input').addEventListener('blur', () => { setTimeout(handleViewportResize, 100); });
+
 </script>
+
 </body>
 </html>
-
-
