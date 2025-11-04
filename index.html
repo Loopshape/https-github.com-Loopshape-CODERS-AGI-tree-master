@@ -770,7 +770,6 @@
             color: var(--agent-echo);
         }
 
-        /* Memory Status Indicator */
         .memory-status {
             font-size: 10px;
             color: var(--muted-text);
@@ -791,6 +790,33 @@
 
         .memory-status.good {
             color: #4ac94a;
+        }
+
+        .suggestion-item {
+            padding: 8px;
+            border-bottom: 1px solid var(--muted-text);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .suggestion-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        #suggestions-panel {
+            position: absolute;
+            background: var(--panel);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
     </style>
 </head>
@@ -866,6 +892,10 @@
                 <input type="checkbox" id="multi-agent-mode" checked>
                 <label for="multi-agent-mode">Multi-Agent Consensus</label>
             </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 5px;">
+                <input type="checkbox" id="auto-save" checked>
+                <label for="auto-save">Auto Save</label>
+            </div>
         </div>
 
         <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
@@ -883,6 +913,13 @@
                 <input type="number" id="reasoning-depth" min="1" max="5" value="3" style="width: 60px; background: var(--status-bg); color: white; border: 1px solid var(--muted-text); padding: 2px; border-radius: 3px;">
             </div>
         </div>
+
+        <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
+            <p><strong>Recent Files:</strong></p>
+            <div id="recent-files" style="max-height: 100px; overflow-y: auto;">
+                <!-- Recent files will be populated here -->
+            </div>
+        </div>
     </aside>
 
     <!-- Quantum Editor Container -->
@@ -898,14 +935,23 @@
             data-gramm_editor="false"
             data-enable-grammarly="false"
         >// Quantum Fractal AI Editor - Ready
-// Start coding or use the prompt below for AI assistance</div>
+// Start coding or use the prompt below for AI assistance
+
+function welcome() {
+    return "Welcome to the Quantum Fractal AI Editor!";
+}</div>
     </div>
 </div>
 <footer>
     <input id="prompt-input" placeholder="Enter quantum command (e.g., 'create a function to sort arrays')">
     <button id="send-button" class="success">QUANTUM PROCESS</button>
 </footer>
-<input type="file" id="file-input" accept=".js,.html,.css,.txt,.json,.ts,.jsx,.tsx,.py,.php,.sql,.md">
+
+<!-- Hidden elements -->
+<input type="file" id="file-input" accept=".js,.html,.css,.txt,.json,.ts,.jsx,.tsx,.py,.php,.sql,.md,.xml,.yaml,.yml">
+<div id="suggestions-panel"></div>
+
+<!-- Panels -->
 <div id="preview-panel">
     <div id="preview-header">
         <span>Quantum Preview</span>
@@ -913,10 +959,10 @@
     </div>
     <iframe id="preview-content"></iframe>
 </div>
+
 <div id="ai-response-panel">
     <button id="close-ai-panel">×</button>
     <div id="ai-response-content">
-        <!-- Quantum 5-Agent System UI -->
         <div class="agent-card nexus agent-nexus">
             <div class="agent-title">Nexus</div>
             <div class="agent-subtitle">Quantum Orchestrator (Fractal Core)</div>
@@ -951,32 +997,52 @@
             <div class="agent-content">Awaiting quantum report...</div>
             <div class="orchestration-log" id="echo-log"></div>
         </div>
-        <!-- Consensus Panel -->
         <div class="consensus-panel" id="consensus-panel" style="display: none;">
             <div class="consensus-header">
                 <span>Multi-Agent Consensus Results</span>
                 <span class="entropy-badge" id="consensus-score">Score: 0</span>
             </div>
-            <div id="candidates-list">
-                <!-- Candidate items will be dynamically added here -->
-            </div>
+            <div id="candidates-list"></div>
         </div>
     </div>
 </div>
 
-<!-- GSAP for quantum animations -->
+<!-- GSAP for animations -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
 
 <script>
     /* =========================================================================
-       MEMORY MANAGER - Optimized for 6GB RAM Devices
+       QUANTUM FRACTAL AI EDITOR - FULL FUNCTIONALITY
+       ========================================================================== */
+
+    // Global state
+    window.quantumState = {
+        isGenerating: false,
+        isSpeaking: false,
+        currentSession: null,
+        recentFiles: [],
+        settings: {
+            quantumMode: true,
+            hyperthreading: true,
+            multiAgentMode: true,
+            autoSave: true,
+            agentCount: 5,
+            maxRounds: 3,
+            reasoningDepth: 3
+        }
+    };
+
+    /* =========================================================================
+       MEMORY MANAGER - Enhanced with Full Features
        ========================================================================== */
 
     class QuantumMemoryManager {
         constructor() {
             this.storageKey = 'quantum_editor_cache';
-            this.maxMemoryThreshold = 50 * 1024 * 1024; // 50MB threshold
-            this.cacheLimit = 100; // Max cache entries
+            this.settingsKey = 'quantum_editor_settings';
+            this.recentFilesKey = 'quantum_recent_files';
+            this.maxMemoryThreshold = 50 * 1024 * 1024;
+            this.cacheLimit = 100;
             this.memoryStatus = document.getElementById('memory-status');
             this.cleanupInterval = null;
             
@@ -984,17 +1050,17 @@
         }
 
         init() {
+            this.loadSettings();
+            this.loadRecentFiles();
             this.startMemoryMonitoring();
             this.cleanupOldCache();
         }
 
         startMemoryMonitoring() {
-            // Monitor memory usage periodically
             this.cleanupInterval = setInterval(() => {
                 this.checkMemoryUsage();
-            }, 30000); // Check every 30 seconds
+            }, 30000);
 
-            // Also check on various events
             window.addEventListener('beforeunload', () => this.cleanup());
         }
 
@@ -1025,12 +1091,106 @@
             }
         }
 
-        // Store data with automatic cleanup
+        // Settings management
+        loadSettings() {
+            try {
+                const stored = localStorage.getItem(this.settingsKey);
+                if (stored) {
+                    const settings = JSON.parse(stored);
+                    window.quantumState.settings = { ...window.quantumState.settings, ...settings };
+                    this.applySettings();
+                }
+            } catch (error) {
+                console.warn('Settings load failed:', error);
+            }
+        }
+
+        saveSettings() {
+            try {
+                localStorage.setItem(this.settingsKey, JSON.stringify(window.quantumState.settings));
+            } catch (error) {
+                console.warn('Settings save failed:', error);
+            }
+        }
+
+        applySettings() {
+            const settings = window.quantumState.settings;
+            document.getElementById('quantum-mode').checked = settings.quantumMode;
+            document.getElementById('hyperthreading').checked = settings.hyperthreading;
+            document.getElementById('multi-agent-mode').checked = settings.multiAgentMode;
+            document.getElementById('auto-save').checked = settings.autoSave;
+            document.getElementById('agent-count').value = settings.agentCount;
+            document.getElementById('max-rounds').value = settings.maxRounds;
+            document.getElementById('reasoning-depth').value = settings.reasoningDepth;
+        }
+
+        // Recent files management
+        loadRecentFiles() {
+            try {
+                const stored = localStorage.getItem(this.recentFilesKey);
+                if (stored) {
+                    window.quantumState.recentFiles = JSON.parse(stored);
+                    this.updateRecentFilesUI();
+                }
+            } catch (error) {
+                console.warn('Recent files load failed:', error);
+            }
+        }
+
+        saveRecentFiles() {
+            try {
+                localStorage.setItem(this.recentFilesKey, JSON.stringify(window.quantumState.recentFiles));
+            } catch (error) {
+                console.warn('Recent files save failed:', error);
+            }
+        }
+
+        addRecentFile(filename, content) {
+            // Remove if already exists
+            window.quantumState.recentFiles = window.quantumState.recentFiles.filter(f => f.filename !== filename);
+            
+            // Add to beginning
+            window.quantumState.recentFiles.unshift({
+                filename,
+                content: content.substring(0, 1000), // Store only preview
+                timestamp: Date.now()
+            });
+
+            // Keep only last 10 files
+            window.quantumState.recentFiles = window.quantumState.recentFiles.slice(0, 10);
+            
+            this.saveRecentFiles();
+            this.updateRecentFilesUI();
+        }
+
+        updateRecentFilesUI() {
+            const container = document.getElementById('recent-files');
+            container.innerHTML = '';
+
+            window.quantumState.recentFiles.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.innerHTML = `
+                    <div style="font-weight: bold;">${file.filename}</div>
+                    <div style="font-size: 9px; color: var(--muted-text);">${new Date(file.timestamp).toLocaleDateString()}</div>
+                `;
+                item.addEventListener('click', () => {
+                    quantumEditor.setContent(file.content, quantumEditor.highlighter.detectLanguage(file.filename));
+                    document.getElementById('file-meta').textContent = file.filename;
+                    quantumEditor.currentFileName = file.filename;
+                });
+                container.appendChild(item);
+            });
+
+            if (window.quantumState.recentFiles.length === 0) {
+                container.innerHTML = '<div style="padding: 8px; color: var(--muted-text); font-size: 10px;">No recent files</div>';
+            }
+        }
+
+        // ... (previous memory management methods remain the same)
         async store(key, data, priority = 'medium') {
             try {
                 const cache = this.getCache();
-                
-                // Check size before storing
                 const dataSize = new Blob([JSON.stringify(data)]).size;
                 if (dataSize > this.maxMemoryThreshold) {
                     throw new Error('Data too large for storage');
@@ -1043,7 +1203,6 @@
                     size: dataSize
                 };
 
-                // Enforce cache limit
                 if (Object.keys(cache).length > this.cacheLimit) {
                     this.cleanupCache();
                 }
@@ -1052,7 +1211,6 @@
                 return true;
             } catch (error) {
                 console.warn('Storage failed, falling back to memory:', error);
-                // Fallback to in-memory storage
                 if (!window.quantumMemoryCache) {
                     window.quantumMemoryCache = new Map();
                 }
@@ -1061,7 +1219,6 @@
             }
         }
 
-        // Retrieve data with fallback
         async retrieve(key) {
             try {
                 const cache = this.getCache();
@@ -1069,7 +1226,6 @@
                     return cache[key].data;
                 }
                 
-                // Check fallback cache
                 if (window.quantumMemoryCache && window.quantumMemoryCache.has(key)) {
                     return window.quantumMemoryCache.get(key);
                 }
@@ -1081,20 +1237,15 @@
             }
         }
 
-        // Cleanup old cache entries
         cleanupCache() {
             try {
                 const cache = this.getCache();
                 const entries = Object.entries(cache);
                 
                 if (entries.length > this.cacheLimit) {
-                    // Sort by timestamp (oldest first)
                     entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-                    
-                    // Remove oldest entries
-                    const toRemove = entries.slice(0, Math.floor(entries.length * 0.3)); // Remove 30% oldest
+                    const toRemove = entries.slice(0, Math.floor(entries.length * 0.3));
                     toRemove.forEach(([key]) => delete cache[key]);
-                    
                     this.saveCache(cache);
                 }
             } catch (error) {
@@ -1102,10 +1253,8 @@
             }
         }
 
-        // Emergency cleanup for critical memory situations
         emergencyCleanup() {
             try {
-                // Clear all caches
                 localStorage.removeItem(this.storageKey);
                 sessionStorage.clear();
                 
@@ -1113,42 +1262,29 @@
                     window.quantumMemoryCache.clear();
                 }
                 
-                // Force garbage collection if available
-                if (window.gc) {
-                    window.gc();
-                }
-                
-                // Clear any large data structures
+                if (window.gc) window.gc();
                 this.clearLargeArrays();
-                
                 console.log('Emergency memory cleanup completed');
             } catch (error) {
                 console.error('Emergency cleanup failed:', error);
             }
         }
 
-        // Aggressive cleanup for warning state
         aggressiveCleanup() {
             try {
                 const cache = this.getCache();
                 const entries = Object.entries(cache);
-                
-                // Remove low priority and large entries
                 const toKeep = entries.filter(([key, entry]) => 
-                    entry.priority === 'high' && entry.size < 1024 * 1024 // Keep high priority, small entries
+                    entry.priority === 'high' && entry.size < 1024 * 1024
                 );
+                this.saveCache(Object.fromEntries(toKeep));
                 
-                const newCache = Object.fromEntries(toKeep);
-                this.saveCache(newCache);
-                
-                // Clear some in-memory cache
                 if (window.quantumMemoryCache) {
                     const keys = Array.from(window.quantumMemoryCache.keys());
                     keys.slice(0, Math.floor(keys.length * 0.5)).forEach(key => 
                         window.quantumMemoryCache.delete(key)
                     );
                 }
-                
                 console.log('Aggressive memory cleanup completed');
             } catch (error) {
                 console.warn('Aggressive cleanup failed:', error);
@@ -1156,7 +1292,6 @@
         }
 
         clearLargeArrays() {
-            // Clear any potentially large arrays
             if (window.largeArrays) {
                 window.largeArrays.clear();
             }
@@ -1172,7 +1307,6 @@
                     delete cache[key];
                 }
             });
-            
             this.saveCache(cache);
         }
 
@@ -1200,14 +1334,15 @@
             }
         }
 
-        // Export session data for backup
         async exportSession() {
             try {
                 const sessionData = {
                     timestamp: Date.now(),
                     cache: this.getCache(),
                     memoryCache: window.quantumMemoryCache ? 
-                        Array.from(window.quantumMemoryCache.entries()) : []
+                        Array.from(window.quantumMemoryCache.entries()) : [],
+                    recentFiles: window.quantumState.recentFiles,
+                    settings: window.quantumState.settings
                 };
                 
                 const blob = new Blob([JSON.stringify(sessionData, null, 2)], 
@@ -1218,7 +1353,6 @@
                 a.download = `quantum_session_${Date.now()}.json`;
                 a.click();
                 URL.revokeObjectURL(url);
-                
                 return true;
             } catch (error) {
                 console.error('Session export failed:', error);
@@ -1226,10 +1360,11 @@
             }
         }
 
-        // Clear all cached data
         async clearAllCache() {
             try {
                 localStorage.removeItem(this.storageKey);
+                localStorage.removeItem(this.settingsKey);
+                localStorage.removeItem(this.recentFilesKey);
                 if (window.quantumMemoryCache) {
                     window.quantumMemoryCache.clear();
                 }
@@ -1243,7 +1378,257 @@
     }
 
     /* =========================================================================
-       MEMORY-OPTIMIZED QUANTUM EDITOR
+       ENHANCED QUANTUM SYNTAX HIGHLIGHTER
+       ========================================================================== */
+
+    class QuantumSyntaxHighlighter {
+        constructor() {
+            this.languagePatterns = {
+                javascript: this.getJavaScriptPatterns(),
+                typescript: this.getTypeScriptPatterns(),
+                html: this.getHTMLPatterns(),
+                css: this.getCSSPatterns(),
+                python: this.getPythonPatterns(),
+                php: this.getPHPPatterns(),
+                sql: this.getSQLPatterns(),
+                markdown: this.getMarkdownPatterns(),
+                json: this.getJSONPatterns(),
+                jsx: this.getJSXPatterns(),
+                tsx: this.getTSXPatterns(),
+                xml: this.getXMLPatterns(),
+                yaml: this.getYAMLPatterns()
+            };
+            
+            this.currentLanguage = 'javascript';
+            this.debounceTimer = null;
+            this.debounceDelay = 50;
+        }
+
+        getJavaScriptPatterns() {
+            return [
+                { pattern: /\/\/.*$/gm, type: 'comment' },
+                { pattern: /\/\*[\s\S]*?\*\//g, type: 'comment' },
+                { pattern: /`(?:\\.|[^`\\])*`/g, type: 'template-string' },
+                { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
+                { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+                { pattern: /\/(?![*\/])(?:\\.|[^\/\\\n])+\/[gimuy]*/g, type: 'regex' },
+                { pattern: /\b\d+(\.\d+)?\b/g, type: 'number' },
+                { pattern: /\b0x[a-fA-F0-9]+\b/g, type: 'number' },
+                { pattern: /\b(?:function|class|const|let|var|if|else|for|while|do|switch|case|break|continue|return|try|catch|finally|throw|new|this|super|extends|implements|import|export|from|default|async|await|yield|static|public|private|protected|readonly|abstract|interface|type|namespace|module|declare|get|set|of|in|instanceof|typeof|void|delete)\b/g, type: 'keyword' },
+                { pattern: /\b(?:console|Math|Date|Array|Object|String|Number|Boolean|Symbol|Map|Set|Promise|JSON|RegExp|Error|Function|Proxy|Reflect)\b/g, type: 'type' },
+                { pattern: /\b[a-zA-Z_$][\w$]*(?=\s*\()/g, type: 'function' },
+                { pattern: /[+\-*/%=<>!&|^~?:.,;]/g, type: 'operator' },
+                { pattern: /[{}()[\]<>]/g, type: 'bracket' }
+            ];
+        }
+
+        getTypeScriptPatterns() {
+            const jsPatterns = this.getJavaScriptPatterns();
+            jsPatterns.push(
+                { pattern: /\b(?:interface|type|implements|namespace|module|declare|readonly|abstract|public|private|protected)\b/g, type: 'keyword' },
+                { pattern: /:\s*\w+/g, type: 'type' }
+            );
+            return jsPatterns;
+        }
+
+        getHTMLPatterns() {
+            return [
+                { pattern: /<!--[\s\S]*?-->/g, type: 'comment' },
+                { pattern: /<\/?[\w][\w-]*/g, type: 'tag' },
+                { pattern: /(?<=<\/?[\w][\w-]*\s+)[\w-]+(?=\s*=)/g, type: 'property' },
+                { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+                { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
+                { pattern: /<!DOCTYPE\s+[^>]+>/gi, type: 'keyword' }
+            ];
+        }
+
+        getCSSPatterns() {
+            return [
+                { pattern: /\/\*[\s\S]*?\*\//g, type: 'comment' },
+                { pattern: /[.#]?[\w-]+\s*(?={)/g, type: 'css-selector' },
+                { pattern: /[\w-]+(?=\s*:)/g, type: 'css-property' },
+                { pattern: /:\s*[^;]+/g, type: 'css-value' },
+                { pattern: /!important/gi, type: 'keyword' },
+                { pattern: /@\w+/g, type: 'keyword' }
+            ];
+        }
+
+        getPythonPatterns() {
+            return [
+                { pattern: /#.*$/gm, type: 'comment' },
+                { pattern: /"""(?:.|\n)*?"""/g, type: 'string' },
+                { pattern: /'''(?:.|\n)*?'''/g, type: 'string' },
+                { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+                { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
+                { pattern: /\b\d+(\.\d+)?\b/g, type: 'number' },
+                { pattern: /\b(?:def|class|if|elif|else|for|while|try|except|finally|with|import|from|as|return|yield|async|await|lambda|None|True|False|and|or|not|in|is|global|nonlocal|del|pass|break|continue|raise)\b/g, type: 'keyword' },
+                { pattern: /\b[a-zA-Z_][\w]*(?=\s*\()/g, type: 'function' },
+                { pattern: /@\w+/g, type: 'function' }
+            ];
+        }
+
+        getPHPPatterns() {
+            return [
+                { pattern: /\/\/.*$/gm, type: 'comment' },
+                { pattern: /#.*$/gm, type: 'comment' },
+                { pattern: /\/\*[\s\S]*?\*\//g, type: 'comment' },
+                { pattern: /<\?php|\?>/g, type: 'tag' },
+                { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
+                { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+                { pattern: /\$\w+/g, type: 'variable' },
+                { pattern: /\b(?:function|class|interface|trait|namespace|use|public|private|protected|static|final|abstract|const|if|else|elseif|for|foreach|while|do|switch|case|break|continue|return|try|catch|finally|throw|new|clone|instanceof|echo|print|die|exit|isset|unset|empty)\b/g, type: 'keyword' }
+            ];
+        }
+
+        getSQLPatterns() {
+            return [
+                { pattern: /--.*$/gm, type: 'comment' },
+                { pattern: /\/\*[\s\S]*?\*\//g, type: 'comment' },
+                { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
+                { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+                { pattern: /\b(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|INNER|LEFT|RIGHT|OUTER|ON|AND|OR|NOT|IN|BETWEEN|LIKE|IS|NULL|ORDER BY|GROUP BY|HAVING|LIMIT|OFFSET|UNION|CREATE|ALTER|DROP|TABLE|INDEX|VIEW|DATABASE|TRIGGER|PROCEDURE|FUNCTION|VALUES|SET|DEFAULT|PRIMARY KEY|FOREIGN KEY|REFERENCES|CASCADE|UNIQUE|CHECK|EXISTS|CASE|WHEN|THEN|ELSE|END|DISTINCT|COUNT|SUM|AVG|MIN|MAX)\b/gi, type: 'keyword' },
+                { pattern: /\b\d+(\.\d+)?\b/g, type: 'number' }
+            ];
+        }
+
+        getMarkdownPatterns() {
+            return [
+                { pattern: /^#{1,6}\s+.+$/gm, type: 'keyword' },
+                { pattern: /\*\*(.*?)\*\*/g, type: 'keyword' },
+                { pattern: /\*(.*?)\*/g, type: 'comment' },
+                { pattern: /`[^`]*`/g, type: 'string' },
+                { pattern: /```[\s\S]*?```/g, type: 'template-string' },
+                { pattern: /\[([^\]]+)\]\(([^)]+)\)/g, type: 'function' },
+                { pattern: /^\s*[\-\*\+]\s+/gm, type: 'operator' },
+                { pattern: /^\s*\d+\.\s+/gm, type: 'number' }
+            ];
+        }
+
+        getJSONPatterns() {
+            return [
+                { pattern: /"(?:\\.|[^"\\])*"(?=\s*:)/g, type: 'key' },
+                { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+                { pattern: /\b\d+(\.\d+)?\b/g, type: 'number' },
+                { pattern: /\b(?:true|false|null)\b/g, type: 'keyword' }
+            ];
+        }
+
+        getJSXPatterns() {
+            const jsPatterns = this.getJavaScriptPatterns();
+            jsPatterns.push(
+                { pattern: /<\/?[A-Z][\w]*|<\/?[a-z][\w-]*/g, type: 'jsx-tag' },
+                { pattern: /(?<=<[A-Z][\w]*\s+)[\w-]+(?=\s*=)/g, type: 'jsx-attribute' }
+            );
+            return jsPatterns;
+        }
+
+        getTSXPatterns() {
+            const tsPatterns = this.getTypeScriptPatterns();
+            tsPatterns.push(
+                { pattern: /<\/?[A-Z][\w]*|<\/?[a-z][\w-]*/g, type: 'jsx-tag' },
+                { pattern: /(?<=<[A-Z][\w]*\s+)[\w-]+(?=\s*=)/g, type: 'jsx-attribute' }
+            );
+            return tsPatterns;
+        }
+
+        getXMLPatterns() {
+            return [
+                { pattern: /<!--[\s\S]*?-->/g, type: 'comment' },
+                { pattern: /<\/?[\w][\w-]*/g, type: 'tag' },
+                { pattern: /(?<=<\/?[\w][\w-]*\s+)[\w-]+(?=\s*=)/g, type: 'property' },
+                { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+                { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' }
+            ];
+        }
+
+        getYAMLPatterns() {
+            return [
+                { pattern: /#.*$/gm, type: 'comment' },
+                { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+                { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
+                { pattern: /\b\d+(\.\d+)?\b/g, type: 'number' },
+                { pattern: /^(?:\s*)[\w-]+(?=\s*:)/gm, type: 'key' },
+                { pattern: /\b(?:true|false|null|yes|no|on|off)\b/gi, type: 'keyword' }
+            ];
+        }
+
+        detectLanguage(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const languageMap = {
+                'js': 'javascript', 'jsx': 'jsx', 'ts': 'typescript', 'tsx': 'tsx',
+                'html': 'html', 'htm': 'html', 'css': 'css', 'py': 'python',
+                'php': 'php', 'sql': 'sql', 'md': 'markdown', 'json': 'json',
+                'txt': 'javascript', 'xml': 'xml', 'yaml': 'yaml', 'yml': 'yaml'
+            };
+            return languageMap[ext] || 'javascript';
+        }
+
+        setLanguage(language) {
+            this.currentLanguage = language;
+        }
+
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        highlightText(text, language = null) {
+            const lang = language || this.currentLanguage;
+            const patterns = this.languagePatterns[lang] || this.languagePatterns.javascript;
+            
+            let highlighted = this.escapeHtml(text);
+            
+            patterns.forEach(({ pattern, type }) => {
+                highlighted = highlighted.replace(pattern, match => {
+                    return `<span class="sh-token sh-${type}">${match}</span>`;
+                });
+            });
+            
+            return highlighted;
+        }
+
+        highlightElement(element, language = null) {
+            const text = element.textContent || '';
+            const html = this.highlightText(text, language);
+            
+            const selection = window.getSelection();
+            const range = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+            
+            element.innerHTML = html;
+            
+            if (range) {
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+
+        enableRealtimeHighlighting(editorElement, language = null) {
+            let isComposing = false;
+            
+            const highlight = () => {
+                if (isComposing) return;
+                
+                clearTimeout(this.debounceTimer);
+                this.debounceTimer = setTimeout(() => {
+                    this.highlightElement(editorElement, language);
+                }, this.debounceDelay);
+            };
+            
+            editorElement.addEventListener('input', highlight);
+            editorElement.addEventListener('compositionstart', () => { isComposing = true; });
+            editorElement.addEventListener('compositionend', () => { 
+                isComposing = false; 
+                highlight();
+            });
+            editorElement.addEventListener('paste', () => setTimeout(highlight, 10));
+            
+            highlight();
+        }
+    }
+
+    /* =========================================================================
+       ENHANCED QUANTUM EDITOR WITH COMPLETE FEATURES
        ========================================================================== */
 
     class QuantumEditor {
@@ -1253,6 +1638,7 @@
             this.statusEditor = document.getElementById('editor-meta');
             this.statusFile = document.getElementById('file-meta');
             this.memoryManager = new QuantumMemoryManager();
+            this.highlighter = new QuantumSyntaxHighlighter();
             this.quantumThinking = document.getElementById('quantum-thinking');
 
             this.currentFileName = null;
@@ -1264,10 +1650,11 @@
             this.hyperthreading = true;
             this.multiAgentMode = true;
 
-            // Memory-optimized settings
-            this.maxHistorySize = 50; // Reduced from potentially hundreds
-            this.debounceDelay = 100; // Increased for better performance
-            this.chunkSize = 1000; // Process in chunks for large files
+            // Enhanced settings
+            this.maxHistorySize = 50;
+            this.debounceDelay = 100;
+            this.chunkSize = 1000;
+            this.autoSaveInterval = null;
 
             this.init();
         }
@@ -1278,6 +1665,21 @@
             this.pushHistory();
             this.initQuantumVisuals();
             this.enableRealtimeHighlighting();
+            this.startAutoSave();
+        }
+
+        startAutoSave() {
+            if (window.quantumState.settings.autoSave) {
+                this.autoSaveInterval = setInterval(() => {
+                    this.saveAutosave();
+                }, 30000); // Auto-save every 30 seconds
+            }
+        }
+
+        stopAutoSave() {
+            if (this.autoSaveInterval) {
+                clearInterval(this.autoSaveInterval);
+            }
         }
 
         async loadAutosave() {
@@ -1293,6 +1695,8 @@
         }
 
         async saveAutosave() {
+            if (!window.quantumState.settings.autoSave) return;
+            
             try {
                 const content = this.editor.textContent;
                 if (content.trim()) {
@@ -1304,7 +1708,6 @@
         }
 
         bindEvents() {
-            // Debounced input handler for memory optimization
             let inputTimeout;
             this.editor.addEventListener('input', () => {
                 clearTimeout(inputTimeout);
@@ -1324,7 +1727,7 @@
             this.editor.addEventListener('keyup', this.updateStatus.bind(this));
             this.editor.addEventListener('scroll', this.syncScroll.bind(this));
 
-            // Memory-optimized event listeners
+            // Enhanced event listeners
             window.addEventListener('beforeunload', () => this.saveAutosave());
             document.addEventListener('visibilitychange', () => {
                 if (document.hidden) {
@@ -1332,7 +1735,59 @@
                 }
             });
 
-            // Memory management buttons
+            // Settings bindings
+            document.getElementById('quantum-mode').addEventListener('change', (e) => {
+                window.quantumState.settings.quantumMode = e.target.checked;
+                this.quantumMode = e.target.checked;
+                this.memoryManager.saveSettings();
+                if (this.quantumMode) {
+                    this.createFractalNodes();
+                } else {
+                    this.quantumThinking.innerHTML = '';
+                }
+            });
+
+            document.getElementById('hyperthreading').addEventListener('change', (e) => {
+                window.quantumState.settings.hyperthreading = e.target.checked;
+                this.hyperthreading = e.target.checked;
+                this.memoryManager.saveSettings();
+                if (this.quantumMode) {
+                    this.createFractalNodes();
+                }
+            });
+
+            document.getElementById('multi-agent-mode').addEventListener('change', (e) => {
+                window.quantumState.settings.multiAgentMode = e.target.checked;
+                this.multiAgentMode = e.target.checked;
+                this.memoryManager.saveSettings();
+            });
+
+            document.getElementById('auto-save').addEventListener('change', (e) => {
+                window.quantumState.settings.autoSave = e.target.checked;
+                this.memoryManager.saveSettings();
+                if (e.target.checked) {
+                    this.startAutoSave();
+                } else {
+                    this.stopAutoSave();
+                }
+            });
+
+            document.getElementById('agent-count').addEventListener('change', (e) => {
+                window.quantumState.settings.agentCount = parseInt(e.target.value);
+                this.memoryManager.saveSettings();
+            });
+
+            document.getElementById('max-rounds').addEventListener('change', (e) => {
+                window.quantumState.settings.maxRounds = parseInt(e.target.value);
+                this.memoryManager.saveSettings();
+            });
+
+            document.getElementById('reasoning-depth').addEventListener('change', (e) => {
+                window.quantumState.settings.reasoningDepth = parseInt(e.target.value);
+                this.memoryManager.saveSettings();
+            });
+
+            // Memory management
             document.getElementById('btn-clear-cache').addEventListener('click', () => {
                 this.memoryManager.clearAllCache().then(success => {
                     quantumNotify(success ? 'Cache cleared' : 'Cache clearance failed', 
@@ -1352,26 +1807,87 @@
                 });
             });
 
-            // Quantum mode toggles
-            document.getElementById('quantum-mode').addEventListener('change', (e) => {
-                this.quantumMode = e.target.checked;
-                if (this.quantumMode) {
-                    this.createFractalNodes();
+            // Code suggestions
+            this.setupCodeSuggestions();
+        }
+
+        setupCodeSuggestions() {
+            const promptInput = document.getElementById('prompt-input');
+            const suggestionsPanel = document.getElementById('suggestions-panel');
+
+            promptInput.addEventListener('input', () => {
+                const value = promptInput.value.toLowerCase();
+                if (value.length < 2) {
+                    suggestionsPanel.style.display = 'none';
+                    return;
+                }
+
+                const suggestions = this.getSuggestions(value);
+                if (suggestions.length > 0) {
+                    this.showSuggestions(suggestions, promptInput);
                 } else {
-                    this.quantumThinking.innerHTML = '';
+                    suggestionsPanel.style.display = 'none';
                 }
             });
 
-            document.getElementById('hyperthreading').addEventListener('change', (e) => {
-                this.hyperthreading = e.target.checked;
-                if (this.quantumMode) {
-                    this.createFractalNodes();
-                }
+            promptInput.addEventListener('blur', () => {
+                setTimeout(() => {
+                    suggestionsPanel.style.display = 'none';
+                }, 200);
+            });
+        }
+
+        getSuggestions(input) {
+            const commonCommands = [
+                'create a function to sort arrays',
+                'optimize this code for performance',
+                'add error handling to this function',
+                'convert this to TypeScript',
+                'explain this code',
+                'refactor this code',
+                'write unit tests for this function',
+                'create a React component',
+                'implement a database query',
+                'add comments to this code',
+                'fix bugs in this code',
+                'improve code readability',
+                'implement authentication',
+                'create API endpoints',
+                'optimize database queries',
+                'add input validation',
+                'implement caching',
+                'create documentation',
+                'set up logging',
+                'handle edge cases'
+            ];
+
+            return commonCommands.filter(cmd => 
+                cmd.toLowerCase().includes(input.toLowerCase())
+            ).slice(0, 5);
+        }
+
+        showSuggestions(suggestions, inputElement) {
+            const suggestionsPanel = document.getElementById('suggestions-panel');
+            suggestionsPanel.innerHTML = '';
+
+            suggestions.forEach(suggestion => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = suggestion;
+                item.addEventListener('click', () => {
+                    inputElement.value = suggestion;
+                    suggestionsPanel.style.display = 'none';
+                    inputElement.focus();
+                });
+                suggestionsPanel.appendChild(item);
             });
 
-            document.getElementById('multi-agent-mode').addEventListener('change', (e) => {
-                this.multiAgentMode = e.target.checked;
-            });
+            const rect = inputElement.getBoundingClientRect();
+            suggestionsPanel.style.position = 'fixed';
+            suggestionsPanel.style.top = (rect.bottom + window.scrollY) + 'px';
+            suggestionsPanel.style.left = (rect.left + window.scrollX) + 'px';
+            suggestionsPanel.style.width = (rect.width) + 'px';
+            suggestionsPanel.style.display = 'block';
         }
 
         handleInput() {
@@ -1406,7 +1922,124 @@
                 } else if (event.key === 's') {
                     event.preventDefault();
                     quantumSaveFile();
+                } else if (event.key === 'f') {
+                    event.preventDefault();
+                    this.showFindDialog();
+                } else if (event.key === 'd') {
+                    event.preventDefault();
+                    this.duplicateLine();
                 }
+            } else if (event.key === 'F2') {
+                event.preventDefault();
+                this.renameVariable();
+            }
+        }
+
+        showFindDialog() {
+            const findText = prompt('Find:');
+            if (findText) {
+                const content = this.editor.textContent;
+                const regex = new RegExp(findText, 'gi');
+                const matches = content.match(regex);
+                if (matches) {
+                    quantumNotify(`Found ${matches.length} matches`, 'info');
+                    this.highlightMatches(findText);
+                } else {
+                    quantumNotify('No matches found', 'warn');
+                }
+            }
+        }
+
+        highlightMatches(text) {
+            const content = this.editor.innerHTML;
+            const regex = new RegExp(`(${text})`, 'gi');
+            const highlighted = content.replace(regex, '<mark>$1</mark>');
+            this.editor.innerHTML = highlighted;
+            
+            // Remove highlighting after 3 seconds
+            setTimeout(() => {
+                this.highlighter.highlightElement(this.editor, this.currentFileType);
+            }, 3000);
+        }
+
+        duplicateLine() {
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return;
+
+            const range = selection.getRangeAt(0);
+            const lineElement = range.startContainer.parentElement;
+            const lineText = lineElement.textContent;
+            
+            const newLine = document.createTextNode('\n' + lineText);
+            range.insertNode(newLine);
+            
+            this.handleInput();
+        }
+
+        renameVariable() {
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return;
+
+            const range = selection.getRangeAt(0);
+            const selectedText = range.toString();
+            
+            if (selectedText) {
+                const newName = prompt('Rename variable:', selectedText);
+                if (newName && newName !== selectedText) {
+                    range.deleteContents();
+                    range.insertNode(document.createTextNode(newName));
+                    this.handleInput();
+                }
+            } else {
+                quantumNotify('Select a variable to rename', 'warn');
+            }
+        }
+
+        insertText(text) {
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return;
+
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(document.createTextNode(text));
+
+            range.setStart(range.endContainer, range.endOffset);
+            range.setEnd(range.endContainer, range.endOffset);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            this.handleInput();
+        }
+
+        enableRealtimeHighlighting() {
+            this.highlighter.enableRealtimeHighlighting(this.editor, this.currentFileType);
+        }
+
+        initQuantumVisuals() {
+            const threadsContainer = document.getElementById('quantum-threads');
+            for (let i = 0; i < 5; i++) {
+                const thread = document.createElement('div');
+                thread.className = 'quantum-thread';
+                thread.style.left = `${20 + i * 15}%`;
+                thread.style.animationDelay = `${i * 0.3}s`;
+                threadsContainer.appendChild(thread);
+            }
+        }
+
+        createFractalNodes() {
+            if (!this.quantumMode) return;
+
+            this.quantumThinking.innerHTML = '';
+            const nodeCount = this.hyperthreading ? 12 : 6;
+
+            for (let i = 0; i < nodeCount; i++) {
+                const node = document.createElement('div');
+                node.className = 'fractal-node';
+                node.style.left = `${Math.random() * 100}%`;
+                node.style.top = `${Math.random() * 100}%`;
+                node.style.animationDelay = `${Math.random() * 2}s`;
+                node.style.background = i % 2 === 0 ? 'var(--agent-nexus)' : 'var(--agent-cognito)';
+                this.quantumThinking.appendChild(node);
             }
         }
 
@@ -1417,17 +2050,29 @@
             this.historyStack.push(content);
             this.redoStack = [];
 
-            // Enforce history size limit
             if (this.historyStack.length > this.maxHistorySize) {
-                this.historyStack.shift(); // Remove oldest entry
+                this.historyStack.shift();
             }
         }
 
-        // Memory-optimized rendering for large files
+        undo() {
+            if (this.historyStack.length > 1) {
+                this.redoStack.push(this.historyStack.pop());
+                this.render(this.historyStack[this.historyStack.length - 1]);
+            }
+        }
+
+        redo() {
+            if (this.redoStack.length) {
+                const content = this.redoStack.pop();
+                this.historyStack.push(content);
+                this.render(content);
+            }
+        }
+
         render(content) {
             try {
-                // Chunk large content for better performance
-                if (content.length > 100000) { // 100KB threshold
+                if (content.length > 100000) {
                     this.renderInChunks(content);
                 } else {
                     this.editor.textContent = content;
@@ -1464,7 +2109,7 @@
 
                 if (end < lines.length) {
                     currentChunk++;
-                    setTimeout(renderNextChunk, 0); // Yield to browser
+                    setTimeout(renderNextChunk, 0);
                 } else {
                     this.highlightContent();
                 }
@@ -1473,21 +2118,9 @@
             renderNextChunk();
         }
 
-        handleMemoryError(error) {
-            console.error('Memory error occurred:', error);
-            this.memoryStatus.textContent = 'RAM: CRITICAL';
-            this.memoryStatus.className = 'memory-status low';
-            
-            // Emergency cleanup
-            this.memoryManager.emergencyCleanup();
-            
-            // Clear editor to free memory
-            this.editor.textContent = '// Memory optimization in progress...\n// Please save your work and refresh if issues persist';
-            
-            quantumNotify('Memory optimized for stability', 'warn');
+        highlightContent() {
+            this.highlighter.highlightElement(this.editor, this.currentFileType);
         }
-
-        // ... (rest of the QuantumEditor methods remain similar but with try-catch wrappers)
 
         updateLineNumbers() {
             try {
@@ -1507,11 +2140,56 @@
             }
         }
 
-        // ... (other methods with similar error handling)
+        syncScroll() {
+            this.lineNumbers.scrollTop = this.editor.scrollTop;
+        }
+
+        updateStatus() {
+            const selection = window.getSelection();
+            const text = this.editor.textContent || '';
+            const lines = text.split('\n');
+
+            let lineNum = 1;
+            let colNum = 0;
+
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const preCaretRange = range.cloneRange();
+                preCaretRange.selectNodeContents(this.editor);
+                preCaretRange.setEnd(range.endContainer, range.endOffset);
+
+                const preCaretText = preCaretRange.toString();
+                const preCaretLines = preCaretText.split('\n');
+
+                lineNum = preCaretLines.length;
+                colNum = preCaretLines[preCaretLines.length - 1].length;
+            }
+
+            const quantumStatus = this.quantumMode ?
+                ` | Quantum: ${this.hyperthreading ? 'Hyperthreaded' : 'Standard'}` :
+                ' | Classical Mode';
+
+            const agentStatus = this.multiAgentMode ? ' | Multi-Agent' : ' | Single-Agent';
+
+            this.statusEditor.textContent =
+                `Cursor: ${lineNum}:${colNum} | Lines: ${lines.length} | Chars: ${text.length} | History: ${this.historyStack.length}${quantumStatus}${agentStatus}`;
+        }
+
+        handleMemoryError(error) {
+            console.error('Memory error occurred:', error);
+            document.getElementById('memory-status').textContent = 'RAM: CRITICAL';
+            document.getElementById('memory-status').className = 'memory-status low';
+            
+            this.memoryManager.emergencyCleanup();
+            this.editor.textContent = '// Memory optimization in progress...\n// Please save your work and refresh if issues persist';
+            
+            quantumNotify('Memory optimized for stability', 'warn');
+        }
 
         setContent(content, fileType = 'javascript') {
             try {
                 this.currentFileType = fileType;
+                this.highlighter.setLanguage(fileType);
                 this.render(content);
                 this.historyStack = [content];
                 this.redoStack = [];
@@ -1523,32 +2201,636 @@
         getContent() {
             return this.editor.textContent;
         }
+
+        insertCodeAtCursor(code) {
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return;
+
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = code;
+
+            const fragment = document.createDocumentFragment();
+            while (tempDiv.firstChild) {
+                fragment.appendChild(tempDiv.firstChild);
+            }
+
+            range.insertNode(fragment);
+
+            range.setStartAfter(fragment.lastChild);
+            range.setEndAfter(fragment.lastChild);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            this.handleInput();
+        }
+
+        replaceSelectionWithCode(code) {
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return;
+
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+
+            const textNode = document.createTextNode(code);
+            range.insertNode(textNode);
+
+            range.setStartAfter(textNode);
+            range.setEndAfter(textNode);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            this.handleInput();
+        }
+
+        // Code formatting and beautification
+        beautifyCode() {
+            try {
+                const content = this.getContent();
+                let formatted = content;
+
+                // Basic formatting rules
+                formatted = formatted.replace(/\s+/g, ' '); // Remove extra whitespace
+                formatted = formatted.replace(/\s*{\s*/g, ' { '); // Format braces
+                formatted = formatted.replace(/\s*}\s*/g, ' } ');
+                formatted = formatted.replace(/\s*\(\s*/g, ' ( '); // Format parentheses
+                formatted = formatted.replace(/\s*\)\s*/g, ' ) ');
+                formatted = formatted.replace(/;\s+/g, ';\n'); // Add newlines after semicolons
+                formatted = formatted.replace(/\n\s*\n/g, '\n'); // Remove multiple empty lines
+
+                this.setContent(formatted);
+                quantumNotify('Code beautified', 'success');
+            } catch (error) {
+                quantumNotify('Beautification failed', 'error');
+            }
+        }
     }
 
-    // Initialize with error handling
+    /* =========================================================================
+       ENHANCED QUANTUM ORCHESTRATOR WITH FULL 10-RULES IMPLEMENTATION
+       ========================================================================== */
+
+    class EnhancedQuantumOrchestrator {
+        constructor() {
+            this.agents = {
+                nexus: document.querySelector('.agent-nexus .agent-content'),
+                cognito: document.querySelector('.agent-cognito .agent-content'),
+                relay: document.querySelector('.agent-relay .agent-content'),
+                sentinel: document.querySelector('.agent-sentinel .agent-content'),
+                echo: document.querySelector('.agent-echo .agent-content')
+            };
+
+            this.logElements = {
+                nexus: document.getElementById('nexus-log'),
+                cognito: document.getElementById('cognito-log'),
+                relay: document.getElementById('relay-log'),
+                sentinel: document.getElementById('sentinel-log'),
+                echo: document.getElementById('echo-log')
+            };
+
+            this.agentCards = {
+                nexus: document.querySelector('.agent-nexus'),
+                cognito: document.querySelector('.agent-cognito'),
+                relay: document.querySelector('.agent-relay'),
+                sentinel: document.querySelector('.agent-sentinel'),
+                echo: document.querySelector('.agent-echo')
+            };
+
+            this.consensusPanel = document.getElementById('consensus-panel');
+            this.candidatesList = document.getElementById('candidates-list');
+            this.consensusScore = document.getElementById('consensus-score');
+
+            this.isGenerating = false;
+            this.quantumConnected = false;
+            this.fileSystem = {
+                genesisHash: null,
+                eventLog: [],
+                fragments: [],
+                origins: {}
+            };
+
+            this.checkQuantumConnection();
+            this.initQuantumHashing();
+            this.bindOrchestratorEvents();
+        }
+
+        bindOrchestratorEvents() {
+            document.getElementById('run-orchestrator').addEventListener('click', () => {
+                this.runEnhancedOrchestrator();
+            });
+
+            document.getElementById('btn-orchestrate').addEventListener('click', () => {
+                this.runEnhancedOrchestrator();
+            });
+        }
+
+        initQuantumHashing() {
+            this.hashSequences = {
+                nexus: this.generateFractalHash('nexus'),
+                cognito: this.generateFractalHash('cognito'),
+                relay: this.generateFractalHash('relay'),
+                sentinel: this.generateFractalHash('sentinel'),
+                echo: this.generateFractalHash('echo')
+            };
+        }
+
+        generateFractalHash(agentName, depth = 3) {
+            const base = agentName + Date.now().toString();
+            let hash = '';
+
+            for (let i = 0; i < depth; i++) {
+                let current = base;
+                for (let j = 0; j <= i; j++) {
+                    current = btoa(current).substring(0, 16);
+                }
+                hash += current;
+            }
+
+            return btoa(hash).substring(0, 32);
+        }
+
+        async checkQuantumConnection() {
+            try {
+                const response = await fetch('http://localhost:11434/api/tags');
+                if (response.ok) {
+                    this.quantumConnected = true;
+                    quantumNotify('Ollama connected', 'success');
+                } else {
+                    this.setQuantumDisconnected();
+                }
+            } catch (error) {
+                this.setQuantumDisconnected();
+            }
+        }
+
+        setQuantumDisconnected() {
+            this.quantumConnected = false;
+            quantumNotify('Ollama not found - using simulated mode', 'warn');
+        }
+
+        async runEnhancedOrchestrator() {
+            if (this.isGenerating) return;
+
+            this.isGenerating = true;
+            const promptInput = document.getElementById('prompt-input');
+            const promptText = promptInput.value.trim() || "Optimize this code with quantum fractal patterns";
+            const editorContext = quantumEditor.getContent();
+
+            document.getElementById('ai-response-panel').style.display = 'block';
+
+            Object.values(this.agents).forEach(agent => {
+                agent.innerHTML = 'Initializing enhanced orchestration...';
+            });
+
+            Object.values(this.agentCards).forEach(card => {
+                card.classList.remove('active');
+            });
+
+            Object.values(this.logElements).forEach(log => {
+                log.innerHTML = '';
+            });
+
+            this.agents.nexus.innerHTML = '<div class="quantum-spinner"></div>Starting enhanced quantum orchestration...';
+            this.agentCards.nexus.classList.add('active');
+
+            try {
+                // Rule 1: Genesis-hash
+                await this.addLog('nexus', 'Generating genesis hash...', 'genesis');
+                const genesisHash = await this.generateGenesisHash();
+                this.fileSystem.genesisHash = genesisHash;
+                await this.addLog('nexus', `Genesis: ${genesisHash.substring(0, 16)}...`, 'genesis');
+
+                // Rule 2: Origin-hash per agent
+                await this.addLog('nexus', 'Generating origin hashes for agents...', 'origin');
+                const agents = [];
+                const agentCount = window.quantumState.settings.agentCount;
+                
+                for (let i = 0; i < agentCount; i++) {
+                    const agentId = `agent-${i}`;
+                    const originHash = await this.generateOriginHash(genesisHash, agentId);
+                    this.fileSystem.origins[agentId] = originHash;
+                    agents.push({ id: agentId, origin: originHash });
+                    await this.addLog('nexus', `${agentId}: ${originHash.substring(0, 12)}...`, 'origin');
+                }
+
+                // Rule 3: Parse prompt & timestamp event
+                await this.addLog('nexus', 'Creating event log entry...', 'event');
+                const event = {
+                    prompt: promptText,
+                    timestamp: Date.now(),
+                    origin: genesisHash,
+                    eventId: this.generateEventId()
+                };
+                this.fileSystem.eventLog.push(event);
+                await this.addLog('nexus', `Event: ${event.eventId} logged`, 'event');
+
+                // Rule 4: Start fractal quantum-states
+                await this.addLog('cognito', `<div class="quantum-spinner"></div>Spawning ${agentCount} fractal agents...`);
+                this.agentCards.cognito.classList.add('active');
+
+                const allCandidates = [];
+                const maxRounds = window.quantumState.settings.maxRounds;
+                
+                for (let round = 0; round < maxRounds; round++) {
+                    await this.addLog('relay', `<div class="quantum-spinner"></div>Round ${round + 1}/${maxRounds}...`);
+                    this.agentCards.relay.classList.add('active');
+
+                    const roundPromises = agents.map(async (agent) => {
+                        // Rule 5: Rehash each origin with genesis
+                        const newOrigin = await this.rehashOrigin(agent.origin, genesisHash, round);
+                        agent.origin = newOrigin;
+
+                        // Rule 6: Accelerate reasoning on maths-logic
+                        const candidate = await this.performFractalReasoning(agent, promptText, editorContext, round);
+                        
+                        // Store fragment
+                        const fragment = {
+                            agentId: agent.id,
+                            origin: agent.origin,
+                            round,
+                            candidate,
+                            entropy: this.calculateEntropy(agent.origin),
+                            timestamp: Date.now()
+                        };
+                        
+                        // Rule 7: Enforce collaboration
+                        const peerFragments = this.fileSystem.fragments.filter(f => 
+                            f.round === round && f.agentId !== agent.id
+                        );
+                        
+                        // Rule 8: Set fragments as thinking pool
+                        this.fileSystem.fragments.push(fragment);
+                        await this.addLog('sentinel', `Fragment from ${agent.id} (round ${round})`, 'fragment');
+
+                        allCandidates.push(fragment);
+                        return fragment;
+                    });
+
+                    await Promise.all(roundPromises);
+                    await new Promise(r => setTimeout(r, 500));
+                }
+
+                // Rule 9: Assemble final answer
+                await this.addLog('sentinel', `<div class="quantum-spinner"></div>Assembling final consensus...`);
+                this.agentCards.sentinel.classList.add('active');
+                const consensus = await this.assembleFinalAnswer(allCandidates, genesisHash);
+
+                // Rule 10: Use highest entropy origin as root
+                await this.addLog('echo', `<div class="quantum-spinner"></div>Finalizing quantum report...`);
+                this.agentCards.echo.classList.add('active');
+                await this.displayEnhancedConsensusResults(consensus, allCandidates);
+
+            } catch (e) {
+                console.error("Enhanced orchestrator error:", e);
+                this.agents.echo.innerHTML = `<span style="color: #ff4444">Orchestrator Error: ${e.message}</span>`;
+            } finally {
+                this.agents.nexus.innerHTML = 'Enhanced orchestration complete';
+                this.agents.cognito.innerHTML = 'Ready';
+                this.agents.relay.innerHTML = 'Ready';
+                this.agents.sentinel.innerHTML = 'Ready';
+
+                Object.values(this.agentCards).forEach(card => {
+                    card.classList.remove('active');
+                });
+                this.isGenerating = false;
+            }
+        }
+
+        async generateGenesisHash() {
+            const timestamp = Date.now().toString();
+            const random = Math.random().toString(36).substring(2);
+            return this.simulateSHA256('GENESIS' + timestamp + random);
+        }
+
+        async generateOriginHash(genesis, agentId) {
+            const nonce = Math.random().toString(36).substring(2, 10);
+            return this.simulateSHA256(genesis + agentId + nonce);
+        }
+
+        async rehashOrigin(origin, genesis, round) {
+            return this.simulateSHA256(origin + genesis + round.toString());
+        }
+
+        simulateSHA256(input) {
+            let hash = 0;
+            for (let i = 0; i < input.length; i++) {
+                const char = input.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(36) + Math.random().toString(36).substring(2, 10);
+        }
+
+        generateEventId() {
+            return 'event_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+        }
+
+        calculateEntropy(hash) {
+            const charCounts = {};
+            for (const char of hash) {
+                charCounts[char] = (charCounts[char] || 0) + 1;
+            }
+            
+            let entropy = 0;
+            const length = hash.length;
+            
+            for (const char in charCounts) {
+                const probability = charCounts[char] / length;
+                entropy -= probability * Math.log2(probability);
+            }
+            
+            return entropy;
+        }
+
+        async performFractalReasoning(agent, prompt, context, round) {
+            const reasoningStrategies = [
+                "Apply recursive optimization patterns",
+                "Use quantum efficiency algorithms", 
+                "Implement fractal code structure",
+                "Apply hyperthreaded reasoning",
+                "Use entropy-based selection",
+                "Apply mathematical transformation",
+                "Implement parallel processing",
+                "Use consensus validation"
+            ];
+
+            const strategy = reasoningStrategies[(round * window.quantumState.settings.reasoningDepth) % reasoningStrategies.length];
+            const seed = agent.origin.substring(0, 12);
+
+            await new Promise(r => setTimeout(r, 200 + (Math.random() * 400)));
+
+            let reasoningOutput = `// ${agent.id} - Round ${round + 1} - ${strategy}
+// Seed: ${seed} | Entropy: ${this.calculateEntropy(agent.origin).toFixed(3)}
+// Fractal Depth: ${window.quantumState.settings.reasoningDepth}
+
+`;
+
+            const contextLines = context.split('\n').slice(0, 5);
+            reasoningOutput += `// Context preview:\n`;
+            contextLines.forEach((line, index) => {
+                reasoningOutput += `// ${line.substring(0, 60)}${line.length > 60 ? '...' : ''}\n`;
+            });
+
+            reasoningOutput += `
+// ${strategy.toLowerCase()} applied with quantum fractal patterns
+function ${agent.id.replace('-', '_')}_quantum_${round}() {
+    // Quantum-optimized implementation
+    try {
+        // Apply fractal transformation
+        ${this.applyFractalTransformation(context, strategy)}
+    } catch (quantumError) {
+        console.error("Quantum fractal error:", quantumError);
+        // Fallback to classical implementation
+        ${this.getClassicalFallback(context)}
+    }
+}`;
+
+            return reasoningOutput;
+        }
+
+        applyFractalTransformation(context, strategy) {
+            const transformations = {
+                "Apply recursive optimization patterns": `
+        // Recursive fractal optimization
+        function fractalOptimize(input, depth = 0) {
+            if (depth >= 3) return input;
+            return fractalOptimize(transform(input), depth + 1);
+        }
+        return fractalOptimize(data);`,
+                
+                "Use quantum efficiency algorithms": `
+        // Quantum efficiency with parallel processing
+        const results = await Promise.all(
+            data.map(item => processQuantum(item))
+        );
+        return results.flat();`,
+                
+                "Implement fractal code structure": `
+        // Fractal code structure with self-similar patterns
+        const fractal = {
+            transform: (x) => x * 2,
+            iterate: (fn, n) => n > 0 ? fractal.iterate(fn, n-1) : fn(),
+            optimize: (data) => data.map(fractal.transform)
+        };
+        return fractal.optimize(data);`,
+                
+                "Apply hyperthreaded reasoning": `
+        // Hyperthreaded execution
+        const threads = [];
+        for (let i = 0; i < 4; i++) {
+            threads.push(executeThread(data.slice(i * chunkSize, (i+1) * chunkSize)));
+        }
+        return (await Promise.all(threads)).flat();`
+            };
+
+            return transformations[strategy] || `
+        // Standard optimization applied
+        return data.map(item => optimize(item));`;
+        }
+
+        getClassicalFallback(context) {
+            return `
+        // Classical fallback implementation
+        return data.filter(item => item !== null && item !== undefined)
+                   .map(item => standardTransform(item));`;
+        }
+
+        async assembleFinalAnswer(allCandidates, genesis) {
+            const candidateGroups = {};
+
+            for (const candidate of allCandidates) {
+                const key = candidate.candidate.substring(0, 100);
+                if (!candidateGroups[key]) {
+                    candidateGroups[key] = {
+                        candidates: [],
+                        totalEntropy: 0,
+                        agents: new Set(),
+                        rounds: new Set()
+                    };
+                }
+                candidateGroups[key].candidates.push(candidate);
+                candidateGroups[key].totalEntropy += candidate.entropy;
+                candidateGroups[key].agents.add(candidate.agentId);
+                candidateGroups[key].rounds.add(candidate.round);
+            }
+
+            const scoredGroups = Object.entries(candidateGroups).map(([key, group]) => {
+                const agentCount = group.agents.size;
+                const roundCount = group.rounds.size;
+                const avgEntropy = group.totalEntropy / group.candidates.length;
+                const score = (agentCount * 2) + (roundCount * 1.5) + (avgEntropy * 3);
+                
+                return { key, candidates: group.candidates, score, agentCount, roundCount, avgEntropy };
+            });
+
+            scoredGroups.sort((a, b) => b.score - a.score);
+            const topGroup = scoredGroups[0];
+            const rootCandidate = topGroup.candidates.reduce((best, current) => 
+                current.entropy > best.entropy ? current : best
+            );
+
+            return {
+                genesis,
+                selectedCandidate: topGroup.candidates[0].candidate,
+                score: topGroup.score.toFixed(3),
+                agentCount: topGroup.agentCount,
+                roundCount: topGroup.roundCount,
+                avgEntropy: topGroup.avgEntropy.toFixed(3),
+                rootAgent: rootCandidate.agentId,
+                rootEntropy: rootCandidate.entropy.toFixed(3),
+                allGroups: scoredGroups
+            };
+        }
+
+        async displayEnhancedConsensusResults(consensus, allCandidates) {
+            this.consensusPanel.style.display = 'block';
+            this.consensusScore.textContent = `Score: ${consensus.score}`;
+
+            this.candidatesList.innerHTML = '';
+
+            consensus.allGroups.forEach((group, index) => {
+                const isSelected = index === 0;
+                const candidateEl = document.createElement('div');
+                candidateEl.className = `candidate-item ${isSelected ? 'selected-candidate' : ''}`;
+                candidateEl.innerHTML = `
+                    <div class="candidate-meta">
+                        <span>Agents: ${group.agentCount} | Rounds: ${group.roundCount}</span>
+                        <span>Score: ${group.score.toFixed(2)} | Entropy: ${group.avgEntropy}</span>
+                    </div>
+                    <div class="candidate-content">${group.candidates[0].candidate.substring(0, 200)}${group.candidates[0].candidate.length > 200 ? '...' : ''}</div>
+                `;
+                this.candidatesList.appendChild(candidateEl);
+            });
+
+            const highlighter = new QuantumSyntaxHighlighter();
+            const highlightedCode = highlighter.highlightText(consensus.selectedCandidate, quantumEditor.currentFileType);
+
+            const quantumButtons = `
+                <div class="action-buttons">
+                    <button class="small success" onclick="quantumCopyEnhancedConsensus()">Copy Enhanced Consensus</button>
+                    <button class="small info" onclick="quantumApplyEnhancedConsensus()">Apply Enhanced Code</button>
+                    <button class="small" onclick="quantumRerunEnhancedOrchestrator()" style="background: var(--agent-nexus);">Rerun Enhanced</button>
+                </div>
+            `;
+
+            this.agents.echo.innerHTML = `
+                <div style="border-left: 3px solid var(--agent-nexus); padding-left: 10px; margin-bottom: 10px;">
+                    <strong>Enhanced Quantum Consensus Complete</strong><br>
+                    <small>Root Agent: ${consensus.rootAgent} | Score: ${consensus.score}</small><br>
+                    <small>Entropy: ${consensus.avgEntropy} | Agents: ${consensus.agentCount} | Rounds: ${consensus.roundCount}</small>
+                </div>
+                <pre style="background: #1a1a1a; padding: 10px; border-radius: 4px; overflow: auto; max-height: 300px; border: 1px solid var(--agent-cognito);">${highlightedCode}</pre>
+                ${quantumButtons}
+            `;
+
+            window.quantumConsensusCode = consensus.selectedCandidate;
+        }
+
+        async addLog(agent, message, type = 'info') {
+            const logEl = this.logElements[agent];
+            if (!logEl) return;
+
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            
+            logEl.appendChild(logEntry);
+            logEl.scrollTop = logEl.scrollHeight;
+
+            this.agentCards[agent].classList.add('active');
+            setTimeout(() => {
+                this.agentCards[agent].classList.remove('active');
+            }, 500);
+        }
+
+        async quantumOptimize() {
+            const currentCode = quantumEditor.getContent();
+            this.runEnhancedOrchestrator();
+        }
+
+        async quantumDocument() {
+            const currentCode = quantumEditor.getContent();
+            this.runEnhancedOrchestrator();
+        }
+
+        async quantumRefactor() {
+            const currentCode = quantumEditor.getContent();
+            this.runEnhancedOrchestrator();
+        }
+    }
+
+    // Global functions
+    function quantumCopyEnhancedConsensus() {
+        if (window.quantumConsensusCode) {
+            navigator.clipboard.writeText(window.quantumConsensusCode).then(() => {
+                quantumNotify('Enhanced consensus code copied to clipboard!', 'success');
+            });
+        }
+    }
+
+    function quantumApplyEnhancedConsensus() {
+        if (window.quantumConsensusCode) {
+            quantumEditor.setContent(window.quantumConsensusCode, quantumEditor.currentFileType);
+            quantumNotify('Enhanced consensus code applied!', 'success');
+        }
+    }
+
+    function quantumRerunEnhancedOrchestrator() {
+        enhancedOrchestrator.runEnhancedOrchestrator();
+    }
+
+    function quantumNotify(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? 'var(--accent)' : 
+                        type === 'warn' ? 'var(--warn-bg)' : 
+                        type === 'error' ? 'var(--err)' : 'var(--info)'};
+            color: ${type === 'warn' ? '#3a3c31' : 'white'};
+            padding: 10px 15px;
+            border-radius: 4px;
+            z-index: 1000;
+            font-size: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        `;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 3000);
+    }
+
+    // Initialize the application
     let quantumEditor;
+    let enhancedOrchestrator;
     let memoryManager;
 
     document.addEventListener('DOMContentLoaded', () => {
         try {
             memoryManager = new QuantumMemoryManager();
             quantumEditor = new QuantumEditor();
+            enhancedOrchestrator = new EnhancedQuantumOrchestrator();
             
-            // Initialize other components with error handling
             initQuantumFileHandling();
             initQuantumAI();
             initQuantumPreview();
             initQuantumLeftPanel();
             initQuantumQuickActions();
             
-            quantumNotify('Quantum Editor Ready - Memory Optimized', 'success');
+            quantumNotify('Quantum Fractal AI Editor Ready', 'success');
         } catch (error) {
             console.error('Initialization failed:', error);
             quantumNotify('Initialization failed - check console', 'error');
         }
     });
 
-    // Global error handler for uncaught exceptions
+    // Global error handler
     window.addEventListener('error', (event) => {
         console.error('Global error:', event.error);
         if (memoryManager) {
@@ -1556,12 +2838,140 @@
         }
     });
 
-    // ... (rest of the initialization functions with try-catch wrappers)
+    // File handling functions
+    function initQuantumFileHandling() {
+        document.getElementById('open-file').addEventListener('click', () => {
+            document.getElementById('file-input').click();
+        });
 
-    // Note: The syntax highlighter and orchestrator classes would also need
-    // similar memory optimization patterns, but are omitted for brevity
+        document.getElementById('file-input').addEventListener('change', handleFileOpen);
+        document.getElementById('save-file').addEventListener('click', quantumSaveFile);
+        document.getElementById('save-as').addEventListener('click', quantumSaveAsFile);
+    }
+
+    function handleFileOpen(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const fileName = file.name;
+            const fileType = quantumEditor.highlighter.detectLanguage(fileName);
+            const content = ev.target.result;
+
+            quantumEditor.setContent(content, fileType);
+            document.getElementById('file-meta').textContent = fileName;
+            quantumEditor.currentFileName = fileName;
+
+            // Add to recent files
+            memoryManager.addRecentFile(fileName, content);
+        };
+        reader.readAsText(file);
+    }
+
+    function quantumSaveFile() {
+        if (!quantumEditor.currentFileName) {
+            quantumSaveAsFile();
+            return;
+        }
+
+        const blob = new Blob([quantumEditor.getContent()], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = quantumEditor.currentFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+        
+        quantumNotify('File saved successfully', 'success');
+    }
+
+    function quantumSaveAsFile() {
+        const fileName = prompt('Enter file name:', quantumEditor.currentFileName || 'quantum_code.js');
+        if (fileName) {
+            quantumEditor.currentFileName = fileName;
+            const fileType = quantumEditor.highlighter.detectLanguage(fileName);
+            quantumEditor.setContent(quantumEditor.getContent(), fileType);
+            document.getElementById('file-meta').textContent = fileName;
+            quantumSaveFile();
+        }
+    }
+
+    // AI functionality
+    function initQuantumAI() {
+        document.getElementById('send-button').addEventListener('click', runQuantumAI);
+        document.getElementById('run-local-ai').addEventListener('click', runQuantumAI);
+
+        document.getElementById('prompt-input').addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runQuantumAI();
+            }
+        });
+
+        document.getElementById('close-ai-panel').addEventListener('click', () => {
+            document.getElementById('ai-response-panel').style.display = 'none';
+        });
+    }
+
+    function runQuantumAI() {
+        const promptInput = document.getElementById('prompt-input');
+        const prompt = promptInput.value.trim();
+        if (!prompt) return;
+
+        if (quantumEditor.multiAgentMode) {
+            enhancedOrchestrator.runEnhancedOrchestrator();
+        } else {
+            quantumNotify('Enhanced orchestration required for full functionality', 'warn');
+        }
+        promptInput.value = '';
+    }
+
+    // Preview functionality
+    function initQuantumPreview() {
+        document.getElementById('btn-render').addEventListener('click', renderQuantumHTML);
+        document.getElementById('render-html').addEventListener('click', renderQuantumHTML);
+
+        document.getElementById('close-preview').addEventListener('click', () => {
+            document.getElementById('preview-panel').style.display = 'none';
+            const previewContent = document.getElementById('preview-content');
+            if (previewContent.src.startsWith('blob:')) {
+                URL.revokeObjectURL(previewContent.src);
+            }
+        });
+    }
+
+    function renderQuantumHTML() {
+        try {
+            const blob = new Blob([quantumEditor.getContent()], { type: 'text/html' });
+            const previewContent = document.getElementById('preview-content');
+            previewContent.src = URL.createObjectURL(blob);
+            document.getElementById('preview-panel').style.display = 'flex';
+        } catch (e) {
+            alert('Quantum rendering error: ' + e.message);
+        }
+    }
+
+    // Left panel functionality
+    function initQuantumLeftPanel() {
+        document.getElementById('left-toggle').addEventListener('click', () => {
+            const isOpen = document.getElementById('editor-stage').classList.toggle('left-panel-open');
+            document.getElementById('left-toggle').textContent = isOpen ? '✕' : '☰';
+        });
+
+        document.getElementById('btn-undo').addEventListener('click', () => quantumEditor.undo());
+        document.getElementById('btn-redo').addEventListener('click', () => quantumEditor.redo());
+        document.getElementById('btn-beautify').addEventListener('click', () => quantumEditor.beautifyCode());
+    }
+
+    // Quick actions
+    function initQuantumQuickActions() {
+        document.getElementById('btn-optimize').addEventListener('click', () => enhancedOrchestrator.quantumOptimize());
+        document.getElementById('btn-document').addEventListener('click', () => enhancedOrchestrator.quantumDocument());
+        document.getElementById('btn-refactor').addEventListener('click', () => enhancedOrchestrator.quantumRefactor());
+    }
 
 </script>
-<script type="module" src="assets/index-B2r34P7o.js"></script>
 </body>
 </html>

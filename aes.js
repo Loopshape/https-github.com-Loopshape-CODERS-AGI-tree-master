@@ -10,7 +10,7 @@ import cors from "cors";
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "4mb" }));
 
 // AES key: env var, else derived from ~/.ssh/nemodian.pub
 let AES_KEY = process.env.AES_KEY;
@@ -77,5 +77,3 @@ app.listen(PORT, () => {
   console.log(`🔒 AES key: ${AES_KEY.substring(0, 8)}...`);
   auralLogs(); // initial fetch
 });
-# PATCH applied directly to file
-# PATCH applied directly to file
