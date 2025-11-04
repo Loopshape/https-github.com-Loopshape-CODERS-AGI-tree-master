@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nemodian Core :: Local Agent-Pool Editor</title>
+    <style>
+        /* ----- Quantum CSS Variables ----- */
+        :root {
+            --muted: #888;
+            --info: #2196F3;
+            --warn: #FF9800;
+            --error: #F44336;
+            --success: #4CAF50;
+            --baseline: 1.5em;
+            --header-h: calc(var(--baseline) * 1.6);
+            --status-h: var(--baseline);
+            --footer-h: calc(var(--baseline) * 2);
+            --font-size: 13px;
+            --ln-width: 50px;
+            --theme-bg: #3a3c31;
+            --panel: #313328;
+            --header-bg: #2e3026;
+            --status-bg: #22241e;
+            --accent: #4ac94a;
+            --muted-text: #999966;
+            --err: #a03333;
+            --warn-bg: #f0ad4e;
+            --hover-blue: #3366a0;
+            --info-bg: #5bc0de;
+            /* New Agent Colors Mapped from Old */
+            --agent-core: #BB86FC;      /* Nexus */
+            --agent-loop: #03DAC6;      /* Cognito */
+            --agent-2244: #FFD54F;      /* Relay */
+            --agent-coin: #CF6679;      /* Sentinel */
+            --agent-code: #4ac94a;      /* Echo */
+            --quantum-glow: rgba(187, 134, 252, 0.6);
+        }
+
+        /* ----- Base ----- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Fira Code', monospace;
+            font-size: var(--font-size);
+            line-height: var(--baseline);
+            background: var(--theme-bg);
+            color: #f0f0e0;
+            overflow: hidden;
+        }
+
+        body {
+            display: grid;
+            grid-template-rows: var(--header-h) var(--status-h) 1fr var(--footer-h);
+        }
+
+        /* ----- Header ----- */
+        header {
+            grid-row: 1;
+            grid-column: 1 / -1;
+            background: var(--header-bg);
+            border-bottom: 1px solid #22241e;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, var(--quantum-glow), transparent);
+            animation: quantumScan 4s infinite linear;
+        }
+
+        @keyframes quantumScan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .quantum-pulse {
+            animation: quantumPulse 2s infinite alternate;
+        }
+
+        @keyframes quantumPulse {
+            0% { opacity: 0.7; transform: scale(1); }
+            100% { opacity: 1; transform: scale(1.05); }
+        }
+
+        header .left, header .right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        button {
+            background: var(--panel);
+            border: 1px solid var(--muted-text);
+            color: #f0f0e0;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all .2s;
+            border-radius: 3px;
+        }
+
+        button:hover {
+            background: var(--hover-blue);
+            border-color: var(--hover-blue);
+        }
+
+        button.success {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* ----- Status Bar ----- */
+        #status-bar {
+            grid-row: 2;
+            grid-column: 1 / -1;
+            background: var(--status-bg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 12px;
+            font-size: 12px;
+            position: relative;
+        }
+
+        /* ----- Modern Editor Layout ----- */
+        #editor-stage {
+            grid-row: 3;
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 0px 1fr;
+            background: var(--theme-bg);
+            overflow: hidden;
+            position: relative;
+            transition: grid-template-columns 0.3s ease;
+        }
+
+        #editor-stage.left-panel-open {
+            grid-template-columns: 240px 1fr;
+        }
+
+        #left-panel {
+            background: var(--panel);
+            border-right: 1px solid #22241e;
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow: hidden;
+            width: 240px;
+        }
+
+        /* ----- Editor Container ----- */
+        .editor-container {
+            position: relative;
+            display: flex;
+            flex: 1;
+            background: var(--theme-bg);
+            overflow: auto;
+        }
+
+        .line-numbers {
+            width: var(--ln-width);
+            padding: 10px 8px;
+            background: var(--panel);
+            color: var(--muted-text);
+            text-align: right;
+            user-select: none;
+            line-height: var(--baseline);
+            flex-shrink: 0;
+            position: sticky;
+            left: 0;
+            z-index: 10;
+        }
+
+        .editor-content {
+            flex: 1;
+            position: relative;
+            min-height: 100%;
+            padding: 10px 12px;
+            box-sizing: border-box;
+            white-space: pre;
+            line-height: var(--baseline);
+            tab-size: 4; -moz-tab-size: 4;
+            caret-color: var(--accent);
+            outline: none;
+            overflow-wrap: normal;
+            word-break: normal;
+        }
+
+        /* ----- Footer ----- */
+        footer {
+            grid-row: 4;
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 12px;
+            background: var(--header-bg);
+            border-top: 1px solid #22241e;
+        }
+
+        #prompt-input {
+            flex: 1;
+            margin-right: 8px;
+            padding: 8px;
+            background: var(--status-bg);
+            border: 1px solid var(--accent);
+            color: #f0f0e0;
+            font-family: inherit;
+            border-radius: 3px;
+            font-size: 16px;
+        }
+
+        /* ----- Agent System Styles ----- */
+        .agent-card {
+            background: var(--panel);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-left: 4px solid var(--muted-text);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .agent-card.active {
+            box-shadow: 0 0 20px var(--quantum-glow);
+            transform: translateY(-2px);
+        }
+
+        .agent-card.core { border-left-color: var(--agent-core); }
+        .agent-card.loop { border-left-color: var(--agent-loop); }
+        .agent-card.agent-2244 { border-left-color: var(--agent-2244); }
+        .agent-card.coin { border-left-color: var(--agent-coin); }
+        .agent-card.code { border-left-color: var(--agent-code); }
+
+        .agent-title { font-weight: bold; font-size: 14px; margin-bottom: 4px; }
+        .agent-core .agent-title { color: var(--agent-core); }
+        .agent-loop .agent-title { color: var(--agent-loop); }
+        .agent-2244 .agent-title { color: var(--agent-2244); }
+        .agent-coin .agent-title { color: var(--agent-coin); }
+        .agent-code .agent-title { color: var(--agent-code); }
+
+        .agent-subtitle { font-size: 11px; color: var(--muted-text); margin-bottom: 6px; }
+        .agent-content { font-size: 12px; line-height: 1.4; min-height: 20px; }
+
+        .quantum-spinner {
+            width: 16px; height: 16px; display: inline-block;
+            margin-right: 6px; position: relative;
+        }
+        .quantum-spinner::before, .quantum-spinner::after {
+            content: ''; position: absolute; width: 100%; height: 100%;
+            border: 2px solid transparent; border-radius: 50%;
+        }
+        .quantum-spinner::before {
+            border-top: 2px solid var(--agent-loop);
+            animation: quantumSpin 1s linear infinite;
+        }
+        .quantum-spinner::after {
+            border-bottom: 2px solid var(--agent-core);
+            animation: quantumSpin 0.5s linear infinite reverse;
+        }
+        @keyframes quantumSpin {
+            0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex; gap: 8px; margin-top: 10px;
+            padding-top: 10px; border-top: 1px solid var(--status-bg);
+        }
+        .action-buttons button { flex: 1; padding: 6px; font-size: 11px; }
+
+        /* ----- Syntax Highlighter Styles ----- */
+        .sh-token { transition: opacity 0.08s ease; }
+        .sh-comment { color: #64748b; font-style: italic; opacity: 0.8; }
+        .sh-string { color: #a3e635; }
+        .sh-number { color: #f59e0b; }
+        .sh-keyword { color: #f472b6; font-weight: 600; }
+        .sh-function { color: #4ac94a; }
+        .sh-bracket { color: #c084fc; }
+        .sh-op, .sh-id { color: #94a3b8; }
+        .sh-ws { opacity: 0.3; }
+        .sh-tag { color: #f472b6; font-weight: 600; }
+        .sh-property { color: #7dd3fc; }
+        .sh-unknown { color: #f87171; }
+        .editor-content::selection { background: rgba(74, 201, 74, 0.3); }
+
+        /* ----- Panels and Modals ----- */
+        #preview-panel, #ai-response-panel {
+            position: fixed;
+            background: var(--panel);
+            border: 1px solid var(--accent);
+            border-radius: 5px;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 0 30px rgba(0,0,0,.5);
+        }
+
+        #preview-panel {
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80%; height: 80%; flex-direction: column;
+        }
+        #preview-header {
+            background: var(--header-bg); color: #f0f0e0; padding: 8px 12px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        #preview-content { width: 100%; height: calc(100% - 40px); border: none; background: white; }
+        #close-preview { background: transparent; border: none; color: #f0f0e0; font-size: 18px; cursor: pointer; }
+
+        #ai-response-panel {
+            bottom: 60px; right: 20px; width: 500px;
+            max-height: calc(100vh - 120px); padding: 15px; overflow-y: auto;
+        }
+        #close-ai-panel {
+            position: absolute; top: 5px; right: 5px; background: transparent;
+            border: none; color: var(--muted-text); font-size: 14px; cursor: pointer;
+        }
+
+        #file-input { display: none; }
+
+        .ai-status { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+        .ai-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--err); animation: pulse 2s infinite; }
+        .ai-dot.connected { background: var(--accent); animation: none; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* Consensus Panel */
+        .consensus-panel {
+            background: var(--panel); border: 1px solid var(--agent-core);
+            border-radius: 8px; padding: 15px; margin-top: 15px;
+            max-height: 300px; overflow-y: auto;
+        }
+        .consensus-header {
+            font-weight: bold; color: var(--agent-core); margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .candidate-item {
+            background: rgba(255,255,255,0.05); border-radius: 4px; padding: 8px;
+            margin-bottom: 8px; border-left: 3px solid var(--agent-loop);
+        }
+        .candidate-meta {
+            font-size: 10px; color: var(--muted-text); display: flex;
+            justify-content: space-between; margin-bottom: 4px;
+        }
+        .candidate-content {
+            font-size: 11px; white-space: pre-wrap;
+            max-height: 80px; overflow: hidden; text-overflow: ellipsis;
+        }
+        .entropy-badge {
+            background: var(--agent-core); color: #222; padding: 2px 6px;
+            border-radius: 10px; font-size: 10px; font-weight: bold;
+        }
+        .selected-candidate {
+            border-left-color: var(--accent); background: rgba(74, 201, 74, 0.1);
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="left">
+        <button id="left-toggle">☰</button>
+        <div style="font-weight:800;" class="quantum-pulse">Nemodian Core :: Local Agent-Pool</div>
+    </div>
+    <div class="right">
+        <div class="ai-status">
+            <div id="ai-dot" class="ai-dot"></div>
+            <div id="ai-indicator">Connecting...</div>
+        </div>
+        <button id="open-file">Open</button>
+        <button id="save-file">Save</button>
+        <button id="render-html">Render HTML</button>
+    </div>
+</header>
+<div id="status-bar">
+    <div id="file-meta">No File Loaded</div>
+    <div id="editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0</div>
+</div>
+<div id="editor-stage">
+    <aside id="left-panel">
+        <button id="btn-undo">UNDO</button>
+        <button id="btn-redo">REDO</button>
+
+        <div style="margin-top: 20px; font-size: 11px; color: var(--muted-text);">
+            <p><strong>AI Agent Actions:</strong></p>
+            <button id="btn-optimize" style="width:100%;margin-bottom:5px;">Optimize Code</button>
+            <button id="btn-document" style="width:100%;margin-bottom:5px;">Add Documentation</button>
+            <button id="btn-refactor" style="width:100%;">Refactor Code</button>
+            <button id="btn-explain" style="width:100%;margin-top:5px;">Explain Code</button>
+        </div>
+    </aside>
+
+    <div class="editor-container">
+        <div class="line-numbers" id="line-numbers"></div>
+        <div
+            class="editor-content"
+            id="editor"
+            contenteditable="true"
+            spellcheck="false"
+        >&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;title&gt;AI Editor Demo&lt;/title&gt;
+  &lt;style&gt;
+    body {
+      font-family: sans-serif;
+      background: #2d2d2d;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: rgba(0,0,0,0.5);
+      padding: 30px;
+      border-radius: 15px;
+      text-align: center;
+    }
+    button {
+      background: #4ac94a; color: white; border: none;
+      padding: 12px 25px; border-radius: 5px;
+      cursor: pointer; transition: all 0.3s;
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class="container"&gt;
+    &lt;h1&gt;Welcome to the AI-Powered Editor&lt;/h1&gt;
+    &lt;p&gt;Use the prompt bar below to control the editor with AI agents.&lt;/p&gt;
+    &lt;button&gt;Get Started&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</div>
+    </div>
+</div>
+<footer>
+    <input id="prompt-input" placeholder="Enter command (e.g., 'convert this to a three-column layout')">
+    <button id="send-button" class="success">PROCESS WITH AGENTS</button>
+</footer>
+<input type="file" id="file-input" accept=".js,.html,.css,.txt,.json">
+<div id="preview-panel">
+    <div id="preview-header">
+        <span>Live Preview</span>
+        <button id="close-preview">×</button>
+    </div>
+    <iframe id="preview-content"></iframe>
+</div>
+<div id="ai-response-panel">
+    <button id="close-ai-panel">×</button>
+    <div id="ai-response-content">
+        <!-- Local Agent System UI -->
+        <div class="agent-card core agent-core">
+            <div class="agent-title">core</div>
+            <div class="agent-subtitle">Orchestrator & Consensus</div>
+            <div class="agent-content">Idle. Awaiting command.</div>
+        </div>
+        <div class="agent-card loop agent-loop">
+            <div class="agent-title">loop</div>
+            <div class="agent-subtitle">Analysis & Iteration Agent</div>
+            <div class="agent-content">Ready</div>
+        </div>
+        <div class="agent-card agent-2244">
+            <div class="agent-title">2244</div>
+            <div class="agent-subtitle">Data & Logic Agent</div>
+            <div class="agent-content">Ready</div>
+        </div>
+        <div class="agent-card coin agent-coin">
+            <div class="agent-title">coin</div>
+            <div class="agent-subtitle">Validation & Security Agent</div>
+            <div class="agent-content">Ready</div>
+        </div>
+        <div class="agent-card code agent-code">
+            <div class="agent-title">code</div>
+            <div class="agent-subtitle">Synthesis & Generation Agent</div>
+            <div class="agent-content">Awaiting final report...</div>
+        </div>
+        <!-- Consensus Panel -->
+        <div class="consensus-panel" id="consensus-panel" style="display: none;">
+            <div class="consensus-header">
+                <span>Multi-Agent Consensus</span>
+                <span class="entropy-badge" id="consensus-score">Score: 0</span>
+            </div>
+            <div id="candidates-list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* =========================================================================
+       Nemodian Core :: Editor & Local AI Agent Orchestrator
+       ========================================================================== */
+
+    class QuantumHighlighter {
+        constructor() {
+            this.rules = {
+                js: [
+                    {t:'comment',r:/^(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/},
+                    {t:'string',r:/^`(?:\\[\s\S]|[^`])*`|^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/},
+                    {t:'number',r:/^\b(?:0x[a-fA-F0-9]+|[0-9]+(?:\.[0-9]+)?(?:e[+-]?\d+)?)\b/},
+                    {t:'keyword',r:/^\b(?:if|else|for|while|function|return|const|let|var|class|new|in|of|switch|case|break|continue|try|catch|throw|async|await|export|import|from|default)\b/},
+                    {t:'function',r:/^\b[a-zA-Z_$][\w$]*(?=\s*\()/},
+                    {t:'bracket',r:/^[\[\]\{\}\(\)]/},
+                    {t:'op',r:/^==|===|!=|!==|<=|>=|=>|->|[-+*/%=<>!&|^~?:.,;]/},
+                    {t:'id',r:/^\b[a-zA-Z_$][\w$]*\b/},
+                    {t:'ws',r:/^\s+/}
+                ],
+                html: [
+                    {t:'comment',r:/^<!--[\s\S]*?-->/},
+                    {t:'tag',r:/^<\/?[\w\d-]+/},
+                    {t:'string',r:/^"(?:\\.|[^"])*"|^'(?:\\.|[^'])*'/},
+                    {t:'op',r:/^[=>\/]/},
+                    {t:'property', r:/^\b[a-zA-Z-]+\b(?=\s*=)/},
+                    {t:'ws',r:/^\s+/},
+                    {t:'text',r:/^[^<]+/}
+                ],
+            };
+            this.rules.css = this.rules.js; // Good enough for this context
+        }
+
+        static escape(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        tokenize(text, language = 'js') {
+            const langRules = this.rules[language] || this.rules.js;
+            const tokens = [];
+            let pos = 0;
+            while (pos < text.length) {
+                let matchFound = false;
+                for (const rule of langRules) {
+                    const match = text.substring(pos).match(rule.r);
+                    if (match) {
+                        tokens.push({ type: rule.t, value: match[0] });
+                        pos += match[0].length;
+                        matchFound = true;
+                        break;
+                    }
+                }
+                if (!matchFound) {
+                    tokens.push({ type: 'unknown', value: text[pos] });
+                    pos++;
+                }
+            }
+            return tokens;
+        }
+
+        highlight(text, language = 'js') {
+            const tokens = this.tokenize(text, language);
+            return tokens.map(token =>
+                `<span class="sh-token sh-${token.type}">${QuantumHighlighter.escape(token.value)}</span>`
+            ).join('');
+        }
+    }
+
+    class CoreEditor {
+        constructor() {
+            this.editor = document.getElementById('editor');
+            this.lineNumbers = document.getElementById('line-numbers');
+            this.statusEditor = document.getElementById('editor-meta');
+            this.statusFile = document.getElementById('file-meta');
+            this.highlighter = new QuantumHighlighter();
+            this.currentFileName = null;
+            this.currentFileType = 'html';
+            this.history = { stack: [], index: -1 };
+            this.isComposing = false;
+            this.init();
+        }
+
+        init() {
+            this.editor.addEventListener('input', () => this.handleInput());
+            this.editor.addEventListener('compositionstart', () => this.isComposing = true);
+            this.editor.addEventListener('compositionend', () => {
+                this.isComposing = false;
+                this.handleInput();
+            });
+            this.editor.addEventListener('keydown', e => this.handleKeydown(e));
+            this.editor.addEventListener('keyup', () => this.updateStatus());
+            this.editor.addEventListener('click', () => this.updateStatus());
+            this.editor.addEventListener('scroll', () => this.syncScroll());
+            this.render(this.editor.innerHTML.replace(/&lt;/g, '<').replace(/&gt;/g, '>'));
+            this.pushHistory();
+        }
+
+        handleInput() {
+            if (this.isComposing) return;
+            this.highlightContent();
+            this.updateLineNumbers();
+            this.updateStatus();
+            this.pushHistory();
+        }
+
+        handleKeydown(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                document.execCommand('insertText', false, '  ');
+            } else if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'z') { e.preventDefault(); this.undo(); }
+                if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); this.redo(); }
+            }
+        }
+
+        highlightContent() {
+            const text = this.editor.textContent || '';
+            const selection = window.getSelection();
+            const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+            const startContainer = range ? range.startContainer : null;
+            const startOffset = range ? range.startOffset : 0;
+
+            const findNodeIndex = (parent, targetNode) => {
+                let index = 0;
+                let found = false;
+                function traverse(node) {
+                    if (node === targetNode) {
+                        found = true;
+                        return;
+                    }
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        index += node.textContent.length;
+                    } else {
+                        for (const child of node.childNodes) {
+                            if (found) break;
+                            traverse(child);
+                        }
+                    }
+                }
+                traverse(parent);
+                return index;
+            };
+
+            const caretPosition = startContainer ? findNodeIndex(this.editor, startContainer) + startOffset : 0;
+            this.editor.innerHTML = this.highlighter.highlight(text, this.currentFileType);
+
+            if (range) {
+                let charCount = 0;
+                let newRange = document.createRange();
+                let nodeFound = false;
+
+                function setCaret(node) {
+                    if (nodeFound) return;
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        const nodeLength = node.textContent.length;
+                        if (charCount + nodeLength >= caretPosition) {
+                            const offset = caretPosition - charCount;
+                            newRange.setStart(node, offset);
+                            newRange.collapse(true);
+                            nodeFound = true;
+                        }
+                        charCount += nodeLength;
+                    } else {
+                        for (const child of node.childNodes) {
+                            setCaret(child);
+                        }
+                    }
+                }
+                setCaret(this.editor);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+            }
+        }
+
+        updateLineNumbers() {
+            const lineCount = (this.editor.textContent.match(/\n/g) || []).length + 1;
+            this.lineNumbers.innerHTML = Array.from({length: lineCount}, (_, i) => i + 1).join('<br>');
+        }
+
+        syncScroll() { this.lineNumbers.scrollTop = this.editor.scrollTop; }
+
+        updateStatus() {
+            const text = this.editor.textContent || '';
+            this.statusEditor.textContent = `Lines: ${text.split('\n').length} | Chars: ${text.length} | History: ${this.history.index + 1}`;
+        }
+
+        pushHistory() {
+            const content = this.editor.textContent;
+            if (this.history.stack[this.history.index] === content) return;
+            this.history.stack = this.history.stack.slice(0, this.history.index + 1);
+            this.history.stack.push(content);
+            this.history.index++;
+        }
+
+        undo() { if (this.history.index > 0) { this.history.index--; this.render(this.history.stack[this.history.index]); } }
+        redo() { if (this.history.index < this.history.stack.length - 1) { this.history.index++; this.render(this.history.stack[this.history.index]); } }
+
+        render(content) {
+            this.editor.textContent = content;
+            this.highlightContent();
+            this.updateLineNumbers();
+            this.updateStatus();
+        }
+
+        setContent(content, fileType = 'html') {
+            this.currentFileType = fileType;
+            this.render(content);
+            this.history = { stack: [content], index: 0 };
+        }
+
+        getContent() { return this.editor.textContent; }
+
+        replaceSelectionWithCode(code) {
+            document.execCommand('insertText', false, code);
+        }
+    }
+
+    class AgentOrchestrator {
+        constructor() {
+            this.agentUIs = {
+                core: { card: document.querySelector('.agent-core'), content: document.querySelector('.agent-core .agent-content') },
+                loop: { card: document.querySelector('.agent-loop'), content: document.querySelector('.agent-loop .agent-content') },
+                '2244': { card: document.querySelector('.agent-2244'), content: document.querySelector('.agent-2244 .agent-content') },
+                coin: { card: document.querySelector('.agent-coin'), content: document.querySelector('.agent-coin .agent-content') },
+                code: { card: document.querySelector('.agent-code'), content: document.querySelector('.agent-code .agent-content') },
+            };
+            this.consensusPanel = document.getElementById('consensus-panel');
+            this.candidatesList = document.getElementById('candidates-list');
+            this.consensusScore = document.getElementById('consensus-score');
+            this.isGenerating = false;
+            this.ollamaUrl = 'http://localhost:11434';
+            this.localModels = ['core', 'loop', '2244', 'coin', 'code'];
+            this.availableModels = [];
+            this.finalCode = null;
+            this.checkConnection();
+        }
+
+        async checkConnection() {
+            const indicator = document.getElementById('ai-indicator');
+            const dot = document.getElementById('ai-dot');
+            try {
+                const response = await fetch(`${this.ollamaUrl}/api/tags`);
+                if (!response.ok) throw new Error('API response not OK');
+                const data = await response.json();
+                this.availableModels = data.models.map(m => m.name.split(':')[0]);
+                const missing = this.localModels.filter(m => !this.availableModels.includes(m));
+                if (missing.length === 0) {
+                    indicator.textContent = `Agents Ready (${this.localModels.length}/${this.localModels.length})`;
+                    dot.classList.add('connected');
+                } else {
+                    indicator.textContent = `Missing: ${missing.join(', ')}`;
+                    dot.style.background = 'var(--warn)';
+                }
+            } catch (error) {
+                indicator.textContent = 'Connection Failed';
+                dot.classList.remove('connected');
+            }
+        }
+
+        updateAgentUI(agent, status, isActive = true) {
+            if (!this.agentUIs[agent]) return;
+            this.agentUIs[agent].content.innerHTML = status;
+            if (isActive) this.agentUIs[agent].card.classList.add('active');
+            else this.agentUIs[agent].card.classList.remove('active');
+        }
+
+        resetAgentUIs() {
+            Object.keys(this.agentUIs).forEach(key => {
+                this.updateAgentUI(key, 'Ready', false);
+            });
+            this.agentUIs.core.content.innerHTML = 'Idle. Awaiting command.';
+            this.agentUIs.code.content.innerHTML = 'Awaiting final report...';
+        }
+
+        buildPrompt(prompt, context) {
+            return `You are an expert programmer. Your task is to process the user's request based on the provided code context.
+Provide only the complete, updated code block as your response. Do not include explanations, apologies, or markdown formatting like \`\`\`.
+
+USER REQUEST:
+${prompt}
+
+CODE CONTEXT:
+\`\`\`${coreEditor.currentFileType}
+${context}
+\`\`\`
+
+YOUR RESPONSE (CODE ONLY):`;
+        }
+        
+        async queryLocalAgent(modelName, fullPrompt) {
+            this.updateAgentUI(modelName, `<div class="quantum-spinner"></div>Thinking...`);
+            try {
+                if (!this.availableModels.includes(modelName)) {
+                    throw new Error(`Model '${modelName}' not available locally.`);
+                }
+                const response = await fetch(`${this.ollamaUrl}/api/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: modelName, prompt: fullPrompt, stream: false })
+                });
+                if (!response.ok) throw new Error(`API error: ${response.status}`);
+                const data = await response.json();
+                const cleanResponse = data.response.replace(/```[\s\S]*?\n/g, '').replace(/```/g, '').trim();
+                this.updateAgentUI(modelName, `Response received.`, false);
+                return { agentId: modelName, candidate: cleanResponse, error: null };
+            } catch (error) {
+                this.updateAgentUI(modelName, `<span style="color:var(--err)">Error: ${error.message}</span>`, false);
+                return { agentId: modelName, candidate: null, error: error.message };
+            }
+        }
+
+        async runOrchestrator(prompt, context) {
+            if (this.isGenerating) return;
+            this.isGenerating = true;
+            document.getElementById('ai-response-panel').style.display = 'block';
+            this.consensusPanel.style.display = 'none';
+            this.resetAgentUIs();
+
+            this.updateAgentUI('core', '<div class="quantum-spinner"></div>Orchestrating agents...');
+            const fullPrompt = this.buildPrompt(prompt, context);
+            
+            const promises = this.localModels.map(model => this.queryLocalAgent(model, fullPrompt));
+            const results = await Promise.all(promises);
+
+            this.updateAgentUI('core', '<div class="quantum-spinner"></div>Running consensus algorithm...');
+            
+            const validCandidates = results.filter(r => r.candidate);
+            if (validCandidates.length === 0) {
+                this.updateAgentUI('core', `<span style="color:var(--err)">All agents failed.</span>`, false);
+                this.updateAgentUI('code', `<span style="color:var(--err)">Consensus failed.</span>`, false);
+                this.isGenerating = false;
+                return;
+            }
+
+            const consensus = this.assembleConsensus(validCandidates);
+            this.displayConsensus(consensus);
+            
+            this.isGenerating = false;
+        }
+
+        calculateEntropy(text) {
+            if (!text) return 0;
+            const freq = {};
+            for (const char of text) { freq[char] = (freq[char] || 0) + 1; }
+            let entropy = 0;
+            const len = text.length;
+            for (const count of Object.values(freq)) {
+                const p = count / len;
+                entropy -= p * Math.log2(p);
+            }
+            return entropy;
+        }
+
+        assembleConsensus(candidates) {
+            const candidateMap = new Map();
+            for (const item of candidates) {
+                const key = item.candidate;
+                if (!candidateMap.has(key)) {
+                    candidateMap.set(key, { ...item, agents: [], count: 0, totalEntropy: 0 });
+                }
+                const existing = candidateMap.get(key);
+                existing.agents.push(item.agentId);
+                existing.count++;
+                existing.totalEntropy += this.calculateEntropy(key);
+            }
+
+            const scored = Array.from(candidateMap.values()).map(item => ({
+                ...item,
+                avgEntropy: item.totalEntropy / item.count,
+                score: item.count * 10 + (item.totalEntropy / item.count)
+            }));
+            
+            scored.sort((a, b) => b.score - a.score);
+            return { selected: scored[0], all: scored };
+        }
+
+        displayConsensus(consensus) {
+            this.updateAgentUI('core', 'Consensus complete.', false);
+            this.consensusPanel.style.display = 'block';
+            this.consensusScore.textContent = `Score: ${consensus.selected.score.toFixed(2)}`;
+            this.candidatesList.innerHTML = '';
+            
+            consensus.all.forEach(c => {
+                const el = document.createElement('div');
+                el.className = `candidate-item ${c === consensus.selected ? 'selected-candidate' : ''}`;
+                el.innerHTML = `
+                    <div class="candidate-meta">
+                        <span>Agents: ${c.agents.join(', ')}</span>
+                        <span>Count: ${c.count} | Entropy: ${c.avgEntropy.toFixed(2)}</span>
+                    </div>
+                    <div class="candidate-content">${QuantumHighlighter.escape(c.candidate)}</div>
+                `;
+                this.candidatesList.appendChild(el);
+            });
+            
+            this.finalCode = consensus.selected.candidate;
+            const highlighted = new QuantumHighlighter().highlight(this.finalCode, coreEditor.currentFileType);
+
+            const buttons = `
+                <div class="action-buttons">
+                    <button onclick="applyConsensusCode()">Apply to Editor</button>
+                    <button onclick="copyConsensusCode()">Copy Code</button>
+                </div>`;
+
+            this.updateAgentUI('code', `
+                <div style="border-left: 3px solid var(--agent-core); padding-left: 10px; margin-bottom: 10px;">
+                    <strong>Consensus Reached by ${consensus.selected.agents.join(', ')}</strong>
+                </div>
+                <pre style="background: #1a1a1a; padding: 10px; border-radius: 4px; overflow: auto; max-height: 250px;">${highlighted}</pre>
+                ${buttons}`, true);
+        }
+    }
+
+    // ----- Global Scope & Event Listeners -----
+    let coreEditor;
+    let agentOrchestrator;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        coreEditor = new CoreEditor();
+        agentOrchestrator = new AgentOrchestrator();
+
+        // Header buttons
+        document.getElementById('open-file').onclick = () => document.getElementById('file-input').click();
+        document.getElementById('save-file').onclick = saveFile;
+        document.getElementById('render-html').onclick = renderHTML;
+
+        // Left panel buttons
+        document.getElementById('left-toggle').onclick = () => document.getElementById('editor-stage').classList.toggle('left-panel-open');
+        document.getElementById('btn-undo').onclick = () => coreEditor.undo();
+        document.getElementById('btn-redo').onclick = () => coreEditor.redo();
+        document.getElementById('btn-optimize').onclick = () => runAIWithPrompt("Optimize this code for performance and readability.");
+        document.getElementById('btn-document').onclick = () => runAIWithPrompt("Add clear, concise documentation comments to this code.");
+        document.getElementById('btn-refactor').onclick = () => runAIWithPrompt("Refactor this code to improve its structure and reduce complexity.");
+        document.getElementById('btn-explain').onclick = () => runAIWithPrompt("Explain what this code does in a few sentences.");
+        
+        // File handling
+        document.getElementById('file-input').onchange = openFile;
+
+        // Footer AI controls
+        document.getElementById('send-button').onclick = runAIWithPrompt;
+        document.getElementById('prompt-input').onkeydown = e => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runAIWithPrompt(); }
+        };
+
+        // Modal/Panel close buttons
+        document.getElementById('close-preview').onclick = () => document.getElementById('preview-panel').style.display = 'none';
+        document.getElementById('close-ai-panel').onclick = () => document.getElementById('ai-response-panel').style.display = 'none';
+    });
+
+    function detectLanguage(fileName) {
+        const ext = fileName?.split('.').pop().toLowerCase();
+        return { js: 'js', html: 'html', css: 'css', json: 'js' }[ext] || 'js';
+    }
+
+    function openFile(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            coreEditor.currentFileName = file.name;
+            document.getElementById('file-meta').textContent = file.name;
+            coreEditor.setContent(ev.target.result, detectLanguage(file.name));
+        };
+        reader.readAsText(file);
+    }
+
+    function saveFile() {
+        const fileName = coreEditor.currentFileName || prompt('Enter file name:', 'untitled.html');
+        if (!fileName) return;
+        coreEditor.currentFileName = fileName;
+        document.getElementById('file-meta').textContent = fileName;
+        const blob = new Blob([coreEditor.getContent()], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    function renderHTML() {
+        const blob = new Blob([coreEditor.getContent()], { type: 'text/html' });
+        document.getElementById('preview-content').src = URL.createObjectURL(blob);
+        document.getElementById('preview-panel').style.display = 'flex';
+    }
+    
+    function runAIWithPrompt(presetPrompt = null) {
+        const promptInput = document.getElementById('prompt-input');
+        const prompt = typeof presetPrompt === 'string' ? presetPrompt : promptInput.value.trim();
+        if (!prompt) return;
+        agentOrchestrator.runOrchestrator(prompt, coreEditor.getContent());
+        if (typeof presetPrompt !== 'string') {
+            promptInput.value = '';
+        }
+    }
+    
+    // Functions called from dynamic HTML buttons
+    function applyConsensusCode() {
+        if (agentOrchestrator.finalCode) {
+            coreEditor.setContent(agentOrchestrator.finalCode, coreEditor.currentFileType);
+        }
+    }
+    function copyConsensusCode() {
+        if (agentOrchestrator.finalCode) {
+            navigator.clipboard.writeText(agentOrchestrator.finalCode);
+        }
+    }
+</script>
+</body>
+</html>
