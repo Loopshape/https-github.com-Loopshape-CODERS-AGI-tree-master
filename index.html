@@ -2757,6 +2757,26 @@ ${codeCandidate}`;
         }
     });
 
+    function getMimeType(fileType) {
+        const mimeMap = {
+            'javascript': 'application/javascript',
+            'jsx': 'application/javascript',
+            'typescript': 'application/typescript',
+            'tsx': 'application/typescript',
+            'html': 'text/html',
+            'css': 'text/css',
+            'python': 'text/x-python',
+            'php': 'application/x-httpd-php',
+            'sql': 'application/sql',
+            'markdown': 'text/markdown',
+            'json': 'application/json',
+            'xml': 'application/xml',
+            'yaml': 'application/x-yaml',
+            'yml': 'application/x-yaml'
+        };
+        return mimeMap[fileType] || 'text/plain';
+    }
+
     function initQuantumFileHandling() {
         document.getElementById('open-file').addEventListener('click', () => {
             document.getElementById('file-input').click();
@@ -2790,8 +2810,9 @@ ${codeCandidate}`;
             quantumSaveAsFile();
             return;
         }
-
-        const blob = new Blob([quantumEditor.getContent()], { type: 'text/plain' });
+        
+        const mimeType = getMimeType(quantumEditor.currentFileType);
+        const blob = new Blob([quantumEditor.getContent()], { type: mimeType });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = quantumEditor.currentFileName;
