@@ -1,5 +1,5 @@
 {
-  "name": "Nemodian Quantum Fractal AI Editor",
-  "description": "An advanced, multi-agent AI code editor powered by Gemini, featuring a quantum fractal interface for complex code generation and analysis.",
+  "name": "Ollama Creative Suite",
+  "description": "An advanced image and text AI suite powered by Ollama, featuring image editing, generation, analysis, color palette extraction, and multi-model chat.",
   "requestFramePermissions": []
 }
