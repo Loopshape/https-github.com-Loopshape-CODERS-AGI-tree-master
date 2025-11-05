@@ -1,8 +1,4 @@
 {
-<<<<<<< HEAD
-  "dependencies": {
-    "monaco": "^1.201704190613.0"
-=======
   "name": "nemodian-quantum-fractal-ai-editor",
   "private": true,
   "version": "0.0.0",
@@ -14,13 +10,13 @@
   },
   "dependencies": {
     "@google/genai": "^1.2.7.0",
-    "react": "^19.2.0"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
->>>>>>> 1eafa81419ab8d4ac77e9c93246b989b7e8d5514
   }
 }
