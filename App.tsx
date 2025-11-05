@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ollamaEditImage, ollamaGenerateImage, ollamaAnalyzeImage, ollamaGenerateColorPalette, ollamaGenerateContentMultiModel, Color, ModelStatus } from './services/ollamaService';
 import { geminiGenerateText, geminiGenerateImage, geminiEditImage, geminiAnalyzeImage, geminiGenerateColorPalette, geminiStreamChat, ChatMessagePart } from './services/geminiService'; // Import Gemini service
@@ -813,6 +814,8 @@ export default function App() {
     const [ollamaModelStatuses, setOllamaModelStatuses] = useState<Record<string, ModelStatus>>(
         Object.fromEntries(OLLAMA_CHAT_MODELS.map(model => [model, 'idle']))
     );
+    const [hasOllamaSavedChat, setHasOllamaSavedChat] = useState<boolean>(false);
+
 
     // Gemini chat states
     const [geminiChatHistory, setGeminiChatHistory] = useState<GeminiChatMessage[]>([]);
@@ -822,6 +825,8 @@ export default function App() {
     const [selectedGeminiModel, setSelectedGeminiModel] = useState<keyof typeof GEMINI_CHAT_MODELS>('gemini-2.5-flash');
     const [enableGeminiSearchGrounding, setEnableGeminiSearchGrounding] = useState<boolean>(false);
     const [geminiSystemInstruction, setGeminiSystemInstruction] = useState<string>('');
+    const [hasGeminiSavedChat, setHasGeminiSavedChat] = useState<boolean>(false);
+
     // Ref for Gemini chat history to be used in useCallback
     const geminiChatHistoryRef = useRef<GeminiChatMessage[]>(geminiChatHistory);
 
@@ -844,6 +849,60 @@ export default function App() {
         }
     }, [selectedGeminiModel, enableGeminiSearchGrounding]);
 
+    // --- Chat History Management (localStorage) ---
+    const getStoredChatHistory = useCallback((key: string): (OllamaChatMessage[] | GeminiChatMessage[]) => {
+        try {
+            const stored = localStorage.getItem(key);
+            return stored ? JSON.parse(stored) : [];
+        } catch (e) {
+            console.error(`Failed to load chat history from localStorage (${key}):`, e);
+            return [];
+        }
+    }, []);
+
+    const saveChatHistory = useCallback((key: string, history: (OllamaChatMessage[] | GeminiChatMessage[])) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(history));
+            if (key === 'ollamaChatHistory') setHasOllamaSavedChat(true);
+            if (key === 'geminiChatHistory') setHasGeminiSavedChat(true);
+            setError(null); // Clear any previous error
+        } catch (e) {
+            console.error(`Failed to save chat history to localStorage (${key}):`, e);
+            setError("Failed to save chat history. Storage might be full or inaccessible.");
+        }
+    }, []);
+
+    const loadOllamaChat = useCallback(() => {
+        const history = getStoredChatHistory('ollamaChatHistory') as OllamaChatMessage[];
+        setOllamaChatHistory(history);
+        setError(null);
+    }, [getStoredChatHistory]);
+
+    const clearOllamaChat = useCallback(() => {
+        setOllamaChatHistory([]);
+        localStorage.removeItem('ollamaChatHistory');
+        setHasOllamaSavedChat(false);
+        setError(null);
+    }, []);
+
+    const loadGeminiChat = useCallback(() => {
+        const history = getStoredChatHistory('geminiChatHistory') as GeminiChatMessage[];
+        setGeminiChatHistory(history);
+        setError(null);
+    }, [getStoredChatHistory]);
+
+    const clearGeminiChat = useCallback(() => {
+        setGeminiChatHistory([]);
+        localStorage.removeItem('geminiChatHistory');
+        setHasGeminiSavedChat(false);
+        setError(null);
+    }, []);
+
+    // Initial check for saved chats on component mount
+    useEffect(() => {
+        setHasOllamaSavedChat(getStoredChatHistory('ollamaChatHistory').length > 0);
+        setHasGeminiSavedChat(getStoredChatHistory('geminiChatHistory').length > 0);
+    }, [getStoredChatHistory]);
 
     // Handler for Ollama Multi-Model Chat
     const handleOllamaSendMessage = useCallback(async () => {
@@ -905,7 +964,7 @@ export default function App() {
                 return newStatuses;
             });
         }
-    }, [currentOllamaChatPrompt, clearError, setError]);
+    }, [currentOllamaChatPrompt, clearError, setError, setOllamaModelStatuses]);
 
     // Handler for Gemini Chat
     const handleGeminiSendMessage = useCallback(async () => {
@@ -1044,7 +1103,7 @@ export default function App() {
         <div className="bg-gray-900 text-white h-screen flex flex-col font-sans">
             <Header />
             <div className="flex flex-grow pt-16 h-full overflow-hidden">
-                <aside className="w-64 bg-gray-800/30 p-4 border-r border-gray-700 flex flex-col space-y-4">
+                <aside className="w-64 bg-gray-800/30 p-4 border-r border-gray-700 flex flex-col space-y-4 overflow-y-auto">
                     <h2 className="text-lg font-semibold text-gray-300">AI Provider</h2>
                     <div className="flex bg-gray-900 rounded-md p-1">
                         <button
@@ -1089,22 +1148,58 @@ export default function App() {
                     {isChatMode && (
                         <div className="bg-gray-800/50 p-4 border-t border-gray-700 flex flex-col items-center">
                             {backendProvider === 'ollama' && (
-                                <div className="flex flex-wrap justify-center gap-2 mb-3">
-                                    {OLLAMA_CHAT_MODELS.map(model => (
-                                        <div key={model} className="flex items-center space-x-1">
-                                            <span
-                                                className={`w-3 h-3 rounded-full
-                                                    ${ollamaModelStatuses[model] === 'processing' ? 'bg-cyan-500 animate-pulse' : ''}
-                                                    ${ollamaModelStatuses[model] === 'success' ? 'bg-green-500' : ''}
-                                                    ${ollamaModelStatuses[model] === 'error' ? 'bg-red-500' : ''}
-                                                    ${ollamaModelStatuses[model] === 'idle' ? 'bg-gray-500' : ''}
-                                                    `}
-                                                title={`Model ${model} is ${ollamaModelStatuses[model] === 'processing' ? 'processing your request' : ollamaModelStatuses[model] === 'success' ? 'ready' : ollamaModelStatuses[model] === 'error' ? 'in an error state' : 'idle'}.`}
-                                            ></span>
-                                            <span className="text-xs text-gray-400">{model}</span>
-                                        </div>
-                                    ))}
-                                </div>
+                                <>
+                                    <div className="flex flex-wrap justify-center gap-2 mb-3">
+                                        {OLLAMA_CHAT_MODELS.map(model => (
+                                            <div key={model} className="flex items-center space-x-1">
+                                                <span
+                                                    className={`w-3 h-3 rounded-full
+                                                        ${ollamaModelStatuses[model] === 'processing' ? 'bg-cyan-500 animate-pulse' : ''}
+                                                        ${ollamaModelStatuses[model] === 'success' ? 'bg-green-500' : ''}
+                                                        ${ollamaModelStatuses[model] === 'error' ? 'bg-red-500' : ''}
+                                                        ${ollamaModelStatuses[model] === 'idle' ? 'bg-gray-500' : ''}
+                                                        `}
+                                                    title={
+                                                        ollamaModelStatuses[model] === 'processing'
+                                                            ? `Model ${model} is currently processing your request.`
+                                                            : ollamaModelStatuses[model] === 'success'
+                                                                ? `Model ${model} successfully processed the last request.`
+                                                                : ollamaModelStatuses[model] === 'error'
+                                                                    ? `Model ${model} encountered an error during the last request.`
+                                                                    : `Model ${model} is idle and ready to process requests.`
+                                                    }
+                                                ></span>
+                                                <span className="text-xs text-gray-400">{model}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="w-full max-w-4xl flex justify-end gap-2 mb-3">
+                                        <button
+                                            onClick={() => saveChatHistory('ollamaChatHistory', ollamaChatHistory)}
+                                            disabled={ollamaChatHistory.length === 0 || isOllamaChatLoading}
+                                            className="px-3 py-1 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 disabled:opacity-50"
+                                            aria-label="Save Ollama chat history"
+                                        >
+                                            Save Chat
+                                        </button>
+                                        <button
+                                            onClick={loadOllamaChat}
+                                            disabled={!hasOllamaSavedChat || isOllamaChatLoading}
+                                            className="px-3 py-1 bg-purple-700 text-white text-sm rounded-md hover:bg-purple-600 disabled:opacity-50"
+                                            aria-label="Load Ollama chat history"
+                                        >
+                                            Load Chat
+                                        </button>
+                                        <button
+                                            onClick={clearOllamaChat}
+                                            disabled={ollamaChatHistory.length === 0 || isOllamaChatLoading}
+                                            className="px-3 py-1 bg-gray-700 text-white text-sm rounded-md hover:bg-gray-600 disabled:opacity-50"
+                                            aria-label="Clear current Ollama chat"
+                                        >
+                                            Clear Chat
+                                        </button>
+                                    </div>
+                                </>
                             )}
 
                             {backendProvider === 'gemini' && (
@@ -1145,11 +1240,38 @@ export default function App() {
                                             onChange={(e) => setEnableGeminiSearchGrounding(e.target.checked)}
                                             disabled={isGeminiChatLoading || isThinkingModeModelSelected} // Disable search for thinking mode to prevent config conflict
                                             className="form-checkbox h-4 w-4 text-cyan-600 bg-gray-900 border-gray-600 rounded focus:ring-cyan-500"
+                                            aria-label="Enable Google Search Grounding"
                                         />
                                         <label htmlFor="enable-search" className="text-sm text-gray-300">Enable Google Search Grounding</label>
                                         {isThinkingModeModelSelected && (
                                             <span className="text-xs text-red-400 ml-2"> (Disabled for Thinking Mode)</span>
                                         )}
+                                    </div>
+                                    <div className="w-full max-w-4xl flex justify-end gap-2">
+                                        <button
+                                            onClick={() => saveChatHistory('geminiChatHistory', geminiChatHistory)}
+                                            disabled={geminiChatHistory.length === 0 || isGeminiChatLoading}
+                                            className="px-3 py-1 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 disabled:opacity-50"
+                                            aria-label="Save Gemini chat history"
+                                        >
+                                            Save Chat
+                                        </button>
+                                        <button
+                                            onClick={loadGeminiChat}
+                                            disabled={!hasGeminiSavedChat || isGeminiChatLoading}
+                                            className="px-3 py-1 bg-purple-700 text-white text-sm rounded-md hover:bg-purple-600 disabled:opacity-50"
+                                            aria-label="Load Gemini chat history"
+                                        >
+                                            Load Chat
+                                        </button>
+                                        <button
+                                            onClick={clearGeminiChat}
+                                            disabled={geminiChatHistory.length === 0 || isGeminiChatLoading}
+                                            className="px-3 py-1 bg-gray-700 text-white text-sm rounded-md hover:bg-gray-600 disabled:opacity-50"
+                                            aria-label="Clear current Gemini chat"
+                                        >
+                                            Clear Chat
+                                        </button>
                                     </div>
                                 </div>
                             )}
