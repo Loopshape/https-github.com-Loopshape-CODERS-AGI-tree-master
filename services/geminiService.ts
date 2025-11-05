@@ -118,15 +118,27 @@ export const geminiGenerateImage = async (
  * Edits an image using Gemini's image editing capabilities.
  * @param imageDataUrl The original image as a data URL.
  * @param prompt The text prompt describing the desired edit.
+ * @param intensity Optional intensity of the effect (0-100).
+ * @param opacity Optional opacity of the effect (0-1).
  * @returns A promise that resolves to the base64 encoded edited image data.
  */
 export const geminiEditImage = async (
     imageDataUrl: string,
     prompt: string,
+    intensity?: number,
+    opacity?: number,
 ): Promise<string> => {
     try {
         const base64Data = dataUrlToBase64(imageDataUrl);
         const mimeType = imageDataUrl.substring(imageDataUrl.indexOf(":") + 1, imageDataUrl.indexOf(";"));
+
+        let fullPrompt = prompt;
+        if (intensity !== undefined && intensity >= 0 && intensity <= 100) {
+            fullPrompt += ` with an intensity of ${intensity}%.`;
+        }
+        if (opacity !== undefined && opacity >= 0 && opacity <= 1) {
+            fullPrompt += ` The effect should have an opacity of ${Math.round(opacity * 100)}%.`;
+        }
 
         const response: GenerateContentResponse = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
@@ -139,7 +151,7 @@ export const geminiEditImage = async (
                         },
                     },
                     {
-                        text: prompt,
+                        text: fullPrompt, // Use the enhanced prompt
                     },
                 ],
             },
@@ -212,6 +224,7 @@ export const geminiGenerateColorPalette = async (
 
         if (source.image) {
             const base64Data = dataUrlToBase64(source.image);
+            // Fix: Correctly access indexOf on source.image, not source object itself.
             const mimeType = source.image.substring(source.image.indexOf(":") + 1, source.image.indexOf(";"));
             contents.push({
                 inlineData: { data: base64Data, mimeType: mimeType },

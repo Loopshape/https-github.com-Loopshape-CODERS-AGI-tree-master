@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ollamaEditImage, ollamaGenerateImage, ollamaAnalyzeImage, ollamaGenerateColorPalette, ollamaGenerateContentMultiModel, Color, ModelStatus } from './services/ollamaService';
 import { geminiGenerateText, geminiGenerateImage, geminiEditImage, geminiAnalyzeImage, geminiGenerateColorPalette, geminiStreamChat, ChatMessagePart } from './services/geminiService'; // Import Gemini service
@@ -146,6 +147,8 @@ const ImageEditorView = ({ image, onImageUpload, clearError, setError, backendPr
     const [editedOutput, setEditedOutput] = useState<string | null>(null); // Can be image data URL or text
     const [prompt, setPrompt] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [intensity, setIntensity] = useState<number>(100); // New state for intensity, 0-100
+    const [opacity, setOpacity] = useState<number>(1.0); // New state for opacity, 0-1
 
     const editorExamples = [
         'Add a dramatic, cinematic filter',
@@ -157,6 +160,8 @@ const ImageEditorView = ({ image, onImageUpload, clearError, setError, backendPr
     useEffect(() => {
         setEditedOutput(null);
         setPrompt('');
+        setIntensity(100); // Reset intensity
+        setOpacity(1.0); // Reset opacity
         clearError();
     }, [image, clearError, backendProvider]);
 
@@ -173,7 +178,7 @@ const ImageEditorView = ({ image, onImageUpload, clearError, setError, backendPr
                 const result = await ollamaEditImage(image, prompt);
                 setEditedOutput(result); // Text description
             } else { // Gemini
-                const result = await geminiEditImage(image, prompt);
+                const result = await geminiEditImage(image, prompt, intensity, opacity); // Pass intensity and opacity
                 setEditedOutput(result); // Actual image
             }
         } catch (err) {
@@ -181,7 +186,7 @@ const ImageEditorView = ({ image, onImageUpload, clearError, setError, backendPr
         } finally {
             setIsLoading(false);
         }
-    }, [image, prompt, setError, clearError, backendProvider]);
+    }, [image, prompt, intensity, opacity, setError, clearError, backendProvider]);
 
     const displayTextOutputHint = backendProvider === 'ollama';
 
@@ -190,6 +195,36 @@ const ImageEditorView = ({ image, onImageUpload, clearError, setError, backendPr
             <ControlsColumn>
                 <UploadControl step={1} onImageUpload={onImageUpload} hasImage={!!image} />
                 <PromptControl step={2} prompt={prompt} setPrompt={setPrompt} disabled={!image} placeholder="e.g., 'Add a retro cinematic filter'" examples={editorExamples} />
+                {backendProvider === 'gemini' && (
+                    <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                        <StepIndicator step={3} />
+                        <h3 className="text-lg font-semibold text-gray-200 mt-3 mb-2">Edit Parameters</h3>
+                        <ParameterControl
+                            label="Intensity"
+                            value={intensity}
+                            min={0}
+                            max={100}
+                            step={5}
+                            onChange={setIntensity}
+                            unit="%"
+                            disabled={!image}
+                        />
+                        <ParameterControl
+                            label="Opacity"
+                            value={opacity}
+                            min={0}
+                            max={1}
+                            step={0.1}
+                            onChange={setOpacity}
+                            displayValue={Math.round(opacity * 100)}
+                            unit="%"
+                            disabled={!image}
+                        />
+                         <p className="text-sm text-gray-400 mt-2">
+                            These values are incorporated into the prompt to guide the Gemini model.
+                        </p>
+                    </div>
+                )}
                 <GenerateButton onClick={handleGenerate} disabled={!image || !prompt.trim() || isLoading} text={isLoading ? 'Editing...' : `Generate ${displayTextOutputHint ? 'Edit Description' : 'Edited Image'}`} />
                  {displayTextOutputHint && (
                     <div className="mt-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700 text-sm text-gray-400">
@@ -656,6 +691,9 @@ const UploadControl = ({ step, onImageUpload, hasImage }: { step: number, onImag
                     console.error("Image resize failed, using original", err);
                     onImageUpload(originalDataUrl); // Fallback to original
                 } finally {
+                    if (fileInputRef.current) {
+                        fileInputRef.current.value = ''; // Clear the file input
+                    }
                     setIsResizing(false);
                 }
             };
@@ -721,6 +759,35 @@ const PromptControl = ({ step, prompt, setPrompt, disabled = false, placeholder,
             aria-label="Prompt for image generation or editing"
         />
         <PromptExamples examples={examples} onSelect={setPrompt} />
+    </div>
+);
+
+const ParameterControl = ({ label, value, min, max, step, onChange, unit = "", displayValue, disabled = false }: {
+    label: string;
+    value: number;
+    min: number;
+    max: number;
+    step: number;
+    onChange: (value: number) => void;
+    unit?: string;
+    displayValue?: number;
+    disabled?: boolean;
+}) => (
+    <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+            {label}: {displayValue !== undefined ? displayValue : value}{unit}
+        </label>
+        <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(e) => onChange(Number(e.target.value))}
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg [&::-webkit-slider-thumb]:bg-cyan-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:appearance-none [&::-moz-range-thumb]:bg-cyan-500 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 disabled:opacity-50"
+            disabled={disabled}
+            aria-label={`${label} slider`}
+        />
     </div>
 );
 
