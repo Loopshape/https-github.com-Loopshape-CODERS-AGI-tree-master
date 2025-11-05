@@ -521,7 +521,7 @@ const GEMINI_CHAT_MODELS = {
     'gemini-2.5-flash-lite': 'Gemini Flash Lite (Fast)',
     'gemini-2.5-flash': 'Gemini Flash (Standard)',
     'gemini-2.5-pro': 'Gemini Pro (Complex Tasks)',
-    'gemini-2.5-pro-thinking-mode': 'Gemini Pro (Thinking Mode)',
+    'gemini-2.5-pro-thinking-mode': 'Gemini Pro (Thinking Mode) - Max Budget',
 };
 const THINKING_BUDGET = 32768; // Max for 2.5 Pro
 
@@ -837,6 +837,14 @@ export default function App() {
         geminiChatHistoryRef.current = geminiChatHistory;
     }, [geminiChatHistory]);
 
+    // Effect to manage search grounding when thinking mode is selected
+    useEffect(() => {
+        if (selectedGeminiModel === 'gemini-2.5-pro-thinking-mode' && enableGeminiSearchGrounding) {
+            setEnableGeminiSearchGrounding(false);
+        }
+    }, [selectedGeminiModel, enableGeminiSearchGrounding]);
+
+
     // Handler for Ollama Multi-Model Chat
     const handleOllamaSendMessage = useCallback(async () => {
         if (!currentOllamaChatPrompt.trim()) return;
@@ -924,9 +932,12 @@ export default function App() {
         let groundingChunks: any[] = [];
         let modelUsed = selectedGeminiModel;
 
-        const isThinkingMode = selectedGeminiModel === 'gemini-2.5-pro-thinking-mode';
-        const modelForApi = isThinkingMode ? 'gemini-2.5-pro' : selectedGeminiModel;
-        const thinkingBudget = isThinkingMode ? THINKING_BUDGET : undefined;
+        const isThinkingModeSelected = selectedGeminiModel === 'gemini-2.5-pro-thinking-mode';
+        const modelForApi = isThinkingModeSelected ? 'gemini-2.5-pro' : selectedGeminiModel;
+        const thinkingBudget = isThinkingModeSelected ? THINKING_BUDGET : undefined;
+        // Search grounding is explicitly disabled when thinking mode is active
+        const enableSearchForApi = isThinkingModeSelected ? false : enableGeminiSearchGrounding;
+
 
         try {
             const stream = geminiStreamChat(
@@ -934,7 +945,7 @@ export default function App() {
                 currentGeminiChatPrompt,
                 geminiApiHistory, // Use the converted history for the API call
                 geminiSystemInstruction,
-                enableGeminiSearchGrounding,
+                enableSearchForApi,
                 thinkingBudget,
             );
 
@@ -1027,6 +1038,7 @@ export default function App() {
     };
 
     const isChatMode = mode === 'ollama_chat' || mode === 'gemini_chat';
+    const isThinkingModeModelSelected = selectedGeminiModel === 'gemini-2.5-pro-thinking-mode';
 
     return (
         <div className="bg-gray-900 text-white h-screen flex flex-col font-sans">
@@ -1087,7 +1099,7 @@ export default function App() {
                                                     ${ollamaModelStatuses[model] === 'error' ? 'bg-red-500' : ''}
                                                     ${ollamaModelStatuses[model] === 'idle' ? 'bg-gray-500' : ''}
                                                     `}
-                                                title={`Model ${model} is ${ollamaModelStatuses[model]}`}
+                                                title={`Model ${model} is ${ollamaModelStatuses[model] === 'processing' ? 'processing your request' : ollamaModelStatuses[model] === 'success' ? 'ready' : ollamaModelStatuses[model] === 'error' ? 'in an error state' : 'idle'}.`}
                                             ></span>
                                             <span className="text-xs text-gray-400">{model}</span>
                                         </div>
@@ -1131,11 +1143,11 @@ export default function App() {
                                             type="checkbox"
                                             checked={enableGeminiSearchGrounding}
                                             onChange={(e) => setEnableGeminiSearchGrounding(e.target.checked)}
-                                            disabled={isGeminiChatLoading || selectedGeminiModel === 'gemini-2.5-pro-thinking-mode'} // Disable search for thinking mode to prevent config conflict
+                                            disabled={isGeminiChatLoading || isThinkingModeModelSelected} // Disable search for thinking mode to prevent config conflict
                                             className="form-checkbox h-4 w-4 text-cyan-600 bg-gray-900 border-gray-600 rounded focus:ring-cyan-500"
                                         />
                                         <label htmlFor="enable-search" className="text-sm text-gray-300">Enable Google Search Grounding</label>
-                                        {selectedGeminiModel === 'gemini-2.5-pro-thinking-mode' && (
+                                        {isThinkingModeModelSelected && (
                                             <span className="text-xs text-red-400 ml-2"> (Disabled for Thinking Mode)</span>
                                         )}
                                     </div>
