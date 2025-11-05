@@ -1,0 +1,4 @@
+# PATCH applied based on prompt: fix ollama api only for all localhost
+# PATCH applied based on prompt: fix ollama api for all localhost ai bindings
+# PATCH applied based on prompt: fix ollama api for all localhost:11434 ai bindings as default connection
+# PATCH applied based on prompt: set ollama api to realtoken on localhost:11434 ai as default

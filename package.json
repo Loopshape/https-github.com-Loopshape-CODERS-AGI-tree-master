@@ -1,5 +1,5 @@
 {
-  "name": "ollama-creative-suite",
+  "name": "gemini-code-reviewer",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,9 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^1.2.7.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "@google/genai": "^1.21.0",
+    "lucide-react": "^0.417.0",
+    "marked": "^13.0.2",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-syntax-highlighter": "^15.5.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
