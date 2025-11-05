@@ -4,6 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nemodian 2244-1 :: Quantum Fractal AI Editor</title>
+
+    <!-- js-beautify via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify-css.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify-html.js"></script>
+    
+    <!-- Import map for Gemini -->
+    <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.2.7.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0"
+  }
+}
+</script>
+
     <style>
         :root {
             --muted: #888;
@@ -131,6 +148,12 @@
             background: var(--hover-blue);
             border-color: var(--hover-blue);
         }
+        
+        button:disabled {
+             background: var(--muted-text);
+             border-color: var(--muted-text);
+             cursor: not-allowed;
+        }
 
         button.success {
             background: var(--accent);
@@ -206,7 +229,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            overflow: hidden;
+            overflow: auto;
             width: 240px;
         }
 
@@ -483,6 +506,7 @@
         .sh-jsx-tag { color: #f472b6; }
         .sh-jsx-attribute { color: #7dd3fc; }
         .sh-template-string { color: #a3e635; font-weight: 500; }
+        .sh-variable { color: #67e8f9; }
 
         .editor-content::selection {
             background: rgba(74, 201, 74, 0.3);
@@ -598,13 +622,14 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: var(--accent);
-            animation: none;
-        }
-
-        .ai-dot.probing {
             background: var(--err);
             animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
 
         .ai-dot.connected {
@@ -648,7 +673,7 @@
                 transform: translateX(-240px);
             }
 
-            #left-panel.open {
+            #editor-stage.left-panel-open #left-panel {
                 transform: translateX(0);
             }
 
@@ -828,8 +853,8 @@
     </div>
     <div class="right">
         <div class="ai-status">
-            <div id="ai-dot" class="ai-dot connected"></div>
-            <div id="ai-indicator" style="font-size:12px;color:#cfcfbd;">Quantum AI: Ready</div>
+            <div id="ai-dot" class="ai-dot"></div>
+            <div id="ai-indicator" style="font-size:12px;color:#cfcfbd;">Quantum AI: Probing...</div>
         </div>
         <button id="open-file" class="small">Open</button>
         <button id="save-file" class="small">Save</button>
@@ -1010,7 +1035,8 @@ function welcome() {
 <!-- GSAP for animations -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
 
-<script>
+<script type="module">
+    import { GoogleGenAI } from "@google/genai";
     /* =========================================================================
        QUANTUM FRACTAL AI EDITOR - FULL FUNCTIONALITY
        ========================================================================== */
@@ -1187,7 +1213,6 @@ function welcome() {
             }
         }
 
-        // ... (previous memory management methods remain the same)
         async store(key, data, priority = 'medium') {
             try {
                 const cache = this.getCache();
@@ -1590,16 +1615,40 @@ function welcome() {
 
         highlightElement(element, language = null) {
             const text = element.textContent || '';
-            const html = this.highlightText(text, language);
             
+            // Preserve cursor position
             const selection = window.getSelection();
-            const range = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+            const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+            let startOffset = range ? range.startOffset : 0;
+            let startContainer = range ? range.startContainer : null;
             
-            element.innerHTML = html;
+            let path = [];
+            let node = startContainer;
+            while(node && node !== element) {
+                let i = 0;
+                let sibling = node;
+                while((sibling = sibling.previousSibling) != null) i++;
+                path.unshift(i);
+                node = node.parentNode;
+            }
+
+            element.innerHTML = this.highlightText(text, language);
             
-            if (range) {
-                selection.removeAllRanges();
-                selection.addRange(range);
+            // Restore cursor position
+            try {
+                if(startContainer) {
+                    node = element;
+                    path.forEach(index => { node = node.childNodes[index]; });
+                    if(node) {
+                        const newRange = document.createRange();
+                        newRange.setStart(node, Math.min(startOffset, node.length || 0));
+                        newRange.collapse(true);
+                        selection.removeAllRanges();
+                        selection.addRange(newRange);
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not restore cursor position.", e);
             }
         }
 
@@ -1650,7 +1699,6 @@ function welcome() {
             this.hyperthreading = true;
             this.multiAgentMode = true;
 
-            // Enhanced settings
             this.maxHistorySize = 50;
             this.debounceDelay = 100;
             this.chunkSize = 1000;
@@ -1666,6 +1714,7 @@ function welcome() {
             this.initQuantumVisuals();
             this.enableRealtimeHighlighting();
             this.startAutoSave();
+            this.updateLineNumbers();
         }
 
         startAutoSave() {
@@ -1725,9 +1774,8 @@ function welcome() {
             this.editor.addEventListener('keydown', this.handleKeydown.bind(this));
             this.editor.addEventListener('click', this.updateStatus.bind(this));
             this.editor.addEventListener('keyup', this.updateStatus.bind(this));
-            this.editor.addEventListener('scroll', this.syncScroll.bind(this));
+            this.editor.parentElement.addEventListener('scroll', this.syncScroll.bind(this));
 
-            // Enhanced event listeners
             window.addEventListener('beforeunload', () => this.saveAutosave());
             document.addEventListener('visibilitychange', () => {
                 if (document.hidden) {
@@ -1735,7 +1783,6 @@ function welcome() {
                 }
             });
 
-            // Settings bindings
             document.getElementById('quantum-mode').addEventListener('change', (e) => {
                 window.quantumState.settings.quantumMode = e.target.checked;
                 this.quantumMode = e.target.checked;
@@ -1787,7 +1834,6 @@ function welcome() {
                 this.memoryManager.saveSettings();
             });
 
-            // Memory management
             document.getElementById('btn-clear-cache').addEventListener('click', () => {
                 this.memoryManager.clearAllCache().then(success => {
                     quantumNotify(success ? 'Cache cleared' : 'Cache clearance failed', 
@@ -1807,7 +1853,6 @@ function welcome() {
                 });
             });
 
-            // Code suggestions
             this.setupCodeSuggestions();
         }
 
@@ -1816,7 +1861,7 @@ function welcome() {
             const suggestionsPanel = document.getElementById('suggestions-panel');
 
             promptInput.addEventListener('input', () => {
-                const value = promptInput.value.toLowerCase();
+                const value = promptInput.value;
                 if (value.length < 2) {
                     suggestionsPanel.style.display = 'none';
                     return;
@@ -1884,8 +1929,8 @@ function welcome() {
 
             const rect = inputElement.getBoundingClientRect();
             suggestionsPanel.style.position = 'fixed';
-            suggestionsPanel.style.top = (rect.bottom + window.scrollY) + 'px';
-            suggestionsPanel.style.left = (rect.left + window.scrollX) + 'px';
+            suggestionsPanel.style.top = (rect.top - 205) + 'px'; // Position above input
+            suggestionsPanel.style.left = (rect.left) + 'px';
             suggestionsPanel.style.width = (rect.width) + 'px';
             suggestionsPanel.style.display = 'block';
         }
@@ -1956,24 +2001,28 @@ function welcome() {
             const highlighted = content.replace(regex, '<mark>$1</mark>');
             this.editor.innerHTML = highlighted;
             
-            // Remove highlighting after 3 seconds
             setTimeout(() => {
                 this.highlighter.highlightElement(this.editor, this.currentFileType);
             }, 3000);
         }
 
         duplicateLine() {
-            const selection = window.getSelection();
-            if (selection.rangeCount === 0) return;
-
+             const selection = window.getSelection();
+            if (!selection.rangeCount) return;
             const range = selection.getRangeAt(0);
-            const lineElement = range.startContainer.parentElement;
-            const lineText = lineElement.textContent;
-            
-            const newLine = document.createTextNode('\n' + lineText);
-            range.insertNode(newLine);
-            
-            this.handleInput();
+            const lineContent = this.getLineContent(range.startContainer);
+            this.insertText('\n' + lineContent);
+        }
+
+        getLineContent(node) {
+            let currentNode = node;
+            while(currentNode && currentNode !== this.editor) {
+                if(currentNode.nodeName === 'DIV' || currentNode.nodeName === 'P' || currentNode.nodeName === 'BR') {
+                   return currentNode.textContent;
+                }
+                currentNode = currentNode.parentNode;
+            }
+            return node.textContent || "";
         }
 
         renameVariable() {
@@ -1986,8 +2035,7 @@ function welcome() {
             if (selectedText) {
                 const newName = prompt('Rename variable:', selectedText);
                 if (newName && newName !== selectedText) {
-                    range.deleteContents();
-                    range.insertNode(document.createTextNode(newName));
+                    document.execCommand('insertText', false, newName);
                     this.handleInput();
                 }
             } else {
@@ -1996,18 +2044,7 @@ function welcome() {
         }
 
         insertText(text) {
-            const selection = window.getSelection();
-            if (selection.rangeCount === 0) return;
-
-            const range = selection.getRangeAt(0);
-            range.deleteContents();
-            range.insertNode(document.createTextNode(text));
-
-            range.setStart(range.endContainer, range.endOffset);
-            range.setEnd(range.endContainer, range.endOffset);
-            selection.removeAllRanges();
-            selection.addRange(range);
-
+            document.execCommand('insertText', false, text);
             this.handleInput();
         }
 
@@ -2017,6 +2054,7 @@ function welcome() {
 
         initQuantumVisuals() {
             const threadsContainer = document.getElementById('quantum-threads');
+            threadsContainer.innerHTML = '';
             for (let i = 0; i < 5; i++) {
                 const thread = document.createElement('div');
                 thread.className = 'quantum-thread';
@@ -2072,13 +2110,8 @@ function welcome() {
 
         render(content) {
             try {
-                if (content.length > 100000) {
-                    this.renderInChunks(content);
-                } else {
-                    this.editor.textContent = content;
-                    this.highlightContent();
-                }
-                
+                this.editor.textContent = content;
+                this.highlighter.highlightElement(this.editor, this.currentFileType);
                 this.updateLineNumbers();
                 this.updateStatus();
 
@@ -2091,88 +2124,55 @@ function welcome() {
             }
         }
 
-        renderInChunks(content) {
-            const lines = content.split('\n');
-            const chunkSize = this.chunkSize;
-            let currentChunk = 0;
-
-            const renderNextChunk = () => {
-                const start = currentChunk * chunkSize;
-                const end = start + chunkSize;
-                const chunk = lines.slice(start, end).join('\n');
-                
-                if (currentChunk === 0) {
-                    this.editor.textContent = chunk;
-                } else {
-                    this.editor.textContent += '\n' + chunk;
-                }
-
-                if (end < lines.length) {
-                    currentChunk++;
-                    setTimeout(renderNextChunk, 0);
-                } else {
-                    this.highlightContent();
-                }
-            };
-
-            renderNextChunk();
-        }
-
-        highlightContent() {
-            this.highlighter.highlightElement(this.editor, this.currentFileType);
-        }
-
         updateLineNumbers() {
             try {
                 const text = this.editor.textContent || '';
-                const lines = text.split('\n');
-                const lineCount = lines.length;
-
+                const lineCount = text.split('\n').length;
                 let lineNumbersHTML = '';
                 for (let i = 1; i <= lineCount; i++) {
                     lineNumbersHTML += i + '<br>';
                 }
-
                 this.lineNumbers.innerHTML = lineNumbersHTML;
-                this.lineNumbers.style.height = this.editor.scrollHeight + 'px';
             } catch (error) {
                 console.warn('Line number update failed:', error);
             }
         }
 
         syncScroll() {
-            this.lineNumbers.scrollTop = this.editor.scrollTop;
+            this.lineNumbers.scrollTop = this.editor.parentElement.scrollTop;
         }
 
         updateStatus() {
-            const selection = window.getSelection();
-            const text = this.editor.textContent || '';
-            const lines = text.split('\n');
+            try {
+                const selection = window.getSelection();
+                const text = this.editor.textContent || '';
+                const lines = text.split('\n');
 
-            let lineNum = 1;
-            let colNum = 0;
+                let lineNum = 1;
+                let colNum = 0;
 
-            if (selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0);
-                const preCaretRange = range.cloneRange();
-                preCaretRange.selectNodeContents(this.editor);
-                preCaretRange.setEnd(range.endContainer, range.endOffset);
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    const preCaretRange = range.cloneRange();
+                    preCaretRange.selectNodeContents(this.editor);
+                    preCaretRange.setEnd(range.endContainer, range.endOffset);
 
-                const preCaretText = preCaretRange.toString();
-                const preCaretLines = preCaretText.split('\n');
+                    const preCaretText = preCaretRange.toString();
+                    const preCaretLines = preCaretText.split('\n');
 
-                lineNum = preCaretLines.length;
-                colNum = preCaretLines[preCaretLines.length - 1].length;
-            }
+                    lineNum = preCaretLines.length;
+                    colNum = preCaretLines[preCaretLines.length - 1].length;
+                }
 
-            const quantumStatus = this.quantumMode ?
-                ` | Quantum: ${this.hyperthreading ? 'Hyperthreaded' : 'Standard'}` :
-                ' | Classical Mode';
+                const quantumStatus = this.quantumMode ?
+                    ` | Quantum: ${this.hyperthreading ? 'Hyperthreaded' : 'Standard'}` :
+                    ' | Classical Mode';
 
-            const agentStatus = this.multiAgentMode ? ' | Multi-Agent' : ' | Single-Agent';
+                const agentStatus = this.multiAgentMode ? ' | Multi-Agent' : ' | Single-Agent';
 
-            this.statusEditor.textContent =
-                `Cursor: ${lineNum}:${colNum} | Lines: ${lines.length} | Chars: ${text.length} | History: ${this.historyStack.length}${quantumStatus}${agentStatus}`;
+                this.statusEditor.textContent =
+                    `Cursor: ${lineNum}:${colNum} | Lines: ${lines.length} | Chars: ${text.length} | History: ${this.historyStack.length}${quantumStatus}${agentStatus}`;
+            } catch(e) { /* ignore selection errors */ }
         }
 
         handleMemoryError(error) {
@@ -2201,79 +2201,43 @@ function welcome() {
         getContent() {
             return this.editor.textContent;
         }
-
-        insertCodeAtCursor(code) {
-            const selection = window.getSelection();
-            if (selection.rangeCount === 0) return;
-
-            const range = selection.getRangeAt(0);
-            range.deleteContents();
-
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = code;
-
-            const fragment = document.createDocumentFragment();
-            while (tempDiv.firstChild) {
-                fragment.appendChild(tempDiv.firstChild);
-            }
-
-            range.insertNode(fragment);
-
-            range.setStartAfter(fragment.lastChild);
-            range.setEndAfter(fragment.lastChild);
-            selection.removeAllRanges();
-            selection.addRange(range);
-
-            this.handleInput();
-        }
-
-        replaceSelectionWithCode(code) {
-            const selection = window.getSelection();
-            if (selection.rangeCount === 0) return;
-
-            const range = selection.getRangeAt(0);
-            range.deleteContents();
-
-            const textNode = document.createTextNode(code);
-            range.insertNode(textNode);
-
-            range.setStartAfter(textNode);
-            range.setEndAfter(textNode);
-            selection.removeAllRanges();
-            selection.addRange(range);
-
-            this.handleInput();
-        }
-
-        // Code formatting and beautification
+        
         beautifyCode() {
             try {
                 const content = this.getContent();
-                let formatted = content;
+                let beautified = content;
 
-                // Basic formatting rules
-                formatted = formatted.replace(/\s+/g, ' '); // Remove extra whitespace
-                formatted = formatted.replace(/\s*{\s*/g, ' { '); // Format braces
-                formatted = formatted.replace(/\s*}\s*/g, ' } ');
-                formatted = formatted.replace(/\s*\(\s*/g, ' ( '); // Format parentheses
-                formatted = formatted.replace(/\s*\)\s*/g, ' ) ');
-                formatted = formatted.replace(/;\s+/g, ';\n'); // Add newlines after semicolons
-                formatted = formatted.replace(/\n\s*\n/g, '\n'); // Remove multiple empty lines
+                if (typeof js_beautify === 'undefined') {
+                    quantumNotify('Beautify library not loaded.', 'warn');
+                    return;
+                }
+                const options = { indent_size: 2, space_in_empty_paren: true };
 
-                this.setContent(formatted);
+                if (['javascript', 'json', 'typescript', 'jsx', 'tsx'].includes(this.currentFileType)) {
+                    beautified = js_beautify(content, options);
+                } else if (['html', 'xml'].includes(this.currentFileType)) {
+                    beautified = html_beautify(content, options);
+                } else if (this.currentFileType === 'css') {
+                    beautified = css_beautify(content, { indent_size: 2 });
+                }
+
+                this.setContent(beautified, this.currentFileType);
                 quantumNotify('Code beautified', 'success');
             } catch (error) {
+                console.error("Beautify error:", error);
                 quantumNotify('Beautification failed', 'error');
             }
         }
     }
 
     /* =========================================================================
-       ENHANCED QUANTUM ORCHESTRATOR WITH FULL 10-RULES IMPLEMENTATION
+       ENHANCED QUANTUM ORCHESTRATOR WITH GEMINI INTEGRATION
        ========================================================================== */
 
     class EnhancedQuantumOrchestrator {
-        constructor() {
+        constructor(GoogleGenAI) {
+            this.GoogleGenAI = GoogleGenAI;
+            this.ai = null;
             this.agents = {
                 nexus: document.querySelector('.agent-nexus .agent-content'),
                 cognito: document.querySelector('.agent-cognito .agent-content'),
@@ -2310,7 +2274,10 @@ function welcome() {
                 fragments: [],
                 origins: {}
             };
+            this.init();
+        }
 
+        init() {
             this.checkQuantumConnection();
             this.initQuantumHashing();
             this.bindOrchestratorEvents();
@@ -2353,12 +2320,15 @@ function welcome() {
 
         async checkQuantumConnection() {
             try {
-                const response = await fetch('http://localhost:11434/api/tags');
-                if (response.ok) {
+                if (process.env.API_KEY && this.GoogleGenAI) {
+                    this.ai = new this.GoogleGenAI({ apiKey: process.env.API_KEY });
                     this.quantumConnected = true;
-                    quantumNotify('Ollama connected', 'success');
+                    quantumNotify('Gemini connection ready', 'success');
+                    document.getElementById('ai-dot').classList.remove('probing');
+                    document.getElementById('ai-dot').classList.add('connected');
+                    document.getElementById('ai-indicator').textContent = 'Quantum AI: Ready';
                 } else {
-                    this.setQuantumDisconnected();
+                    throw new Error("API_KEY not found or GoogleGenAI not provided");
                 }
             } catch (error) {
                 this.setQuantumDisconnected();
@@ -2367,13 +2337,17 @@ function welcome() {
 
         setQuantumDisconnected() {
             this.quantumConnected = false;
-            quantumNotify('Ollama not found - using simulated mode', 'warn');
+            quantumNotify('Gemini API key not found.', 'warn');
+            document.getElementById('ai-dot').classList.add('probing');
+            document.getElementById('ai-dot').classList.remove('connected');
+            document.getElementById('ai-indicator').textContent = 'Quantum AI: No Key';
         }
 
         async runEnhancedOrchestrator() {
             if (this.isGenerating) return;
 
             this.isGenerating = true;
+            document.querySelectorAll('button').forEach(b => b.disabled = true);
             const promptInput = document.getElementById('prompt-input');
             const promptText = promptInput.value.trim() || "Optimize this code with quantum fractal patterns";
             const editorContext = quantumEditor.getContent();
@@ -2383,26 +2357,18 @@ function welcome() {
             Object.values(this.agents).forEach(agent => {
                 agent.innerHTML = 'Initializing enhanced orchestration...';
             });
-
-            Object.values(this.agentCards).forEach(card => {
-                card.classList.remove('active');
-            });
-
-            Object.values(this.logElements).forEach(log => {
-                log.innerHTML = '';
-            });
+            Object.values(this.agentCards).forEach(card => card.classList.remove('active'));
+            Object.values(this.logElements).forEach(log => log.innerHTML = '');
 
             this.agents.nexus.innerHTML = '<div class="quantum-spinner"></div>Starting enhanced quantum orchestration...';
             this.agentCards.nexus.classList.add('active');
 
             try {
-                // Rule 1: Genesis-hash
                 await this.addLog('nexus', 'Generating genesis hash...', 'genesis');
                 const genesisHash = await this.generateGenesisHash();
                 this.fileSystem.genesisHash = genesisHash;
                 await this.addLog('nexus', `Genesis: ${genesisHash.substring(0, 16)}...`, 'genesis');
 
-                // Rule 2: Origin-hash per agent
                 await this.addLog('nexus', 'Generating origin hashes for agents...', 'origin');
                 const agents = [];
                 const agentCount = window.quantumState.settings.agentCount;
@@ -2415,7 +2381,6 @@ function welcome() {
                     await this.addLog('nexus', `${agentId}: ${originHash.substring(0, 12)}...`, 'origin');
                 }
 
-                // Rule 3: Parse prompt & timestamp event
                 await this.addLog('nexus', 'Creating event log entry...', 'event');
                 const event = {
                     prompt: promptText,
@@ -2425,8 +2390,6 @@ function welcome() {
                 };
                 this.fileSystem.eventLog.push(event);
                 await this.addLog('nexus', `Event: ${event.eventId} logged`, 'event');
-
-                // Rule 4: Start fractal quantum-states
                 await this.addLog('cognito', `<div class="quantum-spinner"></div>Spawning ${agentCount} fractal agents...`);
                 this.agentCards.cognito.classList.add('active');
 
@@ -2438,14 +2401,11 @@ function welcome() {
                     this.agentCards.relay.classList.add('active');
 
                     const roundPromises = agents.map(async (agent) => {
-                        // Rule 5: Rehash each origin with genesis
                         const newOrigin = await this.rehashOrigin(agent.origin, genesisHash, round);
                         agent.origin = newOrigin;
 
-                        // Rule 6: Accelerate reasoning on maths-logic
                         const candidate = await this.performFractalReasoning(agent, promptText, editorContext, round);
                         
-                        // Store fragment
                         const fragment = {
                             agentId: agent.id,
                             origin: agent.origin,
@@ -2454,13 +2414,6 @@ function welcome() {
                             entropy: this.calculateEntropy(agent.origin),
                             timestamp: Date.now()
                         };
-                        
-                        // Rule 7: Enforce collaboration
-                        const peerFragments = this.fileSystem.fragments.filter(f => 
-                            f.round === round && f.agentId !== agent.id
-                        );
-                        
-                        // Rule 8: Set fragments as thinking pool
                         this.fileSystem.fragments.push(fragment);
                         await this.addLog('sentinel', `Fragment from ${agent.id} (round ${round})`, 'fragment');
 
@@ -2472,12 +2425,10 @@ function welcome() {
                     await new Promise(r => setTimeout(r, 500));
                 }
 
-                // Rule 9: Assemble final answer
                 await this.addLog('sentinel', `<div class="quantum-spinner"></div>Assembling final consensus...`);
                 this.agentCards.sentinel.classList.add('active');
                 const consensus = await this.assembleFinalAnswer(allCandidates, genesisHash);
 
-                // Rule 10: Use highest entropy origin as root
                 await this.addLog('echo', `<div class="quantum-spinner"></div>Finalizing quantum report...`);
                 this.agentCards.echo.classList.add('active');
                 await this.displayEnhancedConsensusResults(consensus, allCandidates);
@@ -2490,11 +2441,9 @@ function welcome() {
                 this.agents.cognito.innerHTML = 'Ready';
                 this.agents.relay.innerHTML = 'Ready';
                 this.agents.sentinel.innerHTML = 'Ready';
-
-                Object.values(this.agentCards).forEach(card => {
-                    card.classList.remove('active');
-                });
+                Object.values(this.agentCards).forEach(card => card.classList.remove('active'));
                 this.isGenerating = false;
+                document.querySelectorAll('button').forEach(b => b.disabled = false);
             }
         }
 
@@ -2532,19 +2481,25 @@ function welcome() {
             for (const char of hash) {
                 charCounts[char] = (charCounts[char] || 0) + 1;
             }
-            
             let entropy = 0;
             const length = hash.length;
-            
             for (const char in charCounts) {
                 const probability = charCounts[char] / length;
                 entropy -= probability * Math.log2(probability);
             }
-            
             return entropy;
         }
 
         async performFractalReasoning(agent, prompt, context, round) {
+            if (!this.quantumConnected || !this.ai) {
+                await this.addLog('sentinel', `Agent ${agent.id} falling back to simulation (no AI connection).`, 'fragment');
+                await new Promise(r => setTimeout(r, 200 + (Math.random() * 400)));
+                return `// SIMULATED RESPONSE for Agent ${agent.id}
+function simulated_task_for_${agent.id.replace('-', '_')}() {
+    console.log("This is a simulated response due to lack of AI connection.");
+}`;
+            }
+
             const reasoningStrategies = [
                 "Apply recursive optimization patterns",
                 "Use quantum efficiency algorithms", 
@@ -2557,86 +2512,42 @@ function welcome() {
             ];
 
             const strategy = reasoningStrategies[(round * window.quantumState.settings.reasoningDepth) % reasoningStrategies.length];
-            const seed = agent.origin.substring(0, 12);
+            
+            const fullPrompt = `You are an expert coding agent in a multi-agent system.
+Your agent ID is ${agent.id}.
+You are in round ${round + 1} of a multi-round reasoning process.
+Your assigned strategy is: "${strategy}".
 
-            await new Promise(r => setTimeout(r, 200 + (Math.random() * 400)));
+Based on this strategy, analyze the user's request and the provided code to generate an improved or new code snippet.
 
-            let reasoningOutput = `// ${agent.id} - Round ${round + 1} - ${strategy}
-// Seed: ${seed} | Entropy: ${this.calculateEntropy(agent.origin).toFixed(3)}
-// Fractal Depth: ${window.quantumState.settings.reasoningDepth}
+USER REQUEST: "${prompt}"
 
-`;
+CODE CONTEXT:
+\`\`\`${quantumEditor.currentFileType}
+${context}
+\`\`\`
 
-            const contextLines = context.split('\n').slice(0, 5);
-            reasoningOutput += `// Context preview:\n`;
-            contextLines.forEach((line, index) => {
-                reasoningOutput += `// ${line.substring(0, 60)}${line.length > 60 ? '...' : ''}\n`;
-            });
+Provide only the generated code snippet as your response. Do not include explanations or markdown formatting around the code.`;
 
-            reasoningOutput += `
-// ${strategy.toLowerCase()} applied with quantum fractal patterns
-function ${agent.id.replace('-', '_')}_quantum_${round}() {
-    // Quantum-optimized implementation
-    try {
-        // Apply fractal transformation
-        ${this.applyFractalTransformation(context, strategy)}
-    } catch (quantumError) {
-        console.error("Quantum fractal error:", quantumError);
-        // Fallback to classical implementation
-        ${this.getClassicalFallback(context)}
-    }
-}`;
-
-            return reasoningOutput;
-        }
-
-        applyFractalTransformation(context, strategy) {
-            const transformations = {
-                "Apply recursive optimization patterns": `
-        // Recursive fractal optimization
-        function fractalOptimize(input, depth = 0) {
-            if (depth >= 3) return input;
-            return fractalOptimize(transform(input), depth + 1);
-        }
-        return fractalOptimize(data);`,
+            try {
+                const response = await this.ai.models.generateContent({
+                    model: 'gemini-2.5-pro',
+                    contents: fullPrompt,
+                });
                 
-                "Use quantum efficiency algorithms": `
-        // Quantum efficiency with parallel processing
-        const results = await Promise.all(
-            data.map(item => processQuantum(item))
-        );
-        return results.flat();`,
+                const codeCandidate = response.text;
                 
-                "Implement fractal code structure": `
-        // Fractal code structure with self-similar patterns
-        const fractal = {
-            transform: (x) => x * 2,
-            iterate: (fn, n) => n > 0 ? fractal.iterate(fn, n-1) : fn(),
-            optimize: (data) => data.map(fractal.transform)
-        };
-        return fractal.optimize(data);`,
-                
-                "Apply hyperthreaded reasoning": `
-        // Hyperthreaded execution
-        const threads = [];
-        for (let i = 0; i < 4; i++) {
-            threads.push(executeThread(data.slice(i * chunkSize, (i+1) * chunkSize)));
-        }
-        return (await Promise.all(threads)).flat();`
-            };
+                return `// Agent: ${agent.id} | Round: ${round + 1} | Strategy: ${strategy}
+// Seed: ${agent.origin.substring(0, 12)} | Entropy: ${this.calculateEntropy(agent.origin).toFixed(3)}
+${codeCandidate}`;
 
-            return transformations[strategy] || `
-        // Standard optimization applied
-        return data.map(item => optimize(item));`;
+            } catch (error) {
+                console.error(`Agent ${agent.id} failed:`, error);
+                await this.addLog('sentinel', `Agent ${agent.id} encountered an error: ${error.message}`, 'fragment');
+                return `// Agent ${agent.id} failed to generate a response.\n// Error: ${error.message}`;
+            }
         }
-
-        getClassicalFallback(context) {
-            return `
-        // Classical fallback implementation
-        return data.filter(item => item !== null && item !== undefined)
-                   .map(item => standardTransform(item));`;
-        }
-
+        
         async assembleFinalAnswer(allCandidates, genesis) {
             const candidateGroups = {};
 
@@ -2665,6 +2576,15 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
                 return { key, candidates: group.candidates, score, agentCount, roundCount, avgEntropy };
             });
 
+            if(scoredGroups.length === 0) {
+                 return {
+                    genesis,
+                    selectedCandidate: "// No valid candidates were generated by the agents.",
+                    score: 0, agentCount: 0, roundCount: 0, avgEntropy: 0,
+                    rootAgent: 'N/A', rootEntropy: 0, allGroups: []
+                };
+            }
+
             scoredGroups.sort((a, b) => b.score - a.score);
             const topGroup = scoredGroups[0];
             const rootCandidate = topGroup.candidates.reduce((best, current) => 
@@ -2687,19 +2607,19 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
         async displayEnhancedConsensusResults(consensus, allCandidates) {
             this.consensusPanel.style.display = 'block';
             this.consensusScore.textContent = `Score: ${consensus.score}`;
-
             this.candidatesList.innerHTML = '';
 
             consensus.allGroups.forEach((group, index) => {
                 const isSelected = index === 0;
                 const candidateEl = document.createElement('div');
                 candidateEl.className = `candidate-item ${isSelected ? 'selected-candidate' : ''}`;
+                const contentPreview = new QuantumSyntaxHighlighter().escapeHtml(group.candidates[0].candidate.substring(0, 200));
                 candidateEl.innerHTML = `
                     <div class="candidate-meta">
                         <span>Agents: ${group.agentCount} | Rounds: ${group.roundCount}</span>
                         <span>Score: ${group.score.toFixed(2)} | Entropy: ${group.avgEntropy}</span>
                     </div>
-                    <div class="candidate-content">${group.candidates[0].candidate.substring(0, 200)}${group.candidates[0].candidate.length > 200 ? '...' : ''}</div>
+                    <div class="candidate-content">${contentPreview}${group.candidates[0].candidate.length > 200 ? '...' : ''}</div>
                 `;
                 this.candidatesList.appendChild(candidateEl);
             });
@@ -2747,23 +2667,23 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
         }
 
         async quantumOptimize() {
-            const currentCode = quantumEditor.getContent();
+            document.getElementById('prompt-input').value = "Optimize this code for performance and readability";
             this.runEnhancedOrchestrator();
         }
 
         async quantumDocument() {
-            const currentCode = quantumEditor.getContent();
+            document.getElementById('prompt-input').value = "Add comprehensive documentation and comments to this code";
             this.runEnhancedOrchestrator();
         }
 
         async quantumRefactor() {
-            const currentCode = quantumEditor.getContent();
+            document.getElementById('prompt-input').value = "Refactor this code to improve its structure, maintainability, and apply modern best practices";
             this.runEnhancedOrchestrator();
         }
     }
 
     // Global functions
-    function quantumCopyEnhancedConsensus() {
+    window.quantumCopyEnhancedConsensus = function() {
         if (window.quantumConsensusCode) {
             navigator.clipboard.writeText(window.quantumConsensusCode).then(() => {
                 quantumNotify('Enhanced consensus code copied to clipboard!', 'success');
@@ -2771,14 +2691,14 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
         }
     }
 
-    function quantumApplyEnhancedConsensus() {
+    window.quantumApplyEnhancedConsensus = function() {
         if (window.quantumConsensusCode) {
             quantumEditor.setContent(window.quantumConsensusCode, quantumEditor.currentFileType);
             quantumNotify('Enhanced consensus code applied!', 'success');
         }
     }
 
-    function quantumRerunEnhancedOrchestrator() {
+    window.quantumRerunEnhancedOrchestrator = function() {
         enhancedOrchestrator.runEnhancedOrchestrator();
     }
 
@@ -2815,7 +2735,7 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
         try {
             memoryManager = new QuantumMemoryManager();
             quantumEditor = new QuantumEditor();
-            enhancedOrchestrator = new EnhancedQuantumOrchestrator();
+            enhancedOrchestrator = new EnhancedQuantumOrchestrator(GoogleGenAI);
             
             initQuantumFileHandling();
             initQuantumAI();
@@ -2830,7 +2750,6 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
         }
     });
 
-    // Global error handler
     window.addEventListener('error', (event) => {
         console.error('Global error:', event.error);
         if (memoryManager) {
@@ -2838,7 +2757,26 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
         }
     });
 
-    // File handling functions
+    function getMimeType(fileType) {
+        const mimeMap = {
+            'javascript': 'application/javascript',
+            'jsx': 'application/javascript',
+            'typescript': 'application/typescript',
+            'tsx': 'application/typescript',
+            'html': 'text/html',
+            'css': 'text/css',
+            'python': 'text/x-python',
+            'php': 'application/x-httpd-php',
+            'sql': 'application/sql',
+            'markdown': 'text/markdown',
+            'json': 'application/json',
+            'xml': 'application/xml',
+            'yaml': 'application/x-yaml',
+            'yml': 'application/x-yaml'
+        };
+        return mimeMap[fileType] || 'text/plain';
+    }
+
     function initQuantumFileHandling() {
         document.getElementById('open-file').addEventListener('click', () => {
             document.getElementById('file-input').click();
@@ -2862,8 +2800,6 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
             quantumEditor.setContent(content, fileType);
             document.getElementById('file-meta').textContent = fileName;
             quantumEditor.currentFileName = fileName;
-
-            // Add to recent files
             memoryManager.addRecentFile(fileName, content);
         };
         reader.readAsText(file);
@@ -2874,8 +2810,9 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
             quantumSaveAsFile();
             return;
         }
-
-        const blob = new Blob([quantumEditor.getContent()], { type: 'text/plain' });
+        
+        const mimeType = getMimeType(quantumEditor.currentFileType);
+        const blob = new Blob([quantumEditor.getContent()], { type: mimeType });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = quantumEditor.currentFileName;
@@ -2898,7 +2835,6 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
         }
     }
 
-    // AI functionality
     function initQuantumAI() {
         document.getElementById('send-button').addEventListener('click', runQuantumAI);
         document.getElementById('run-local-ai').addEventListener('click', runQuantumAI);
@@ -2920,15 +2856,15 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
         const prompt = promptInput.value.trim();
         if (!prompt) return;
 
-        if (quantumEditor.multiAgentMode) {
+        if (window.quantumState.settings.multiAgentMode) {
             enhancedOrchestrator.runEnhancedOrchestrator();
         } else {
-            quantumNotify('Enhanced orchestration required for full functionality', 'warn');
+            // Simplified single agent call could be implemented here
+            document.getElementById('prompt-input').value = "Single-agent mode requires Multi-Agent Consensus to be enabled in settings.";
+            quantumNotify('Enable Multi-Agent Consensus in settings', 'warn');
         }
-        promptInput.value = '';
     }
 
-    // Preview functionality
     function initQuantumPreview() {
         document.getElementById('btn-render').addEventListener('click', renderQuantumHTML);
         document.getElementById('render-html').addEventListener('click', renderQuantumHTML);
@@ -2946,6 +2882,9 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
         try {
             const blob = new Blob([quantumEditor.getContent()], { type: 'text/html' });
             const previewContent = document.getElementById('preview-content');
+            if (previewContent.src.startsWith('blob:')) {
+                 URL.revokeObjectURL(previewContent.src);
+            }
             previewContent.src = URL.createObjectURL(blob);
             document.getElementById('preview-panel').style.display = 'flex';
         } catch (e) {
@@ -2953,10 +2892,10 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
         }
     }
 
-    // Left panel functionality
     function initQuantumLeftPanel() {
         document.getElementById('left-toggle').addEventListener('click', () => {
-            const isOpen = document.getElementById('editor-stage').classList.toggle('left-panel-open');
+            const editorStage = document.getElementById('editor-stage');
+            const isOpen = editorStage.classList.toggle('left-panel-open');
             document.getElementById('left-toggle').textContent = isOpen ? '✕' : '☰';
         });
 
@@ -2965,7 +2904,6 @@ function ${agent.id.replace('-', '_')}_quantum_${round}() {
         document.getElementById('btn-beautify').addEventListener('click', () => quantumEditor.beautifyCode());
     }
 
-    // Quick actions
     function initQuantumQuickActions() {
         document.getElementById('btn-optimize').addEventListener('click', () => enhancedOrchestrator.quantumOptimize());
         document.getElementById('btn-document').addEventListener('click', () => enhancedOrchestrator.quantumDocument());

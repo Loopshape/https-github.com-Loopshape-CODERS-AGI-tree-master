@@ -377,13 +377,13 @@ const ColorPaletteView = ({ setError, clearError }: any) => {
 
 // --- Control Primitives ---
 
-const ControlsColumn = ({ children }: { children: React.ReactNode }) => (
+const ControlsColumn = ({ children }: { children?: React.ReactNode }) => (
     <div className="w-full md:w-80 lg:w-96 bg-gray-900/50 backdrop-blur-sm border-r border-gray-700 p-4 flex flex-col space-y-4 overflow-y-auto">
         {children}
     </div>
 );
 
-const ResultColumn = ({ children }: { children: React.ReactNode }) => (
+const ResultColumn = ({ children }: { children?: React.ReactNode }) => (
     <main className="flex-1 p-6 flex flex-col bg-gray-900 overflow-hidden">
         {children}
     </main>
