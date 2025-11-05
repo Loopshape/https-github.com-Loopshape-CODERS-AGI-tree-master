@@ -844,6 +844,110 @@
             display: none;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
+
+        /* FIND AND REPLACE STYLES */
+        #find-replace-panel {
+            position: absolute;
+            top: var(--header-h); /* Below the header */
+            right: 12px; /* Align with right buttons */
+            background: var(--panel);
+            border: 1px solid var(--accent);
+            border-radius: 5px;
+            padding: 8px;
+            z-index: 100;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,.3);
+            width: 300px; /* Fixed width */
+        }
+
+        #find-replace-panel.expanded {
+            height: auto; /* Allow height to adjust */
+        }
+
+        #find-replace-panel input[type="text"] {
+            background: var(--status-bg);
+            border: 1px solid var(--muted-text);
+            color: #f0f0e0;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-family: inherit;
+            font-size: 12px;
+            width: calc(100% - 18px); /* Adjust for padding/border */
+        }
+
+        #find-replace-panel .input-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #find-replace-panel .input-group button {
+            padding: 4px 6px;
+            font-size: 10px;
+            min-width: 24px;
+            background: var(--header-bg);
+            border-color: var(--muted-text);
+        }
+        #find-replace-panel .input-group button:hover {
+            background: var(--hover-blue);
+            border-color: var(--hover-blue);
+        }
+
+
+        #find-replace-panel .options {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+            font-size: 11px;
+        }
+
+        #find-replace-panel .options input[type="checkbox"] {
+            margin-right: 3px;
+        }
+
+        #find-replace-panel .replace-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        #find-replace-panel .replace-actions button {
+            flex: 1;
+            font-size: 11px;
+            padding: 4px 6px;
+        }
+
+        #find-replace-panel .close-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: transparent;
+            border: none;
+            color: var(--muted-text);
+            font-size: 14px;
+            cursor: pointer;
+        }
+        #find-replace-panel .close-button:hover {
+            color: white;
+        }
+
+        /* Search highlights */
+        mark.search-match {
+            background-color: rgba(0, 191, 255, 0.2); /* Light blue, non-active */
+            color: inherit;
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
+        mark.active-search-match {
+            background-color: rgba(74, 201, 74, 0.5); /* Accent green, active */
+            color: #fff;
+            border-radius: 2px;
+            padding: 0 2px;
+        }
     </style>
 <link rel="stylesheet" href="/index.css">
 </head>
@@ -861,6 +965,7 @@
         <button id="open-file" class="small">Open</button>
         <button id="save-file" class="small">Save</button>
         <button id="save-as" class="small">Save As</button>
+        <button id="find-button" class="small">Find</button> <!-- NEW FIND BUTTON -->
         <button id="render-html" class="small warn">Render HTML</button>
         <button id="run-local-ai" class="small info">Quantum AI</button>
         <button id="run-orchestrator" class="small success">Orchestrator</button>
@@ -1034,6 +1139,26 @@ function welcome() {
     </div>
 </div>
 
+<!-- NEW FIND AND REPLACE PANEL -->
+<div id="find-replace-panel" style="display: none;">
+    <button class="close-button" id="close-find-replace">×</button>
+    <div class="input-group">
+        <input type="text" id="find-input" placeholder="Find..." aria-label="Find text">
+        <span id="find-matches-count" style="color:var(--muted-text); font-size: 11px; min-width: 40px; text-align: center;">0/0</span>
+        <button id="find-previous" title="Previous Match (Shift+Enter)">←</button>
+        <button id="find-next" title="Next Match (Enter)">→</button>
+    </div>
+    <input type="text" id="replace-input" placeholder="Replace..." aria-label="Replace text">
+    <div class="options">
+        <label><input type="checkbox" id="find-case-sensitive"> Match Case</label>
+        <label><input type="checkbox" id="find-regex"> RegEx</label>
+    </div>
+    <div class="replace-actions">
+        <button id="replace-button" class="info">Replace</button>
+        <button id="replace-all-button" class="warn">Replace All</button>
+    </div>
+</div>
+
 <!-- GSAP for animations -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
 
@@ -1058,6 +1183,18 @@ function welcome() {
             maxRounds: 3,
             reasoningDepth: 3
         }
+    };
+
+    // Global state for Find/Replace
+    window.findReplaceState = {
+        isOpen: false,
+        searchTerm: '',
+        replaceTerm: '',
+        caseSensitive: false,
+        regex: false,
+        matches: [], // Array of { start: number, end: number }
+        currentMatchIndex: -1,
+        lastEditorContent: '' // To detect content changes
     };
 
     /* =========================================================================
@@ -1126,7 +1263,14 @@ function welcome() {
                 if (stored) {
                     const settings = JSON.parse(stored);
                     window.quantumState.settings = { ...window.quantumState.settings, ...settings };
-                    this.applySettings();
+                    // Apply settings directly to UI elements after loading
+                    document.getElementById('quantum-mode').checked = window.quantumState.settings.quantumMode;
+                    document.getElementById('hyperthreading').checked = window.quantumState.settings.hyperthreading;
+                    document.getElementById('multi-agent-mode').checked = window.quantumState.settings.multiAgentMode;
+                    document.getElementById('auto-save').checked = window.quantumState.settings.autoSave;
+                    document.getElementById('agent-count').value = window.quantumState.settings.agentCount;
+                    document.getElementById('max-rounds').value = window.quantumState.settings.maxRounds;
+                    document.getElementById('reasoning-depth').value = window.quantumState.settings.reasoningDepth;
                 }
             } catch (error) {
                 console.warn('Settings load failed:', error);
@@ -1141,16 +1285,8 @@ function welcome() {
             }
         }
 
-        applySettings() {
-            const settings = window.quantumState.settings;
-            document.getElementById('quantum-mode').checked = settings.quantumMode;
-            document.getElementById('hyperthreading').checked = settings.hyperthreading;
-            document.getElementById('multi-agent-mode').checked = settings.multiAgentMode;
-            document.getElementById('auto-save').checked = settings.autoSave;
-            document.getElementById('agent-count').value = settings.agentCount;
-            document.getElementById('max-rounds').value = settings.maxRounds;
-            document.getElementById('reasoning-depth').value = settings.reasoningDepth;
-        }
+        // applySettings() - No longer needed as settings are applied directly in loadSettings
+        // And QuantumEditor will sync its internal state from window.quantumState.settings
 
         // Recent files management
         loadRecentFiles() {
@@ -1429,6 +1565,7 @@ function welcome() {
             this.currentLanguage = 'javascript';
             this.debounceTimer = null;
             this.debounceDelay = 50;
+            this.lastSelection = null; // To store cursor position / selection
         }
 
         getJavaScriptPatterns() {
@@ -1488,6 +1625,7 @@ function welcome() {
                 { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
                 { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
                 { pattern: /\b\d+(\.\d+)?\b/g, type: 'number' },
+                { pattern: /\b0x[a-fA-F0-9]+\b/g, type: 'number' },
                 { pattern: /\b(?:def|class|if|elif|else|for|while|try|except|finally|with|import|from|as|return|yield|async|await|lambda|None|True|False|and|or|not|in|is|global|nonlocal|del|pass|break|continue|raise)\b/g, type: 'keyword' },
                 { pattern: /\b[a-zA-Z_][\w]*(?=\s*\()/g, type: 'function' },
                 { pattern: /@\w+/g, type: 'function' }
@@ -1594,6 +1732,42 @@ function welcome() {
             this.currentLanguage = language;
         }
 
+        // Saves the current selection/cursor position
+        saveCursorPosition(element) {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0 && element.contains(selection.anchorNode)) {
+                this.lastSelection = selection.getRangeAt(0).cloneRange();
+            } else {
+                this.lastSelection = null;
+            }
+        }
+
+        // Restores the saved selection/cursor position
+        restoreCursorPosition(element) {
+            if (this.lastSelection) {
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                try {
+                    selection.addRange(this.lastSelection);
+                } catch (e) {
+                    // Fallback if range is no longer valid (e.g., due to massive DOM changes)
+                    console.warn('Failed to restore cursor position, setting to start.', e);
+                    const newRange = document.createRange();
+                    newRange.setStart(element, 0); // Set to the beginning of the contenteditable element
+                    newRange.collapse(true);
+                    selection.addRange(newRange);
+                }
+            } else {
+                // If no saved position, set cursor to start
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                const newRange = document.createRange();
+                newRange.setStart(element, 0); // Set to the beginning of the contenteditable element
+                newRange.collapse(true);
+                selection.addRange(newRange);
+            }
+        }
+
         escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -1661,42 +1835,26 @@ function welcome() {
         }
 
         highlightElement(element, language = null) {
-            const text = element.textContent || '';
+            this.saveCursorPosition(element);
+            const text = element.textContent || ''; // Get raw text content
 
-            // Preserve cursor position
-            const selection = window.getSelection();
-            const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-            let startOffset = range ? range.startOffset : 0;
-            let startContainer = range ? range.startContainer : null;
-
-            let path = [];
-            let node = startContainer;
-            while(node && node !== element) {
-                let i = 0;
-                let sibling = node;
-                while((sibling = sibling.previousSibling) != null) i++;
-                path.unshift(i);
-                node = node.parentNode;
-            }
-
+            // Clear existing highlighting (including any previous search marks, which are spans within the editor)
+            // By overwriting innerHTML, we implicitly clear all old content.
             element.innerHTML = this.highlightText(text, language);
 
-            // Restore cursor position
-            try {
-                if(startContainer) {
-                    node = element;
-                    path.forEach(index => { node = node.childNodes[index]; });
-                    if(node) {
-                        const newRange = document.createRange();
-                        newRange.setStart(node, Math.min(startOffset, node.length || 0));
-                        newRange.collapse(true);
-                        selection.removeAllRanges();
-                        selection.addRange(newRange);
-                    }
-                }
-            } catch (e) {
-                console.warn("Could not restore cursor position.", e);
-            }
+            this.restoreCursorPosition(element);
+        }
+
+        // This method is primarily for explicit clearing, not used within highlightElement anymore
+        clearOldSearchHighlights(element) {
+             const marks = element.querySelectorAll('mark.search-match');
+             marks.forEach(mark => {
+                 const parent = mark.parentNode;
+                 while (mark.firstChild) {
+                     parent.insertBefore(mark.firstChild, mark);
+                 }
+                 parent.removeChild(mark);
+             });
         }
 
         enableRealtimeHighlighting(editorElement, language = null) {
@@ -1708,6 +1866,10 @@ function welcome() {
                 clearTimeout(this.debounceTimer);
                 this.debounceTimer = setTimeout(() => {
                     this.highlightElement(editorElement, language);
+                    // After syntax highlighting, re-apply search highlights if panel is open
+                    if (window.findReplaceState.isOpen) {
+                        quantumEditor.applySearchHighlightsToDOM();
+                    }
                 }, this.debounceDelay);
             };
 
@@ -1719,6 +1881,7 @@ function welcome() {
             });
             editorElement.addEventListener('paste', () => setTimeout(highlight, 10));
 
+            // Initial highlight
             highlight();
         }
     }
@@ -1742,20 +1905,35 @@ function welcome() {
             this.historyStack = [];
             this.redoStack = [];
             this.isComposing = false;
-            this.quantumMode = true;
-            this.hyperthreading = true;
-            this.multiAgentMode = true;
+            // Sync initial state from global settings
+            this.quantumMode = window.quantumState.settings.quantumMode;
+            this.hyperthreading = window.quantumState.settings.hyperthreading;
+            this.multiAgentMode = window.quantumState.settings.multiAgentMode;
 
             this.maxHistorySize = 50;
             this.debounceDelay = 100;
             this.chunkSize = 1000;
             this.autoSaveInterval = null;
 
+            // Find & Replace DOM elements
+            this.findReplacePanel = document.getElementById('find-replace-panel');
+            this.findInput = document.getElementById('find-input');
+            this.replaceInput = document.getElementById('replace-input');
+            this.caseSensitiveToggle = document.getElementById('find-case-sensitive');
+            this.regexToggle = document.getElementById('find-regex');
+            this.findPreviousButton = document.getElementById('find-previous');
+            this.findNextButton = document.getElementById('find-next');
+            this.replaceButton = document.getElementById('replace-button');
+            this.replaceAllButton = document.getElementById('replace-all-button');
+            this.closeFindReplaceButton = document.getElementById('close-find-replace');
+            this.findMatchesCount = document.getElementById('find-matches-count');
+
             this.init();
         }
 
         init() {
             this.bindEvents();
+            this.bindFindReplaceEvents(); // NEW: Bind Find/Replace events
             this.loadAutosave();
             this.pushHistory();
             this.initQuantumVisuals();
@@ -1832,7 +2010,7 @@ function welcome() {
 
             document.getElementById('quantum-mode').addEventListener('change', (e) => {
                 window.quantumState.settings.quantumMode = e.target.checked;
-                this.quantumMode = e.target.checked;
+                this.quantumMode = e.target.checked; // Sync internal state
                 this.memoryManager.saveSettings();
                 if (this.quantumMode) {
                     this.createFractalNodes();
@@ -1843,7 +2021,7 @@ function welcome() {
 
             document.getElementById('hyperthreading').addEventListener('change', (e) => {
                 window.quantumState.settings.hyperthreading = e.target.checked;
-                this.hyperthreading = e.target.checked;
+                this.hyperthreading = e.target.checked; // Sync internal state
                 this.memoryManager.saveSettings();
                 if (this.quantumMode) {
                     this.createFractalNodes();
@@ -1852,7 +2030,7 @@ function welcome() {
 
             document.getElementById('multi-agent-mode').addEventListener('change', (e) => {
                 window.quantumState.settings.multiAgentMode = e.target.checked;
-                this.multiAgentMode = e.target.checked;
+                this.multiAgentMode = e.target.checked; // Sync internal state
                 this.memoryManager.saveSettings();
             });
 
@@ -1901,6 +2079,47 @@ function welcome() {
             });
 
             this.setupCodeSuggestions();
+        }
+
+        // NEW: Bind Find & Replace related events
+        bindFindReplaceEvents() {
+            document.getElementById('find-button').addEventListener('click', () => this.showFindReplaceDialog());
+            this.closeFindReplaceButton.addEventListener('click', () => this.hideFindReplaceDialog());
+
+            this.findInput.addEventListener('input', () => this.performSearch());
+            this.replaceInput.addEventListener('input', () => {
+                window.findReplaceState.replaceTerm = this.replaceInput.value;
+            });
+
+            this.caseSensitiveToggle.addEventListener('change', () => this.performSearch());
+            this.regexToggle.addEventListener('change', () => this.performSearch());
+
+            this.findNextButton.addEventListener('click', () => this.findNext());
+            this.findPreviousButton.addEventListener('click', () => this.findPrevious());
+            this.replaceButton.addEventListener('click', () => this.replaceCurrent());
+            this.replaceAllButton.addEventListener('click', () => this.replaceAll());
+
+            this.findInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        this.findPrevious();
+                    } else {
+                        this.findNext();
+                    }
+                }
+            });
+
+            // Global keydown for closing find dialog
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && window.findReplaceState.isOpen) {
+                    this.hideFindReplaceDialog();
+                    e.preventDefault();
+                } else if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                    e.preventDefault();
+                    this.showFindReplaceDialog();
+                }
+            });
         }
 
         setupCodeSuggestions() {
@@ -1993,6 +2212,12 @@ function welcome() {
             if (this.quantumMode) {
                 this.createFractalNodes();
             }
+
+            // NEW: If find/replace panel is open, re-run search after content changes
+            if (window.findReplaceState.isOpen && window.findReplaceState.searchTerm) {
+                // Delay slightly to ensure highlighter has finished its work if any.
+                setTimeout(() => this.performSearch(), this.debounceDelay / 2);
+            }
         }
 
         handleKeydown(event) {
@@ -2014,9 +2239,9 @@ function welcome() {
                 } else if (event.key === 's') {
                     event.preventDefault();
                     quantumSaveFile();
-                } else if (event.key === 'f') {
+                } else if (event.key === 'f') { // NEW: Ctrl+F to open find dialog
                     event.preventDefault();
-                    this.showFindDialog();
+                    this.showFindReplaceDialog();
                 } else if (event.key === 'd') {
                     event.preventDefault();
                     this.duplicateLine();
@@ -2025,32 +2250,325 @@ function welcome() {
                 event.preventDefault();
                 this.renameVariable();
             }
+            // Removed global Escape key handler here because it's now in bindFindReplaceEvents
         }
 
-        showFindDialog() {
-            const findText = prompt('Find:');
-            if (findText) {
-                const content = this.editor.textContent;
-                const regex = new RegExp(findText, 'gi');
-                const matches = content.match(regex);
-                if (matches) {
-                    quantumNotify(`Found ${matches.length} matches`, 'info');
-                    this.highlightMatches(findText);
-                } else {
-                    quantumNotify('No matches found', 'warn');
+        // NEW: Show Find/Replace Dialog
+        showFindReplaceDialog() {
+            this.findReplacePanel.style.display = 'flex';
+            window.findReplaceState.isOpen = true;
+
+            // Pre-fill find input with current selection if any
+            const selection = window.getSelection();
+            if (selection && selection.toString().length > 0) {
+                this.findInput.value = selection.toString();
+            }
+            this.findInput.focus();
+            this.performSearch(); // Perform initial search
+        }
+
+        // NEW: Hide Find/Replace Dialog
+        hideFindReplaceDialog() {
+            this.findReplacePanel.style.display = 'none';
+            window.findReplaceState.isOpen = false;
+            window.findReplaceState.matches = [];
+            window.findReplaceState.currentMatchIndex = -1;
+            this.findMatchesCount.textContent = '0/0';
+            this.clearAllSearchHighlightsFromDOM();
+            // Restore cursor after clearing highlights, it was already saved by highlighter
+            this.highlighter.restoreCursorPosition(this.editor);
+        }
+
+        // NEW: Perform Search
+        performSearch() {
+            window.findReplaceState.searchTerm = this.findInput.value;
+            window.findReplaceState.replaceTerm = this.replaceInput.value;
+            window.findReplaceState.caseSensitive = this.caseSensitiveToggle.checked;
+            window.findReplaceState.regex = this.regexToggle.checked;
+
+            const text = this.editor.textContent;
+            window.findReplaceState.lastEditorContent = text;
+            window.findReplaceState.matches = [];
+            window.findReplaceState.currentMatchIndex = -1;
+
+            if (!window.findReplaceState.searchTerm) {
+                this.findMatchesCount.textContent = '0/0';
+                this.applySearchHighlightsToDOM(); // Clear highlights
+                return;
+            }
+
+            let flags = 'g';
+            if (!window.findReplaceState.caseSensitive) {
+                flags += 'i';
+            }
+
+            try {
+                const searchRegex = new RegExp(
+                    window.findReplaceState.regex ? window.findReplaceState.searchTerm : this.escapeRegExp(window.findReplaceState.searchTerm),
+                    flags
+                );
+                let match;
+                while ((match = searchRegex.exec(text)) !== null) {
+                    window.findReplaceState.matches.push({
+                        start: match.index,
+                        end: match.index + match[0].length
+                    });
                 }
+            } catch (e) {
+                this.findMatchesCount.textContent = 'Error!';
+                quantumNotify(`Invalid regex: ${e.message}`, 'error');
+                // Ensure highlights are cleared on regex error
+                this.clearAllSearchHighlightsFromDOM();
+                return;
+            }
+
+            this.findMatchesCount.textContent = `${window.findReplaceState.matches.length > 0 ? 1 : 0}/${window.findReplaceState.matches.length}`;
+            if (window.findReplaceState.matches.length > 0) {
+                window.findReplaceState.currentMatchIndex = 0;
+            }
+            this.applySearchHighlightsToDOM();
+            this.scrollToActiveMatch();
+        }
+
+        // NEW: Helper to escape special regex characters
+        escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+        }
+
+        // NEW: Find Next
+        findNext() {
+            if (window.findReplaceState.matches.length === 0) return;
+            window.findReplaceState.currentMatchIndex = (window.findReplaceState.currentMatchIndex + 1) % window.findReplaceState.matches.length;
+            this.findMatchesCount.textContent = `${window.findReplaceState.currentMatchIndex + 1}/${window.findReplaceState.matches.length}`;
+            this.applySearchHighlightsToDOM();
+            this.scrollToActiveMatch();
+        }
+
+        // NEW: Find Previous
+        findPrevious() {
+            if (window.findReplaceState.matches.length === 0) return;
+            window.findReplaceState.currentMatchIndex = (window.findReplaceState.currentMatchIndex - 1 + window.findReplaceState.matches.length) % window.findReplaceState.matches.length;
+            this.findMatchesCount.textContent = `${window.findReplaceState.currentMatchIndex + 1}/${window.findReplaceState.matches.length}`;
+            this.applySearchHighlightsToDOM();
+            this.scrollToActiveMatch();
+        }
+
+        // NEW: Apply search highlights to the DOM, preserving syntax highlighting and cursor
+        applySearchHighlightsToDOM() {
+            // Re-apply syntax highlighting and restore cursor first.
+            // This also implicitly clears any old search <mark> tags as innerHTML is replaced.
+            this.highlighter.highlightElement(this.editor, this.currentFileType);
+
+            if (!window.findReplaceState.isOpen || window.findReplaceState.matches.length === 0 || !window.findReplaceState.searchTerm) {
+                // If no search is active, the marks have already been cleared by highlightElement
+                return;
+            }
+
+            const selection = window.getSelection();
+            const originalRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+
+            let textContentOffset = 0;
+            let currentMatchIndex = 0;
+
+            // Use a function to recursively traverse and apply marks
+            const applyMarksRecursive = (node) => {
+                if (currentMatchIndex >= window.findReplaceState.matches.length) return; // All matches processed
+
+                if (node.nodeType === Node.TEXT_NODE) {
+                    const nodeText = node.nodeValue;
+                    if (!nodeText) return;
+
+                    let nodeOffset = 0;
+                    while (currentMatchIndex < window.findReplaceState.matches.length) {
+                        const match = window.findReplaceState.matches[currentMatchIndex];
+
+                        // Check if the current text node contains part of the match
+                        if (match.end <= textContentOffset + nodeOffset) {
+                            currentMatchIndex++; // This match is already past or fully processed
+                            continue;
+                        }
+                        if (match.start >= textContentOffset + nodeText.length) {
+                            break; // Match is in a later node
+                        }
+
+                        // Calculate start and end offsets within the current text node
+                        const highlightStartInNode = Math.max(nodeOffset, match.start - textContentOffset);
+                        const highlightEndInNode = Math.min(nodeText.length, match.end - textContentOffset);
+
+                        if (highlightStartInNode < highlightEndInNode) {
+                            // Split the text node into three parts: before, match, after
+                            const range = document.createRange();
+                            range.setStart(node, highlightStartInNode);
+                            range.setEnd(node, highlightEndInNode);
+
+                            const mark = document.createElement('mark');
+                            mark.className = 'search-match';
+                            if (currentMatchIndex === window.findReplaceState.currentMatchIndex) {
+                                mark.classList.add('active-search-match');
+                            }
+
+                            try {
+                                range.surroundContents(mark);
+                                // After surrounding, the DOM structure changes.
+                                // The original text node 'node' is now replaced by 'mark' in its parent.
+                                // The new text node to continue searching in is now inside 'mark'.
+                                // So we need to re-point 'node' to the text node inside 'mark' if applicable,
+                                // or adjust 'nodeOffset' for the portion already processed.
+                                // Simplest is to restart traversal from 'mark's parent if needed.
+                                // For current purpose, we can re-find the new text node for the rest of the original 'nodeText'.
+
+                                // Move past the marked segment in the current logical text block
+                                nodeOffset = highlightEndInNode;
+
+                                // The surroundContents operation can be tricky with text nodes,
+                                // often splitting them. To avoid complex TreeWalker management
+                                // and still preserve syntax spans, we need to re-traverse or use a simpler structure.
+                                // Given that highlightElement *just* regenerated innerHTML, direct mutation should work.
+
+                                // Since `surroundContents` replaces the range with the new element,
+                                // the `node` variable might become stale. We need to effectively
+                                // get the next sibling or descend into the new mark.
+                                // For simplicity and robustness against internal HTML structure,
+                                // we will break from this text node's loop and let the outer traversal
+                                // continue to the next relevant child.
+                                // This requires a bit of recursion or a loop that can handle the new DOM.
+                                // Let's use a simpler approach that relies on the structure set by syntax highlighting.
+
+                                // A direct approach without intricate TreeWalker resets:
+                                // Since `highlightElement` restores cursor, subsequent `surroundContents`
+                                // operations might shift it. We apply all marks, then restore cursor once.
+                                currentMatchIndex++; // Move to the next match
+                            } catch (e) {
+                                console.warn('Failed to apply search highlight for:', nodeText.substring(highlightStartInNode, highlightEndInNode), e);
+                                currentMatchIndex++; // Skip this match and try the next
+                            }
+                        } else {
+                            currentMatchIndex++;
+                        }
+                    }
+                    textContentOffset += nodeText.length; // Accumulate length of processed text
+                } else if (node.nodeType === Node.ELEMENT_NODE && node.childNodes.length > 0) {
+                    for (let i = 0; i < node.childNodes.length; i++) {
+                        applyMarksRecursive(node.childNodes[i]);
+                    }
+                }
+            };
+
+            // Start recursive application of marks
+            applyMarksRecursive(this.editor);
+
+            // Restore original cursor position after all DOM manipulations
+            if (originalRange) {
+                selection.removeAllRanges();
+                selection.addRange(originalRange);
             }
         }
 
-        highlightMatches(text) {
-            const content = this.editor.innerHTML;
-            const regex = new RegExp(`(${text})`, 'gi');
-            const highlighted = content.replace(regex, '<mark>$1</mark>');
-            this.editor.innerHTML = highlighted;
 
+        // NEW: Clear all search highlights from the DOM (explicitly, used when hiding panel)
+        clearAllSearchHighlightsFromDOM() {
+             this.highlighter.clearOldSearchHighlights(this.editor);
+        }
+
+        // NEW: Scroll to the active search match
+        scrollToActiveMatch() {
+            if (window.findReplaceState.currentMatchIndex === -1 || window.findReplaceState.matches.length === 0) return;
+
+            // Find the active mark element
+            const activeMark = this.editor.querySelector('mark.active-search-match');
+            if (activeMark) {
+                activeMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // NEW: Replace current match
+        replaceCurrent() {
+            if (window.findReplaceState.currentMatchIndex === -1 || window.findReplaceState.matches.length === 0) {
+                quantumNotify('No match to replace.', 'warn');
+                return;
+            }
+
+            let text = this.editor.textContent;
+            const currentMatch = window.findReplaceState.matches[window.findReplaceState.currentMatchIndex];
+            const before = text.substring(0, currentMatch.start);
+            const after = text.substring(currentMatch.end);
+            const newContent = before + window.findReplaceState.replaceTerm + after;
+
+            this.setContent(newContent, this.currentFileType); // This will trigger re-highlighting
+
+            // After replacement, the match indices are invalid. Re-run search and move to next conceptually.
+            const originalMatchLength = currentMatch.end - currentMatch.start;
+            const replacementLength = window.findReplaceState.replaceTerm.length;
+            const lengthDifference = replacementLength - originalMatchLength;
+
+            // Give a small delay for DOM updates to settle before re-searching
             setTimeout(() => {
-                this.highlighter.highlightElement(this.editor, this.currentFileType);
-            }, 3000);
+                this.performSearch(); // This will recalculate all matches
+
+                // Try to find a match near the previous 'next' position
+                let nextMatchIndex = -1;
+                const newCursorPosition = currentMatch.start + replacementLength; // Where cursor would be after replacement
+
+                // Find the first match that starts after the replacement point
+                for (let i = 0; i < window.findReplaceState.matches.length; i++) {
+                    if (window.findReplaceState.matches[i].start >= newCursorPosition) {
+                        nextMatchIndex = i;
+                        break;
+                    }
+                }
+
+                if (nextMatchIndex === -1 && window.findReplaceState.matches.length > 0) {
+                    // If no match found after, loop back to the first match
+                    nextMatchIndex = 0;
+                }
+
+                if (nextMatchIndex !== -1) {
+                    window.findReplaceState.currentMatchIndex = nextMatchIndex;
+                    this.findMatchesCount.textContent = `${window.findReplaceState.currentMatchIndex + 1}/${window.findReplaceState.matches.length}`;
+                    this.applySearchHighlightsToDOM();
+                    this.scrollToActiveMatch();
+                } else {
+                    // No matches left
+                    this.hideFindReplaceDialog();
+                }
+            }, 50);
+
+            quantumNotify('Match replaced.', 'success');
+        }
+
+        // NEW: Replace all matches
+        replaceAll() {
+            if (window.findReplaceState.matches.length === 0) {
+                quantumNotify('No matches to replace.', 'warn');
+                return;
+            }
+
+            const text = this.editor.textContent;
+            let flags = 'g';
+            if (!window.findReplaceState.caseSensitive) {
+                flags += 'i';
+            }
+
+            try {
+                const searchRegex = new RegExp(
+                    window.findReplaceState.regex ? window.findReplaceState.searchTerm : this.escapeRegExp(window.findReplaceState.searchTerm),
+                    flags
+                );
+                const newContent = text.replace(searchRegex, window.findReplaceState.replaceTerm);
+                this.setContent(newContent, this.currentFileType);
+                this.hideFindReplaceDialog(); // Close dialog as all replacements are done
+                quantumNotify(`${window.findReplaceState.matches.length} matches replaced!`, 'success');
+            } catch (e) {
+                quantumNotify(`Error replacing all: ${e.message}`, 'error');
+            }
+        }
+
+        showFindDialog() { // This method is now effectively replaced by showFindReplaceDialog
+            quantumNotify("Use the new 'Find' button or Ctrl+F for Find/Replace functionality.", 'info');
+        }
+
+        highlightMatches(text) { // This method is now effectively replaced by applySearchHighlightsToDOM
+            quantumNotify("Search highlighting is now handled by the Find/Replace panel.", 'info');
         }
 
         duplicateLine() {
@@ -2064,12 +2582,24 @@ function welcome() {
         getLineContent(node) {
             let currentNode = node;
             while(currentNode && currentNode !== this.editor) {
+                // Check if current node is a block element or breaks line for contenteditable
                 if(currentNode.nodeName === 'DIV' || currentNode.nodeName === 'P' || currentNode.nodeName === 'BR') {
                    return currentNode.textContent;
                 }
                 currentNode = currentNode.parentNode;
             }
-            return node.textContent || "";
+            // Fallback for flat text nodes or if at the root
+            // This might not get the full "line" if it's just a segment of a text node
+            const fullText = this.editor.textContent;
+            if (fullText) {
+                const preCaretRange = document.createRange();
+                preCaretRange.selectNodeContents(this.editor);
+                preCaretRange.setEnd(selection.focusNode, selection.focusOffset);
+                const preCaretText = preCaretRange.toString();
+                const lineNumber = preCaretText.split('\n').length - 1;
+                return fullText.split('\n')[lineNumber];
+            }
+            return '';
         }
 
         renameVariable() {
@@ -2130,6 +2660,7 @@ function welcome() {
 
         pushHistory() {
             const content = this.editor.textContent;
+            // Only push if content has actually changed from the last history entry
             if (this.historyStack.length && this.historyStack[this.historyStack.length - 1] === content) return;
 
             this.historyStack.push(content);
@@ -2142,7 +2673,14 @@ function welcome() {
 
         undo() {
             if (this.historyStack.length > 1) {
-                this.redoStack.push(this.historyStack.pop());
+                const currentContent = this.editor.textContent;
+                // Only push to redo if current content isn't already the last one
+                if (currentContent !== this.historyStack[this.historyStack.length - 1]) {
+                     this.redoStack.push(currentContent);
+                } else {
+                     this.redoStack.push(this.historyStack.pop()); // Pop the current state before going back
+                }
+
                 this.render(this.historyStack[this.historyStack.length - 1]);
             }
         }
@@ -2157,8 +2695,11 @@ function welcome() {
 
         render(content) {
             try {
-                this.editor.textContent = content;
-                this.highlighter.highlightElement(this.editor, this.currentFileType);
+                this.editor.textContent = content; // Set raw text first
+                this.highlighter.highlightElement(this.editor, this.currentFileType); // Apply syntax highlights
+                if (window.findReplaceState.isOpen) { // If find panel is open, apply search highlights
+                    this.applySearchHighlightsToDOM();
+                }
                 this.updateLineNumbers();
                 this.updateStatus();
 
@@ -2237,16 +2778,30 @@ function welcome() {
             try {
                 this.currentFileType = fileType;
                 this.highlighter.setLanguage(fileType);
-                this.render(content);
-                this.historyStack = [content];
-                this.redoStack = [];
+                this.render(content); // Render will now handle full highlighting logic
+                this.pushHistory(); // Add to history
+                this.redoStack = []; // Clear redo stack on new content set
+                window.findReplaceState.lastEditorContent = content; // Update last known content for search
             } catch (error) {
                 this.handleMemoryError(error);
             }
         }
 
         getContent() {
-            return this.editor.textContent;
+            // Create a temporary div to strip out highlight marks from the editor's innerHTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = this.editor.innerHTML; // Get the full HTML content
+
+            // Remove all <mark> tags
+            tempDiv.querySelectorAll('mark.search-match').forEach(mark => {
+                while(mark.firstChild) {
+                    mark.parentNode.insertBefore(mark.firstChild, mark); // Move children out
+                }
+                mark.parentNode.removeChild(mark); // Remove the mark tag itself
+            });
+
+            // Return only the text content, which now also implicitly removes syntax highlighting spans
+            return tempDiv.textContent;
         }
 
         beautifyCode() {
@@ -2396,577 +2951,4 @@ function welcome() {
             this.isGenerating = true;
             document.querySelectorAll('button').forEach(b => b.disabled = true);
             const promptInput = document.getElementById('prompt-input');
-            const promptText = promptInput.value.trim() || "Optimize this code with quantum fractal patterns";
-            const editorContext = quantumEditor.getContent();
-
-            document.getElementById('ai-response-panel').style.display = 'block';
-
-            Object.values(this.agents).forEach(agent => {
-                agent.innerHTML = 'Initializing enhanced orchestration...';
-            });
-            Object.values(this.agentCards).forEach(card => card.classList.remove('active'));
-            Object.values(this.logElements).forEach(log => log.innerHTML = '');
-
-            this.agents.nexus.innerHTML = '<div class="quantum-spinner"></div>Starting enhanced quantum orchestration...';
-            this.agentCards.nexus.classList.add('active');
-
-            try {
-                await this.addLog('nexus', 'Generating genesis hash...', 'genesis');
-                const genesisHash = await this.generateGenesisHash();
-                this.fileSystem.genesisHash = genesisHash;
-                await this.addLog('nexus', `Genesis: ${genesisHash.substring(0, 16)}...`, 'genesis');
-
-                await this.addLog('nexus', 'Generating origin hashes for agents...', 'origin');
-                const agents = [];
-                const agentCount = window.quantumState.settings.agentCount;
-
-                for (let i = 0; i < agentCount; i++) {
-                    const agentId = `agent-${i}`;
-                    const originHash = await this.generateOriginHash(genesisHash, agentId);
-                    this.fileSystem.origins[agentId] = originHash;
-                    agents.push({ id: agentId, origin: originHash });
-                    await this.addLog('nexus', `${agentId}: ${originHash.substring(0, 12)}...`, 'origin');
-                }
-
-                await this.addLog('nexus', 'Creating event log entry...', 'event');
-                const event = {
-                    prompt: promptText,
-                    timestamp: Date.now(),
-                    origin: genesisHash,
-                    eventId: this.generateEventId()
-                };
-                this.fileSystem.eventLog.push(event);
-                await this.addLog('nexus', `Event: ${event.eventId} logged`, 'event');
-                await this.addLog('cognito', `<div class="quantum-spinner"></div>Spawning ${agentCount} fractal agents...`);
-                this.agentCards.cognito.classList.add('active');
-
-                const allCandidates = [];
-                const maxRounds = window.quantumState.settings.maxRounds;
-
-                for (let round = 0; round < maxRounds; round++) {
-                    await this.addLog('relay', `<div class="quantum-spinner"></div>Round ${round + 1}/${maxRounds}...`);
-                    this.agentCards.relay.classList.add('active');
-
-                    const roundPromises = agents.map(async (agent) => {
-                        const newOrigin = await this.rehashOrigin(agent.origin, genesisHash, round);
-                        agent.origin = newOrigin;
-
-                        const candidate = await this.performFractalReasoning(agent, promptText, editorContext, round);
-
-                        const fragment = {
-                            agentId: agent.id,
-                            origin: agent.origin,
-                            round,
-                            candidate,
-                            entropy: this.calculateEntropy(agent.origin),
-                            timestamp: Date.now()
-                        };
-                        this.fileSystem.fragments.push(fragment);
-                        await this.addLog('sentinel', `Fragment from ${agent.id} (round ${round})`, 'fragment');
-
-                        allCandidates.push(fragment);
-                        return fragment;
-                    });
-
-                    await Promise.all(roundPromises);
-                    await new Promise(r => setTimeout(r, 500));
-                }
-
-                await this.addLog('sentinel', `<div class="quantum-spinner"></div>Assembling final consensus...`);
-                this.agentCards.sentinel.classList.add('active');
-                const consensus = await this.assembleFinalAnswer(allCandidates, genesisHash);
-
-                await this.addLog('echo', `<div class="quantum-spinner"></div>Finalizing quantum report...`);
-                this.agentCards.echo.classList.add('active');
-                await this.displayEnhancedConsensusResults(consensus, allCandidates);
-
-            } catch (e) {
-                console.error("Enhanced orchestrator error:", e);
-                this.agents.echo.innerHTML = `<span style="color: #ff4444">Orchestrator Error: ${e.message}</span>`;
-            } finally {
-                this.agents.nexus.innerHTML = 'Enhanced orchestration complete';
-                this.agents.cognito.innerHTML = 'Ready';
-                this.agents.relay.innerHTML = 'Ready';
-                this.agents.sentinel.innerHTML = 'Ready';
-                Object.values(this.agentCards).forEach(card => card.classList.remove('active'));
-                this.isGenerating = false;
-                document.querySelectorAll('button').forEach(b => b.disabled = false);
-            }
-        }
-
-        async generateGenesisHash() {
-            const timestamp = Date.now().toString();
-            const random = Math.random().toString(36).substring(2);
-            return this.simulateSHA256('GENESIS' + timestamp + random);
-        }
-
-        async generateOriginHash(genesis, agentId) {
-            const nonce = Math.random().toString(36).substring(2, 10);
-            return this.simulateSHA256(genesis + agentId + nonce);
-        }
-
-        async rehashOrigin(origin, genesis, round) {
-            return this.simulateSHA256(origin + genesis + round.toString());
-        }
-
-        simulateSHA256(input) {
-            let hash = 0;
-            for (let i = 0; i < input.length; i++) {
-                const char = input.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash;
-            }
-            return Math.abs(hash).toString(36) + Math.random().toString(36).substring(2, 10);
-        }
-
-        generateEventId() {
-            return 'event_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-        }
-
-        calculateEntropy(hash) {
-            const charCounts = {};
-            for (const char of hash) {
-                charCounts[char] = (charCounts[char] || 0) + 1;
-            }
-            let entropy = 0;
-            const length = hash.length;
-            for (const char in charCounts) {
-                const probability = charCounts[char] / length;
-                entropy -= probability * Math.log2(probability);
-            }
-            return entropy;
-        }
-
-        async performFractalReasoning(agent, prompt, context, round) {
-            if (!this.quantumConnected || !this.ai) {
-                await this.addLog('sentinel', `Agent ${agent.id} falling back to simulation (no AI connection).`, 'fragment');
-                await new Promise(r => setTimeout(r, 200 + (Math.random() * 400)));
-                return `// SIMULATED RESPONSE for Agent ${agent.id}
-function simulated_task_for_${agent.id.replace('-', '_')}() {
-    console.log("This is a simulated response due to lack of AI connection.");
-}`;
-            }
-
-            const reasoningStrategies = [
-                "Apply recursive optimization patterns",
-                "Use quantum efficiency algorithms",
-                "Implement fractal code structure",
-                "Apply hyperthreaded reasoning",
-                "Use entropy-based selection",
-                "Apply mathematical transformation",
-                "Implement parallel processing",
-                "Use consensus validation"
-            ];
-
-            const strategy = reasoningStrategies[(round * window.quantumState.settings.reasoningDepth) % reasoningStrategies.length];
-
-            const MAX_CONTEXT_LENGTH = 8000;
-            let truncatedContext = context;
-            if (context.length > MAX_CONTEXT_LENGTH) {
-                const half = MAX_CONTEXT_LENGTH / 2;
-                truncatedContext = context.substring(0, half) +
-                                   '\n\n// ... [CODE TRUNCATED FOR BREVITY] ...\n\n' +
-                                   context.substring(context.length - half);
-            }
-
-            const fullPrompt = `You are an expert coding agent in a multi-agent system.
-Your agent ID is ${agent.id}.
-You are in round ${round + 1} of a multi-round reasoning process.
-Your assigned strategy is: "${strategy}".
-
-Based on this strategy, analyze the user's request and the provided code to generate an improved or new code snippet.
-
-USER REQUEST: "${prompt}"
-
-CODE CONTEXT:
-\`\`\`${quantumEditor.currentFileType}
-${truncatedContext}
-\`\`\`
-
-Provide only the generated code snippet as your response. Do not include explanations or markdown formatting around the code.`;
-
-            try {
-                const response = await this.ai.models.generateContent({
-                    model: 'gemini-2.5-pro',
-                    contents: fullPrompt,
-                });
-
-                const codeCandidate = response.text;
-
-                return `// Agent: ${agent.id} | Round: ${round + 1} | Strategy: ${strategy}
-// Seed: ${agent.origin.substring(0, 12)} | Entropy: ${this.calculateEntropy(agent.origin).toFixed(3)}
-${codeCandidate}`;
-
-            } catch (error) {
-                console.error(`Agent ${agent.id} failed:`, error);
-                await this.addLog('sentinel', `Agent ${agent.id} encountered an error: ${error.message}`, 'fragment');
-                return `// Agent ${agent.id} failed to generate a response.\n// Error: ${error.message}`;
-            }
-        }
-
-        async assembleFinalAnswer(allCandidates, genesis) {
-            const candidateGroups = {};
-
-            for (const candidate of allCandidates) {
-                const key = candidate.candidate.substring(0, 100);
-                if (!candidateGroups[key]) {
-                    candidateGroups[key] = {
-                        candidates: [],
-                        totalEntropy: 0,
-                        agents: new Set(),
-                        rounds: new Set()
-                    };
-                }
-                candidateGroups[key].candidates.push(candidate);
-                candidateGroups[key].totalEntropy += candidate.entropy;
-                candidateGroups[key].agents.add(candidate.agentId);
-                candidateGroups[key].rounds.add(candidate.round);
-            }
-
-            const scoredGroups = Object.entries(candidateGroups).map(([key, group]) => {
-                const agentCount = group.agents.size;
-                const roundCount = group.rounds.size;
-                const avgEntropy = group.totalEntropy / group.candidates.length;
-                const score = (agentCount * 2) + (roundCount * 1.5) + (avgEntropy * 3);
-
-                return { key, candidates: group.candidates, score, agentCount, roundCount, avgEntropy };
-            });
-
-            if(scoredGroups.length === 0) {
-                 return {
-                    genesis,
-                    selectedCandidate: "// No valid candidates were generated by the agents.",
-                    score: 0, agentCount: 0, roundCount: 0, avgEntropy: 0,
-                    rootAgent: 'N/A', rootEntropy: 0, allGroups: []
-                };
-            }
-
-            scoredGroups.sort((a, b) => b.score - a.score);
-            const topGroup = scoredGroups[0];
-            const rootCandidate = topGroup.candidates.reduce((best, current) =>
-                current.entropy > best.entropy ? current : best
-            );
-
-            return {
-                genesis,
-                selectedCandidate: topGroup.candidates[0].candidate,
-                score: topGroup.score.toFixed(3),
-                agentCount: topGroup.agentCount,
-                roundCount: topGroup.roundCount,
-                avgEntropy: topGroup.avgEntropy.toFixed(3),
-                rootAgent: rootCandidate.agentId,
-                rootEntropy: rootCandidate.entropy.toFixed(3),
-                allGroups: scoredGroups
-            };
-        }
-
-        async displayEnhancedConsensusResults(consensus, allCandidates) {
-            this.consensusPanel.style.display = 'block';
-            this.consensusScore.textContent = `Score: ${consensus.score}`;
-            this.candidatesList.innerHTML = '';
-
-            consensus.allGroups.forEach((group, index) => {
-                const isSelected = index === 0;
-                const candidateEl = document.createElement('div');
-                candidateEl.className = `candidate-item ${isSelected ? 'selected-candidate' : ''}`;
-                const contentPreview = new QuantumSyntaxHighlighter().escapeHtml(group.candidates[0].candidate.substring(0, 200));
-                candidateEl.innerHTML = `
-                    <div class="candidate-meta">
-                        <span>Agents: ${group.agentCount} | Rounds: ${group.roundCount}</span>
-                        <span>Score: ${group.score.toFixed(2)} | Entropy: ${group.avgEntropy}</span>
-                    </div>
-                    <div class="candidate-content">${contentPreview}${group.candidates[0].candidate.length > 200 ? '...' : ''}</div>
-                `;
-                this.candidatesList.appendChild(candidateEl);
-            });
-
-            const highlighter = new QuantumSyntaxHighlighter();
-            const highlightedCode = highlighter.highlightText(consensus.selectedCandidate, quantumEditor.currentFileType);
-
-            const quantumButtons = `
-                <div class="action-buttons">
-                    <button class="small success" onclick="quantumCopyEnhancedConsensus()">Copy Enhanced Consensus</button>
-                    <button class="small info" onclick="quantumApplyEnhancedConsensus()">Apply Enhanced Code</button>
-                    <button class="small" onclick="quantumRerunEnhancedOrchestrator()" style="background: var(--agent-nexus);">Rerun Enhanced</button>
-                </div>
-            `;
-
-            this.agents.echo.innerHTML = `
-                <div style="border-left: 3px solid var(--agent-nexus); padding-left: 10px; margin-bottom: 10px;">
-                    <strong>Enhanced Quantum Consensus Complete</strong><br>
-                    <small>Root Agent: ${consensus.rootAgent} | Score: ${consensus.score}</small><br>
-                    <small>Entropy: ${consensus.avgEntropy} | Agents: ${consensus.agentCount} | Rounds: ${consensus.roundCount}</small>
-                </div>
-                <pre style="background: #1a1a1a; padding: 10px; border-radius: 4px; overflow: auto; max-height: 300px; border: 1px solid var(--agent-cognito);">${highlightedCode}</pre>
-                ${quantumButtons}
-            `;
-
-            window.quantumConsensusCode = consensus.selectedCandidate;
-        }
-
-        async addLog(agent, message, type = 'info') {
-            const logEl = this.logElements[agent];
-            if (!logEl) return;
-
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry ${type}`;
-            logEntry.innerHTML = `[${timestamp}] ${message}`;
-
-            logEl.appendChild(logEntry);
-            logEl.scrollTop = logEl.scrollHeight;
-
-            this.agentCards[agent].classList.add('active');
-            setTimeout(() => {
-                this.agentCards[agent].classList.remove('active');
-            }, 500);
-        }
-
-        async quantumOptimize() {
-            document.getElementById('prompt-input').value = "Optimize this code for performance and readability";
-            this.runEnhancedOrchestrator();
-        }
-
-        async quantumDocument() {
-            document.getElementById('prompt-input').value = "Add comprehensive documentation and comments to this code";
-            this.runEnhancedOrchestrator();
-        }
-
-        async quantumRefactor() {
-            document.getElementById('prompt-input').value = "Refactor this code to improve its structure, maintainability, and apply modern best practices";
-            this.runEnhancedOrchestrator();
-        }
-    }
-
-    // Global functions
-    window.quantumCopyEnhancedConsensus = function() {
-        if (window.quantumConsensusCode) {
-            navigator.clipboard.writeText(window.quantumConsensusCode).then(() => {
-                quantumNotify('Enhanced consensus code copied to clipboard!', 'success');
-            });
-        }
-    }
-
-    window.quantumApplyEnhancedConsensus = function() {
-        if (window.quantumConsensusCode) {
-            quantumEditor.setContent(window.quantumConsensusCode, quantumEditor.currentFileType);
-            quantumNotify('Enhanced consensus code applied!', 'success');
-        }
-    }
-
-    window.quantumRerunEnhancedOrchestrator = function() {
-        enhancedOrchestrator.runEnhancedOrchestrator();
-    }
-
-    function quantumNotify(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${type === 'success' ? 'var(--accent)' :
-                        type === 'warn' ? 'var(--warn-bg)' :
-                        type === 'error' ? 'var(--err)' : 'var(--info)'};
-            color: ${type === 'warn' ? '#3a3c31' : 'white'};
-            padding: 10px 15px;
-            border-radius: 4px;
-            z-index: 1000;
-            font-size: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        `;
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 3000);
-    }
-
-    // Initialize the application
-    let quantumEditor;
-    let enhancedOrchestrator;
-    let memoryManager;
-
-    document.addEventListener('DOMContentLoaded', () => {
-        try {
-            memoryManager = new QuantumMemoryManager();
-            quantumEditor = new QuantumEditor();
-            enhancedOrchestrator = new EnhancedQuantumOrchestrator(GoogleGenAI);
-
-            initQuantumFileHandling();
-            initQuantumAI();
-            initQuantumPreview();
-            initQuantumLeftPanel();
-            initQuantumQuickActions();
-
-            quantumNotify('Quantum Fractal AI Editor Ready', 'success');
-        } catch (error) {
-            console.error('Initialization failed:', error);
-            quantumNotify('Initialization failed - check console', 'error');
-        }
-    });
-
-    window.addEventListener('error', (event) => {
-        console.error('Global error:', event.error);
-        if (memoryManager) {
-            memoryManager.emergencyCleanup();
-        }
-    });
-
-    function getMimeType(fileType) {
-        const mimeMap = {
-            'javascript': 'application/javascript',
-            'jsx': 'application/javascript',
-            'typescript': 'application/typescript',
-            'tsx': 'application/typescript',
-            'html': 'text/html',
-            'css': 'text/css',
-            'python': 'text/x-python',
-            'php': 'application/x-httpd-php',
-            'sql': 'application/sql',
-            'markdown': 'text/markdown',
-            'json': 'application/json',
-            'xml': 'application/xml',
-            'yaml': 'application/x-yaml',
-            'yml': 'application/x-yaml'
-        };
-        return mimeMap[fileType] || 'text/plain';
-    }
-
-    function initQuantumFileHandling() {
-        document.getElementById('open-file').addEventListener('click', () => {
-            document.getElementById('file-input').click();
-        });
-
-        document.getElementById('file-input').addEventListener('change', handleFileOpen);
-        document.getElementById('save-file').addEventListener('click', quantumSaveFile);
-        document.getElementById('save-as').addEventListener('click', quantumSaveAsFile);
-    }
-
-    function handleFileOpen(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-            const fileName = file.name;
-            const fileType = quantumEditor.highlighter.detectLanguage(fileName);
-            const content = ev.target.result;
-
-            quantumEditor.setContent(content, fileType);
-            document.getElementById('file-meta').textContent = fileName;
-            quantumEditor.currentFileName = fileName;
-            memoryManager.addRecentFile(fileName, content);
-        };
-        reader.readAsText(file);
-    }
-
-    function quantumSaveFile() {
-        if (!quantumEditor.currentFileName) {
-            quantumSaveAsFile();
-            return;
-        }
-
-        const mimeType = getMimeType(quantumEditor.currentFileType);
-        const blob = new Blob([quantumEditor.getContent()], { type: mimeType });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = quantumEditor.currentFileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(a.href);
-
-        quantumNotify('File saved successfully', 'success');
-    }
-
-    function quantumSaveAsFile() {
-        const fileName = prompt('Enter file name:', quantumEditor.currentFileName || 'quantum_code.js');
-        if (fileName) {
-            quantumEditor.currentFileName = fileName;
-            const fileType = quantumEditor.highlighter.detectLanguage(fileName);
-            quantumEditor.setContent(quantumEditor.getContent(), fileType);
-            document.getElementById('file-meta').textContent = fileName;
-            quantumSaveFile();
-        }
-    }
-
-    function initQuantumAI() {
-        document.getElementById('send-button').addEventListener('click', runQuantumAI);
-        document.getElementById('run-local-ai').addEventListener('click', runQuantumAI);
-
-        document.getElementById('prompt-input').addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                e.preventDefault();
-                runQuantumAI();
-            }
-        });
-
-        document.getElementById('close-ai-panel').addEventListener('click', () => {
-            document.getElementById('ai-response-panel').style.display = 'none';
-        });
-    }
-
-    function runQuantumAI() {
-        const promptInput = document.getElementById('prompt-input');
-        const prompt = promptInput.value.trim();
-        if (!prompt) return;
-
-        if (window.quantumState.settings.multiAgentMode) {
-            enhancedOrchestrator.runEnhancedOrchestrator();
-        } else {
-            // Simplified single agent call could be implemented here
-            document.getElementById('prompt-input').value = "Single-agent mode requires Multi-Agent Consensus to be enabled in settings.";
-            quantumNotify('Enable Multi-Agent Consensus in settings', 'warn');
-        }
-    }
-
-    function initQuantumPreview() {
-        document.getElementById('btn-render').addEventListener('click', renderQuantumHTML);
-        document.getElementById('render-html').addEventListener('click', renderQuantumHTML);
-
-        document.getElementById('close-preview').addEventListener('click', () => {
-            document.getElementById('preview-panel').style.display = 'none';
-            const previewContent = document.getElementById('preview-content');
-            if (previewContent.src.startsWith('blob:')) {
-                URL.revokeObjectURL(previewContent.src);
-            }
-        });
-    }
-
-    function renderQuantumHTML() {
-        try {
-            const blob = new Blob([quantumEditor.getContent()], { type: 'text/html' });
-            const previewContent = document.getElementById('preview-content');
-            if (previewContent.src.startsWith('blob:')) {
-                 URL.revokeObjectURL(previewContent.src);
-            }
-            previewContent.src = URL.createObjectURL(blob);
-            document.getElementById('preview-panel').style.display = 'flex';
-        } catch (e) {
-            alert('Quantum rendering error: ' + e.message);
-        }
-    }
-
-    function initQuantumLeftPanel() {
-        document.getElementById('left-toggle').addEventListener('click', () => {
-            const editorStage = document.getElementById('editor-stage');
-            const isOpen = editorStage.classList.toggle('left-panel-open');
-            document.getElementById('left-toggle').textContent = isOpen ? '✕' : '☰';
-        });
-
-        document.getElementById('btn-undo').addEventListener('click', () => quantumEditor.undo());
-        document.getElementById('btn-redo').addEventListener('click', () => quantumEditor.redo());
-        document.getElementById('btn-beautify').addEventListener('click', () => quantumEditor.beautifyCode());
-    }
-
-    function initQuantumQuickActions() {
-        document.getElementById('btn-optimize').addEventListener('click', () => enhancedOrchestrator.quantumOptimize());
-        document.getElementById('btn-document').addEventListener('click', () => enhancedOrchestrator.quantumDocument());
-        document.getElementById('btn-refactor').addEventListener('click', () => enhancedOrchestrator.quantumRefactor());
-    }
-
-</script>
-<script type="module" src="/index.tsx"></script>
-</body>
-</html>
+            const
