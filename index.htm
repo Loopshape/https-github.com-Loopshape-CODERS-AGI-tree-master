@@ -1,0 +1,298 @@
+< !DOCTYPE html > < html lang = "en" >
+  <
+  head > < meta charset = "UTF-8" >
+  <
+  meta name = "viewport"
+content = "width=device-width, initial-scale=1.0" > < title > Nemodian 2244 - 1::AI Code Editor < /title> <
+link href = "https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"
+rel = "stylesheet" / > < script src = "https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" > < /script> <
+script src = "https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js" > < /script> <
+script src = "https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js" > < /script> <
+script src = "https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify.js" > < /script> <
+style > html, body {
+  margin: 0;height: 100 % ;font - family: 'Fira Code',
+  monospace;font - size: 12 px;overflow: hidden;
+}
+body {
+  display: flex;flex - direction: column;background: #3a3c31;color:# f0f0e0;position: absolute;top: 0;left: 0;right: 0;bottom: 0;
+}
+header {
+  background: #2e3026;color:# f0f0e0;padding: 5 px 10 px;display: flex;justify - content: space - between;align - items: center;position: fixed;top: 0;width: 100 % ;z - index: 2;border - bottom: 1 px solid #22241e;}
+# status - bar {
+    background: #22241e;color:# 4 ac94a;padding: 2 px 10 px;font - size: 11 px;position: fixed;top: 35 px;width: 100 % ;z - index: 2;border - top: 1 px solid #2e3026;transition: background-color 0.2s,color 0.2s;display:flex;justify-content:space-between;}         # status - bar.error {
+      background - color: #a03333;
+      color: #f0f0e0;
+    }
+    #status - bar.warn {
+      background - color: #f0ad4e;
+      color: #3a3c31;}                          # status - bar.success {
+        background - color: #4ac94a;color:# 3 a3c31;
+      }
+      #status - bar.editor - info {
+        color: #999966;}                                           # status - bar.file - info {
+          font - weight: 800;
+        }
+        footer {
+          background: #2e3026;color:# f0f0e0;padding: 5 px 10 px;position: fixed;bottom: 0;width: 100 % ;z - index: 2;border - top: 1 px solid #22241e;box-sizing:border-box;}
+# footer - grid {
+            display: grid;grid - template - columns: repeat(24, 1 fr);gap: 5 px;width: 100 % ;align - items: center;
+          }
+          #editor - container {
+            flex: 1;margin - top: 58 px;margin - bottom: 42 px;overflow: hidden;position: relative;display: flex;background: #3a3c31;}
+.code-editor-wrapper{display:flex;flex:1;overflow:auto;position:relative;width:100%;height:100%;}
+# line - numbers {
+              padding: 5 px 5 px 5 px 10 px;text - align: right;color: #999966;font-size:12px;line-height:1.5;user-select:none;background:# 313328;min - width: 30 px;position: sticky;left: 0;z - index: 5;height: fit - content;
+            }.highlighting - area {
+              position: absolute;top: 0;left: 0;right: 0;bottom: 0;pointer - events: none;z - index: 0;
+            }.highlighting - area pre {
+              margin: 0;padding: 5 px;background: transparent!important;white - space: pre - wrap;word - break: break -all;
+            }.highlighting - area code {
+              font - size: 12 px;
+              line - height: 1.5;
+            }
+            #editor {
+              width: 100 % ;height: 100 % ;border: none;outline: none;resize: none;padding: 5 px;font - family: inherit;font - size: inherit;background: transparent;color: transparent;caret - color: #4ac94a;z-index:1;line-height:1.5;white-space:pre-wrap;word-break:break-all;position:absolute;top:0;left:55px;right:0;bottom:0;padding-left:5px;box-sizing:border-box;}                                                                             button{font-size:11px;padding:2px 6px;cursor:pointer;background:# a03333;color: #f0f0e0;border: 1 px solid #a03333;transition: all 0.1 s;text - transform: uppercase;
+            }
+            button: hover {
+              background: #3366a0;color:# f0f0e0;border - color: #3366a0;}
+# save,
+              #delete {
+                background: #a03333;border - color: #a03333;color: #f0f0e0;
+              }
+              #save: hover,
+              #delete: hover {
+                background: #3366a0;color:# f0f0e0;
+              }
+              #prompt - input {
+                font - size: 12 px;
+                padding: 5 px 0.5 em 5 px 0.5 em;
+                font - weight: 800;
+                background: #22241e;color:# f0f0e0;
+                border: 1 px solid #4ac94a;width:100%;grid-column:1/span 20;}
+# send - button {
+                  height: 30 px;line - height: 1;width: 100 % ;grid - column: 21 / span 4;
+                }
+                #side - menu {
+                  position: fixed;top: 36 px;left: -216 px;width: 200 px;height: calc(100 % -36 px);background: #313328;z-index:10;transition:left 0.3s ease-in-out;border-right:1px solid # 22241 e;padding: 10 px;box - shadow: 2 px 0 5 px rgba(0, 0, 0, 0.5);display: flex;flex - direction: column;gap: 8 px;overflow - y: auto;
+                }
+                #side - menu.open {
+                  left: 0;
+                }
+                #menu - toggle {
+                    cursor: pointer;font - size: 16 px;padding: 0 10 px;user - select: none;
+                  }.menu - group - title {
+                    color: #4ac94a;font-size:10px;text-transform:uppercase;margin-top:10px;border-bottom:1px solid # 4 ac94a33;padding - bottom: 2 px;
+                  }.menu - button - item {
+                    width: 100 % ;margin - top: 0;
+                  } <
+                  /style>                                                                           </head >
+                  <
+                  body > < div id = "side-menu" >
+                  <
+                  div class = "menu-group-title" > File Operations < /div>                                <button id="save" class="menu-button-item">SAVE (Ctrl+S)</button >
+                  <
+                  button id = "load"
+                class = "menu-button-item" > LOAD < /button>                           <div class="menu-group-title">Code Tools</div >
+                  <
+                  button id = "beautify"
+                class = "menu-button-item" > Beautify < /button>                   <button id="syntaxcheck" class="menu-button-item">Syntax/Repair < /button> <
+                button id = "compress"
+                class = "menu-button-item" > Compress < /button>                   <div class="menu-group-title">History</div >
+                  <
+                  button id = "undo"
+                class = "menu-button-item" > UNDO(Ctrl + Z) < /button>                  <button id="redo" class="menu-button-item">REDO (Ctrl+Y/Shift + Z) < /button> < /
+              div > < header > < span id = "menu-toggle" > ☰Nemodian Menu < /span > < span > Nemodian 2244 - 1::AI Editor < /span > < /header > < div id = "status-bar" > < span id = "file-metadata" > No File Loaded < /span > < span id = "editor-metadata" > Cursor: 0: 0 | Tokens: 0 | History: 0 | Status: READY < /span > < /div > < div id = "editor-container" > <
+                div class = "code-editor-wrapper" > < div id = "line-numbers" > < /div> <
+              div class = "highlighting-area" > < pre > < code class = "language-javascript"
+              id = "highlighted-code" > < /code></pre > < /div> <
+              textarea id = "editor"
+              spellcheck = "false"
+              autofocus > < /textarea>                   </div >
+              <
+              /div>                                                                             <footer>                                                                           <div id="footer-grid">                                                             <input type="text" id="prompt-input" placeholder="Enter AI Prompt (Ctrl+Enter to Run)">                                                                               <button id="send-button">SEND</button > < /div>                                                                             </footer > < script src = "https://code.jquery.com/jquery-3.6.0.min.js" > < /script>                <script>                                                                           / / === State ===
+              let assemblyCode = '',
+                historyStack = [],
+                redoStack = [],
+                MAX_HISTORY = 200;
+              const $editor = $('#editor'),
+                $highlightCode = $('#highlighted-code'),
+                $status = $('#status-bar'),
+                $lineNumbers = $('#line-numbers');
+              let fileMetadata = {
+                name: 'Untitled',
+                path: '(Unsaved/Local)',
+                sizeKB: '0.00',
+                timestamp: 'N/A'
+              };
+              let lastStatusMessage = 'READY';
+              let currentLanguage = 'javascript'; // === Notifications ===                                                           function showNotification(msg,type='info',dur=3000){                                   if(!$status.data('notifying')){$status.data('original-text',$status.html());$status.data('notifying',true);}                                                          $status.removeClass('error warn success').addClass(type).html(`<span class="file-info">${msg}</span><span class="editor-info"></span>`);                              clearTimeout($status.data('timer'));                                               $status.data('timer', setTimeout(()=>{                                                 $status.removeClass('error warn success');                                         $status.html($status.data('original-text') || '<span id="file-metadata">No File Loaded</span><span id="editor-metadata">Cursor: 0:0 | Tokens: 0 | History: 0 | Status: READY</span>');                                                                   $status.data('notifying', false);                                              }, dur));
+            }
+            // === History ===                                                                 function pushHistory(){const code=$editor.val(); if(historyStack.length&&historyStack[historyStack.length-1]===code) return; historyStack.push(code); if(historyStack.length>MAX_HISTORY) historyStack.shift(); redoStack=[]; updateStatus('READY');}
+            function undo() {
+              if (historyStack.length) {
+                redoStack.push($editor.val());
+                assemblyCode = historyStack.pop();
+                renderAssembly();
+                showNotification('Action: UNDO', 'info', 1500);
+              }
+            }
+
+            function redo() {
+              if (redoStack.length) {
+                historyStack.push($editor.val());
+                assemblyCode = redoStack.pop();
+                renderAssembly();
+                showNotification('Action: REDO', 'info', 1500);
+              }
+            }
+            // === Rendering ===
+            function renderAssembly(code = assemblyCode) {
+              $editor.val(code);
+              highlightCode(code);
+              generateLineNumbers();
+              updateStatus();
+            }
+
+            function highlightCode(code) {
+              const g = Prism.languages[currentLanguage] || Prism.languages.javascript;
+              $highlightCode.html(Prism.highlight(code, g, currentLanguage));
+            }
+
+            function generateLineNumbers() {
+              let lines = $editor.val().split('\n').length,
+                html = '';
+              for (let i = 1; i <= lines; i++) html += `<div>${i}</div>`;
+              $lineNumbers.html(html);
+            }
+
+            function syncScroll() {
+              let st = $editor.scrollTop(),
+                sl = $editor.scrollLeft();
+              $('.code-editor-wrapper').scrollTop(st);
+              $('.code-editor-wrapper').scrollLeft(sl);
+            }
+
+            function updateStatus(statusMessage = 'EDITING') {
+              lastStatusMessage = statusMessage;
+              if ($status.data('notifying')) return;
+              const pos = $editor[0].selectionStart,
+                code = $editor.val(),
+                lines = code.substr(0, pos).split('\n'),
+                line = lines.length,
+                col = lines[lines.length - 1].length,
+                tokens = (code.match(/function|let|const|var|class|for|if|while/g) || []).length,
+                editorMetadataHTML = `<span class="editor-info">Cursor: ${line}:${col} | Tokens: ${tokens} | History: ${historyStack.length} | Status: ${statusMessage}</span>`,
+                fileInfoHTML = `<span class="file-info">${fileMetadata.name} [${fileMetadata.sizeKB} KB] - ${fileMetadata.timestamp}</span>`;
+              $status.html(fileInfoHTML + editorMetadataHTML);
+            } // === File Access (Local only via browser) ===                                    async function openFile(){                                                             try{                                                                                   [handle] = await window.showOpenFilePicker();                                      const file = await handle.getFile();                                               assemblyCode = await file.text();                                                  fileMetadata.name = file.name;                                                     fileMetadata.sizeKB = (file.size/1024).toFixed(2);
+            fileMetadata.timestamp = new Date(file.lastModified).toLocaleTimeString();renderAssembly();
+            pushHistory();showNotification(`File LOADED: ${fileMetadata.name}`, 'success');
+            updateStatus('LOADED');
+          }
+          catch (e) {
+            showNotification('File open cancelled or unsupported.', 'warn');
+            updateStatus('READY');
+          }
+        }
+        async function saveFile() {
+          try {
+            if (!window.currentFileHandle) window.currentFileHandle = await window.showSaveFilePicker();
+            const writable = await window.currentFileHandle.createWritable();
+            await writable.write($editor.val());
+            await writable.close();
+            fileMetadata.timestamp = new Date().toLocaleTimeString();
+            fileMetadata.sizeKB = (new Blob([$editor.val()]).size / 1024).toFixed(2);
+            showNotification('File SAVED successfully.', 'success');
+            updateStatus('SAVED');
+          } catch (e) {
+            showNotification('File save cancelled or unsupported.', 'warn');
+            updateStatus('READY');
+          }
+        }
+        // === AI Simulation (Offline) ===
+        async function runAgents(prompt, codeToRefine = null) {
+          $editor.prop('disabled', true);
+          showNotification('Running AI Assembly (Simulated)...', 'info', 2000);
+          await new Promise(r => setTimeout(r, 1000)); // simulate delay
+          let originalCode = codeToRefine || $editor.val(); // Very simple “AI fix”: append comment with prompt
+          assemblyCode = originalCode + `\n// [AI_SIMULATION]: ${prompt}`;
+          renderAssembly(assemblyCode);
+          pushHistory();
+          showNotification('AI Assembly Complete (Simulated).', 'success', 2000);
+          $editor.prop('disabled', false);
+          updateStatus('READY');
+        } // === Editor Event Handlers ===                                                   $('#undo').click(undo);                                                            $('#redo').click(redo);                                                            $('#beautify').click(()=>{assemblyCode=js_beautify($editor.val(),{indent_size:2});renderAssembly();pushHistory();showNotification('Code BEAUTIFIED.','success');});   $('#compress').click(()=>{assemblyCode=$editor.val().replace(/\/\/.*/g,'').replace(/\s+/g,' ').replace(/\s*([{}();,])\s*/g,'$1').trim();renderAssembly();pushHistory();showNotification('Code COMPRESSED.','success');});
+        $('#save').click(saveFile);$('#load').click(openFile);$('#syntaxcheck').click(() => {
+          try {
+            new Function($editor.val());
+            showNotification('Syntax OK.', 'success');
+          } catch (e) {
+            let line = (e.stack.match(/:(\d+):/) || [0, 1])[1];
+            alert(`Syntax ERROR on line ${line}: ${e.message}\nSimulated AI can attempt a fix.`);
+            runAgents(`Fix syntax error on line ${line}`);
+          }
+        });
+        // Editor input events                                                             $editor.on('input propertychange',()=>{assemblyCode=$editor.val();pushHistory();highlightCode(assemblyCode);generateLineNumbers();updateStatus();});                  $editor.on('scroll',syncScroll);                                                   $editor.on('keyup click',updateStatus);
+        // AI Prompt send
+        function sendPrompt() {
+          let prompt = $('#prompt-input').val().trim();
+          if (prompt) runAgents(prompt);
+          $('#prompt-input').val('');
+        }
+        $('#send-button').click(sendPrompt);
+        $('#prompt-input').keypress(e => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            sendPrompt();
+          }
+        });
+
+        // Side Menu toggle
+        $('#menu-toggle').click(e => {
+          $('#side-menu').toggleClass('open');
+        });
+        $(document).click(e => {
+          if (!$(e.target).closest('#side-menu,#menu-toggle').length) $('#side-menu').removeClass('open');
+        });
+        // Keyboard shortcuts                                                              $(document).keydown(e=>{
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          saveFile();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+          e.preventDefault();
+          undo();
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
+          e.preventDefault();
+          redo();
+        }
+      });
+    // Resize layout                                                                   function resizeLayout(){
+    const windowH = window.innerHeight,
+      headerH = $('header').outerHeight(true),
+      statusH = $('#status-bar').outerHeight(true),
+      footerH = $('footer').outerHeight(true);
+    const editorContainerH = windowH - headerH - statusH - footerH;
+    $('#editor-container').css('height', editorContainerH + 'px');
+    const lnW = $('#line-numbers').outerWidth(),
+      pad = 5,
+      leftPos = lnW + pad;$editor.css({
+      'left': leftPos + 'px',
+      'width': `calc(100% - ${leftPos}px)`
+    });
+    $('.highlighting-area').css('padding-left', leftPos + 'px');
+    generateLineNumbers();syncScroll();
+  }
+  $(window).on('resize orientationchange', resizeLayout);
+  $(document).ready(() => {
+    assemblyCode = '// Nemodian 2244-1 AI Editor Ready\n// Ctrl+Enter or SEND button runs AI prompt.';
+    renderAssembly();
+    pushHistory();
+    resizeLayout();
+    updateStatus('READY');
+  }); <
+  /script> < /
+  body > <
+  /html>
+  // [AI_SIMULATION]: Fix syntax error on line 158
