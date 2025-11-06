@@ -3,1510 +3,2266 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nemodian 2244-1 :: Quantum AI Editor</title>
-    <style>
-        /* ----- CSS Grid 24-Column Responsive Layout ----- */
-        :root {
-            --grid-columns: 24;
-            --baseline: 1.5rem;
-            --gutter: 1rem;
-            --header-h: calc(var(--baseline) * 2);
-            --status-h: var(--baseline);
-            --footer-h: calc(var(--baseline) * 1.5);
-
-            /* Quantum Color Scheme */
-            --quantum-primary: #00FF88;
-            --quantum-secondary: #7E57C2;
-            --quantum-accent: #00B8D4;
-            --quantum-bg: #0A0A12;
-            --quantum-surface: #1A1A2E;
-            --quantum-border: #2A2A3E;
-
-            /* Status Colors */
-            --success: #4CAF50;
-            --warn: #FF9800;
-            --error: #F44336;
-            --info: #2196F3;
-
-            /* Editor Colors */
-            --editor-bg: #1E1E1E;
-            --editor-text: #F0F0F0;
-            --editor-muted: #888;
-            --editor-gutter: #2D2D2D;
-            --editor-accent: #4ac94a;
-        }
-
-        /* ----- CSS Reset & Base ----- */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;                                                        }
-
-        html {
-            font-size: 16px;
-            line-height: var(--baseline);
-        }
-
-        body {
-            font-family: 'Fira Code', 'Monaco', 'Cascadia Code', monospace;
-            background: var(--quantum-bg);
-            color: var(--editor-text);
-            min-height: 100vh;
-            display: grid;
-            grid-template-rows: var(--header-h) var(--status-h) 1fr var(--footer-h);
-            grid-template-columns: repeat(var(--grid-columns), 1fr);
-            overflow: hidden;
-        }
-
-        /* ----- Header Grid ----- */
-        header {
-            grid-row: 1;
-            grid-column: 1 / -1;
-            background: var(--quantum-surface);
-            border-bottom: 1px solid var(--quantum-border);
-            display: grid;
-            grid-template-columns: repeat(var(--grid-columns), 1fr);
-            align-items: center;
-            padding: 0 var(--gutter);
-            gap: var(--gutter);
-        }
-
-        .header-left {
-            grid-column: 1 / span 12;
-            display: flex;
-            align-items: center;
-            gap: var(--gutter);
-        }
-
-        .header-right {
-            grid-column: 13 / -1;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: calc(var(--gutter) / 2);
-        }
-
-        /* ----- Status Bar Grid ----- */
-        #status-bar {
-            grid-row: 2;
-            grid-column: 1 / -1;
-            background: var(--quantum-surface);
-            border-bottom: 1px solid var(--quantum-border);
-            display: grid;
-            grid-template-columns: repeat(var(--grid-columns), 1fr);
-            align-items: center;
-            padding: 0 var(--gutter);
-            font-size: 0.875rem;
-            gap: var(--gutter);
-        }
-
-        #file-meta {
-            grid-column: 1 / span 12;
-        }
-
-        #editor-meta {
-            grid-column: 13 / -1;
-            text-align: right;
-        }
-
-        /* ----- Editor Stage Grid ----- */
-        #editor-stage {
-            grid-row: 3;
-            grid-column: 1 / -1;
-            display: grid;
-            grid-template-columns: repeat(var(--grid-columns), 1fr);
-            background: var(--quantum-bg);
-            overflow: hidden;
-            position: relative;
-        }
-
-        #left-panel {
-            grid-column: 1 / span 4;
-            background: var(--quantum-surface);
-            border-right: 1px solid var(--quantum-border);
-            padding: var(--gutter);
-            display: flex;
-            flex-direction: column;
-            gap: calc(var(--gutter) / 2);
-            overflow-y: auto;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        #editor-container {
-            grid-column: 5 / -1;
-            background: var(--editor-bg);
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* ----- Footer Grid ----- */
-        footer {
-            grid-row: 4;
-            grid-column: 1 / -1;
-            background: var(--quantum-surface);
-            border-top: 1px solid var(--quantum-border);
-            display: grid;
-            grid-template-columns: repeat(var(--grid-columns), 1fr);
-            align-items: center;
-            padding: 0 var(--gutter);
-            gap: var(--gutter);
-        }
-
-        #prompt-input {
-            grid-column: 1 / span 22;
-            background: var(--quantum-bg);
-            border: 1px solid var(--quantum-primary);
-            color: var(--editor-text);
-            padding: calc(var(--baseline) / 3);
-            font-family: inherit;
-            border-radius: 4px;
-        }
-
-        #send-button {
-            grid-column: 23 / -1;
-        }
-
-        /* ----- Button Styles ----- */
-        button {
-            background: var(--quantum-secondary);
-            border: 1px solid var(--quantum-border);
-            color: var(--editor-text);
-            padding: calc(var(--baseline) / 3) calc(var(--baseline) / 2);
-            cursor: pointer;
-            font-size: 0.875rem;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-            font-family: inherit;
-        }
-
-        button:hover {
-            background: var(--quantum-primary);
-            border-color: var(--quantum-primary);
-            color: var(--quantum-bg);
-        }
-
-        button.success {
-            background: var(--success);
-            border-color: var(--success);
-        }
-
-        button.info {
-            background: var(--info);
-            border-color: var(--info);
-        }
-
-        button.warn {
-            background: var(--warn);
-            border-color: var(--warn);
-            color: var(--quantum-bg);
-        }
-
-        button.quantum {
-            background: var(--quantum-primary);
-            border-color: var(--quantum-primary);
-            color: var(--quantum-bg);
-        }
-
-        button.small {
-            font-size: 0.75rem;
-            padding: calc(var(--baseline) / 4) calc(var(--baseline) / 3);
-        }
-
-        /* ----- Editor Components ----- */
-        #editor-outer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            overflow: hidden;
-        }
-
-        #line-gutter {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4rem;
-            background: var(--editor-gutter);
-            color: var(--editor-muted);
-            padding: var(--gutter);
-            font-family: inherit;
-            font-size: 0.875rem;
-            line-height: var(--baseline);
-            overflow: hidden;
-            text-align: right;
-            user-select: none;
-            z-index: 10;
-        }
-
-        .highlighting {
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            pointer-events: none;
-            overflow: auto;
-            padding: var(--gutter);
-            padding-left: calc(4rem + var(--gutter));
-            z-index: 5;
-        }
-
-        .highlighting pre {
-            margin: 0;
-            font-family: inherit;
-            font-size: 0.875rem;
-            line-height: var(--baseline);
-            white-space: pre;
-            word-break: normal;
-        }
-
-        #editor {
-            position: absolute;
-            left: 4rem;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            padding: var(--gutter);
-            margin: 0;
-            background: transparent;
-            color: transparent;
-            caret-color: var(--editor-accent);
-            font-family: inherit;
-            font-size: 0.875rem;
-            line-height: var(--baseline);
-            border: 0;
-            outline: 0;
-            resize: none;
-            white-space: pre;
-            word-break: normal;
-            z-index: 20;
-            tab-size: 4;
-        }
-
-        /* ----- Status Bar States ----- */
-        #status-bar.error {
-            background: var(--error);
-            color: white;
-        }
-
-        #status-bar.warn {
-            background: var(--warn);
-            color: var(--quantum-bg);
-        }
-
-        #status-bar.success {
-            background: var(--success);
-            color: var(--quantum-bg);
-        }
-
-        #status-bar.info {
-            background: var(--info);
-            color: var(--quantum-bg);
-        }
-
-        /* ----- Preview Panel ----- */
-        #preview-panel {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80vw;
-            height: 80vh;
-            background: white;
-            border: 2px solid var(--quantum-primary);
-            border-radius: 8px;
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-            box-shadow: 0 0 50px rgba(0, 255, 136, 0.3);
-        }
-
-        #preview-header {
-            background: var(--quantum-surface);
-            color: var(--quantum-primary);
-            padding: calc(var(--baseline) / 2) var(--gutter);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--quantum-primary);
-            font-weight: bold;
-        }
-
-        #preview-content {
-            flex: 1;
-            border: none;
-            background: white;
-        }
-
-        #close-preview {
-            background: transparent;
-            border: none;
-            color: var(--quantum-primary);
-            font-size: 1.25rem;
-            cursor: pointer;
-            padding: 0;
-            width: 2rem;
-            height: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* ----- AI Response Panel ----- */
-        #ai-response-panel {
-            position: fixed;
-            bottom: calc(var(--footer-h) + var(--gutter));
-            right: var(--gutter);
-            width: min(500px, 90vw);
-            max-height: 400px;
-            background: var(--quantum-surface);
-            border: 2px solid var(--quantum-primary);
-            border-radius: 8px;
-            padding: var(--gutter);
-            overflow-y: auto;
-            z-index: 100;
-            display: none;
-            box-shadow: 0 8px 32px rgba(0, 255, 136, 0.2);
-        }
-
-        #ai-response-content {
-            font-size: 0.875rem;
-            line-height: var(--baseline);
-        }
-
-        #close-ai-panel {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            background: transparent;
-            border: none;
-            color: var(--editor-muted);
-            font-size: 1.125rem;
-            cursor: pointer;
-            padding: 0;
-            width: 1.5rem;
-            height: 1.5rem;
-        }
-
-        /* ----- Quantum Dashboard ----- */
-        #quantum-dashboard {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: min(90vw, 1200px);
-            height: min(80vh, 800px);
-            background: var(--quantum-bg);
-            border: 2px solid var(--quantum-primary);
-            border-radius: 12px;
-            z-index: 2000;
-            display: none;
-            flex-direction: column;
-            box-shadow: 0 0 60px rgba(0, 255, 136, 0.4);
-        }
-
-        #dashboard-header {
-            background: var(--quantum-surface);
-            color: var(--quantum-primary);
-            padding: var(--gutter);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--quantum-primary);
-            font-weight: bold;
-            font-size: 1.125rem;
-        }
-
-        #dashboard-content {
-            flex: 1;
-            padding: var(--gutter);
-            overflow-y: auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: var(--gutter);
-        }
-
-        .agent-card {
-            background: var(--quantum-surface);
-            border: 1px solid var(--quantum-secondary);
-            border-radius: 8px;
-            padding: var(--gutter);
-            color: var(--editor-text);
-        }
-
-        .agent-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: calc(var(--gutter) / 2);
-            padding-bottom: calc(var(--gutter) / 2);
-            border-bottom: 1px solid var(--quantum-secondary);
-        }
-
-        .agent-name {
-            font-weight: bold;
-            color: var(--quantum-primary);
-        }
-
-        .agent-status {
-            font-size: 0.75rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 12px;
-            background: var(--quantum-accent);
-            color: var(--quantum-bg);
-        }
-
-        .agent-content {
-            font-size: 0.875rem;
-            line-height: calc(var(--baseline) * 0.875);
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
-            margin-top: calc(var(--gutter) / 2);
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: var(--quantum-primary);
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-
-        #close-dashboard {
-            background: transparent;
-            border: none;
-            color: var(--quantum-primary);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0;
-            width: 2rem;
-            height: 2rem;
-        }
-
-        /* ----- AI Indicator ----- */
-        .ai-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .ai-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--error);
-            animation: pulse 2s infinite;
-        }
-
-        .ai-dot.connected {
-            background: var(--quantum-primary);
-            animation: quantum-pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        @keyframes quantum-pulse {
-            0%, 100% {
-                box-shadow: 0 0 5px var(--quantum-primary);
-                opacity: 1;
-            }
-            50% {
-                box-shadow: 0 0 15px var(--quantum-primary);
-                opacity: 0.8;
-            }
-        }
-
-        /* ----- Syntax Highlighting ----- */
-        .token.comment {
-            color: var(--editor-muted);
-            font-style: italic;
-        }
-
-        .token.keyword {
-            color: #ff79c6;
-        }
-
-        .token.string {
-            color: #50fa7b;
-        }
-
-        .token.function {
-            color: #8be9fd;
-        }
-
-        .token.number {
-            color: #bd93f9;
-        }
-
-        .token.operator {
-            color: #ff79c6;
-        }
-
-        .token.punctuation {
-            color: #f8f8f2;
-        }
-
-        .token.tag {
-            color: #ff79c6;
-        }
-
-        .token.attr-name {
-            color: #50fa7b;
-        }
-
-        .token.attr-value {
-            color: #f1fa8c;
-        }
-
-        /* ----- Responsive Design ----- */
-        @media (max-width: 1200px) {
-            #left-panel {
-                grid-column: 1 / span 6;
-            }
-            #editor-container {
-                grid-column: 7 / -1;
-            }
-        }
-
-        @media (max-width: 768px) {
-            body {
-                grid-template-rows: var(--header-h) var(--status-h) 1fr var(--footer-h);
-            }
-
-            .header-left {
-                grid-column: 1 / span 16;
-            }
-
-            .header-right {
-                grid-column: 17 / -1;
-            }
-
-            #file-meta {
-                grid-column: 1 / span 14;
-                font-size: 0.75rem;
-            }
-
-            #editor-meta {
-                grid-column: 15 / -1;
-                font-size: 0.75rem;
-            }
-
-            #left-panel {
-                position: fixed;
-                top: 0;
-                left: 0;
-                height: 100vh;
-                width: min(300px, 85vw);
-                z-index: 100;
-                transform: translateX(-100%);
-                box-shadow: 2px 0 20px rgba(0, 0, 0, 0.5);
-            }
-
-            #left-panel.open {
-                transform: translateX(0);
-            }
-
-            #editor-container {
-                grid-column: 1 / -1;
-            }
-
-            #panel-overlay {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.7);
-                z-index: 90;
-            }
-
-            #panel-overlay.active {
-                display: block;
-            }
-
-            #prompt-input {
-                grid-column: 1 / span 18;
-            }
-
-            #send-button {
-                grid-column: 19 / -1;
-            }
-        }
-
-        @media (max-width: 480px) {
-            :root {
-                --gutter: 0.75rem;
-                --baseline: 1.25rem;
-            }
-
-            .header-left {
-                grid-column: 1 / span 14;
-            }
-
-            .header-right {
-                grid-column: 15 / -1;
-            }
-
-            #file-meta {
-                grid-column: 1 / span 12;
-            }
-
-            #editor-meta {
-                grid-column: 13 / -1;
-            }
-
-            #prompt-input {
-                grid-column: 1 / span 16;
-            }
-
-            #send-button {
-                grid-column: 17 / -1;
-            }
-        }
-
-        /* ----- Utility Classes ----- */
-        .hidden {
-            display: none !important;
-        }
-
-        .text-muted {
-            color: var(--editor-muted);
-        }
-
-        .text-small {
-            font-size: 0.75rem;
-        }
-
-        .mt-1 {
-            margin-top: calc(var(--baseline) / 2);
-        }
-
-        .mb-1 {
-            margin-bottom: calc(var(--baseline) / 2);
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <div class="header-left">
-            <button id="left-toggle" class="small">☰</button>
-            <div style="font-weight: 800; font-size: 1.125rem;">Nemodian 2244-1 :: Quantum AI Editor</div>
-        </div>
-        <div class="header-right">
-            <div class="ai-status">
-                <div class="ai-dot"></div>
-                <div id="ai-indicator" class="text-small">Quantum AI: Initializing...</div>
-            </div>
-            <button id="open-file" class="small">Open</button>
-            <button id="save-file" class="small">Save</button>
-            <button id="save-as" class="small">Save As</button>
-            <button id="render-html" class="small warn">Render</button>
-            <button id="run-quantum-ai" class="small quantum">AI</button>
-            <button id="show-dashboard" class="small info">Dashboard</button>
-        </div>
-    </header>
-
-    <div id="status-bar" class="info">
-        <div id="file-meta">No File Loaded</div>
-        <div id="editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>
-    </div>
-
-    <div id="editor-stage">
-        <div id="panel-overlay"></div>
-
-        <aside id="left-panel">
-            <button id="btn-undo" class="small">UNDO</button>
-            <button id="btn-redo" class="small">REDO</button>
-            <button id="btn-beautify" class="small">Beautify</button>
-            <button id="btn-render" class="small warn">Render HTML</button>
-            <button id="btn-quantum" class="small quantum">Quantum Process</button>
-
-            <div class="mt-1">
-                <p class="text-small text-muted"><strong>Quantum AI Commands:</strong></p>
-                <ul class="text-small text-muted" style="padding-left: 1.25rem;">
-                    <li>Explain this code</li>
-                    <li>Optimize this function</li>
-                    <li>Add documentation</li>
-                    <li>Find bugs</li>
-                    <li>Refactor code</li>
-                    <li>Generate tests</li>
-                </ul>
-            </div>
-
-            <div class="mt-1">
-                <p class="text-small text-muted"><strong>HTML Render:</strong></p>
-                <p class="text-small text-muted">Click "Render HTML" to preview your HTML code in a live browser view.</p>
-            </div>
-
-            <div class="mt-1">
-                <p class="text-small" style="color: var(--quantum-primary);"><strong>Quantum Processing:</strong></p>
-                <p class="text-small" style="color: var(--quantum-primary);">Uses parallel agent processing with fractal reasoning for advanced code analysis and generation.</p>
-            </div>
-        </aside>
-
-        <div id="editor-container">
-            <div id="editor-outer">
-                <div id="line-gutter"></div>
-                <div class="highlighting">
-                    <pre><code id="highlighted" class="language-html"></code></pre>
-                </div>
-                <textarea id="editor" spellcheck="false">&lt;!DOCTYPE html&gt;
-&lt;html lang="en"&gt;
-&lt;head&gt;
-  &lt;meta charset="UTF-8"&gt;
-  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
-  &lt;title&gt;Nemodian 2244-1 Quantum Demo&lt;/title&gt;
-  &lt;style&gt;
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-      color: white;
-      margin: 0;
-      padding: 20px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    .container {
-      background: rgba(0, 0, 0, 0.7);
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-      max-width: 600px;
-      text-align: center;
-    }
-    h1 {
-      font-size: 2.5rem;
-      margin-bottom: 10px;
-      background: linear-gradient(90deg, #4ac94a, #5bc0de);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    p {
-      font-size: 1.2rem;
-      line-height: 1.6;
-    }
-    .features {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 15px;
-      margin: 20px 0;
-    }
-    .feature {
-      background: rgba(74, 201, 74, 0.2);
-      padding: 10px 15px;
-      border-radius: 8px;
-      border: 1px solid #4ac94a;
-    }
-    button {
-      background: #4ac94a;
-      color: white;
-      border: none;
-      padding: 12px 25px;
-      border-radius: 5px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    button:hover {
-      background: #3aa83a;
-      transform: translateY(-2px);
-    }
-  &lt;/style&gt;
-&lt;/head&gt;
-&lt;body&gt;
-  &lt;div class="container"&gt;
-    &lt;h1&gt;Welcome to Nemodian 2244-1 Quantum&lt;/h1&gt;
-    &lt;p&gt;This is a demonstration of the Quantum AI Editor's capabilities. You can edit this HTML and CSS, and then click "Render HTML" to see your changes.&lt;/p&gt;
-    &lt;div class="features"&gt;
-      &lt;div class="feature"&gt;HTML Editing&lt;/div&gt;
-      &lt;div class="feature"&gt;CSS Styling&lt;/div&gt;
-      &lt;div class="feature"&gt;Quantum AI&lt;/div&gt;
-      &lt;div class="feature"&gt;Parallel Processing&lt;/div&gt;
-    &lt;/div&gt;
-    &lt;button&gt;Get Started&lt;/button&gt;
-  &lt;/div&gt;
-&lt;/body&gt;
-&lt;/html&gt;</textarea>
-            </div>
-        </div>
-    </div>
-
-    <footer>
-        <input id="prompt-input" placeholder="Quantum AI Prompt (Ctrl+Enter to run)">
-        <button id="send-button" class="success">SEND</button>
-    </footer>
-
-    <input type="file" id="file-input" accept=".js,.html,.css,.txt,.json,.py,.md" class="hidden">
-
-    <!-- Modals -->
-    <div id="preview-panel">
-        <div id="preview-header">
-            <span>HTML Preview</span>
-            <button id="close-preview">×</button>
-        </div>
-        <iframe id="preview-content"></iframe>
-    </div>
-
-    <div id="ai-response-panel">
-        <button id="close-ai-panel">×</button>
-        <div id="ai-response-content"></div>
-    </div>
-
-    <div id="quantum-dashboard">
-        <div id="dashboard-header">
-            <span>Quantum Agent Dashboard</span>
-            <button id="close-dashboard">×</button>
-        </div>
-        <div id="dashboard-content">
-            <!-- Agent cards will be populated by JavaScript -->
-        </div>
-    </div>
-
+    <title>Nemodian 2244-1 :: Quantum Fractal AI Editor</title>
+
+    <!-- js-beautify via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify-css.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify-html.js"></script>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Tailwind configuration for theme variables -->
     <script>
-        // ==================== QUANTUM AGENT CORE ====================
-        class QuantumAgentCore {
-            constructor() {
-                this.agents = new Map();
-                this.isProcessing = false;
-                this.performanceMetrics = {
-                    startTime: null,
-                    endTime: null,
-                    agentTimes: new Map()
-                };
-
-                this.initAgents();
-                this.setupEventListeners();
-                console.log("Quantum Agent Core initialized");
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'muted': '#888',
+              'info-color': '#2196F3',
+              'warn-color': '#FF9800',
+              'error-color': '#F44336',
+              'success-color': '#4CAF50',
+              'theme-bg': '#3a3c31',
+              'panel-bg': '#313328',
+              'header-bg': '#2e3026',
+              'status-bg': '#22241e',
+              'accent-color': '#4ac94a',
+              'muted-text': '#999966',
+              'err-color': '#a03333',
+              'warn-bg': '#f0ad4e',
+              'hover-blue': '#3366a0',
+              'info-bg': '#5bc0de',
+              'agent-nexus': '#BB86FC',
+              'agent-cognito': '#03DAC6',
+              'agent-relay': '#FFD54F',
+              'agent-sentinel': '#CF6679',
+              'agent-echo': '#4ac94a',
+              'quantum-glow': 'rgba(187, 134, 252, 0.6)',
+            },
+            lineHeight: {
+              'baseline': '1.5em',
+            },
+            fontSize: {
+              'xs-editor': '13px',
+            },
+            spacing: {
+              'header-h': 'calc(1.5em * 1.6)',
+              'status-h': '1.5em',
+              'footer-h': 'calc(1.5em * 2)',
+              'ln-width': '50px',
             }
+          }
+        },
+        // Preserve custom keyframes from the original CSS
+        corePlugins: {
+          preflight: false,
+        },
+      }
+    </script>
 
-            initAgents() {
-                const agents = [
-                    { id: 'nexus', name: 'Nexus', role: 'Orchestrator' },
-                    { id: 'cognito', name: 'Cognito', role: 'Analyzer' },
-                    { id: 'relay', name: 'Relay', role: 'Communicator' },
-                    { id: 'sentinel', name: 'Sentinel', role: 'Monitor' },
-                    { id: 'echo', name: 'Echo', role: 'Reporter' }
-                ];
+    <!-- Import map for Gemini -->
+    <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.2.7.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "gsap": "https://aistudiocdn.com/gsap@^3.13.0"
+  }
+}
+</script>
+<style>
+/* Custom Keyframes from original CSS, preserved as Tailwind doesn't handle arbitrary keyframes directly in CDN config */
+@keyframes quantumScan {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+@keyframes blink {
+    0%, 50% { background-color: transparent; }
+    51%, 100% { background-color: rgba(0,255,0,0.05); }
+}
+@keyframes quantumPulse {
+    0% { opacity: 0.7; transform: scale(1); }
+    100% { opacity: 1; transform: scale(1.05); }
+}
+@keyframes threadFlow {
+    0% { top: -100%; }
+    100% { top: 100%; }
+}
+@keyframes quantumSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+@keyframes fractalPulse {
+    0% { transform: scale(1); opacity: 0.3; }
+    100% { transform: scale(1.5); opacity: 0.8; }
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+@keyframes quantumPulseDot {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+}
+/* Syntax Highlighting Styles - Merged from Editor.tsx */
+.sh-token { transition: opacity 0.08s ease; pointer-events: none; }
+.sh-comment { color: #64748b; font-style: italic; opacity: 0.8; }
+.sh-string { color: #a3e635; font-weight: 500; }
+.sh-number { color: #f59e0b; font-weight: 600; }
+.sh-keyword { color: #f472b6; font-weight: 600; }
+.sh-type { color: #7dd3fc; font-weight: 500; }
+.sh-bracket { color: #c084fc; font-weight: 700; }
+.sh-id { color: #94a3b8; }
+.sh-op { color: #94a3b8; font-weight: 500; }
+.sh-ws { opacity: 0.3; }
+.sh-key { color: #7dd3fc; font-weight: 500; }
+.sh-number2 { color: #f59e0b; font-weight: 600; }
+.sh-text { color: #e2e8f0; }
+.sh-unknown { color: #f87171; }
+.sh-tag { color: #f472b6; font-weight: 600; }
+.sh-property { color: #7dd3fc; font-weight: 500; }
+.sh-function { color: #4ac94a; font-weight: 500; }
+.sh-operator { color: #93c5fd; font-weight: 600; }
+.sh-regex { color: #fbbf24; }
+.sh-html-entity { color: #f59e0b; }
+.sh-css-selector { color: #c084fc; }
+.sh-css-property { color: #60a5fa; }
+.sh-css-value { color: #34d399; }
+.sh-jsx-tag { color: #f472b6; }
+.sh-jsx-attribute { color: #7dd3fc; }
+.sh-template-string { color: #a3e635; font-weight: 500; }
+.sh-variable { color: #67e8f9; }
+.editor-content::selection { background: rgba(74, 201, 74, 0.3); }
+.editor-container::-webkit-scrollbar { width: 12px; }
+.editor-container::-webkit-scrollbar-track { background: var(--panel-bg); }
+.editor-container::-webkit-scrollbar-thumb { background: var(--muted-text); border-radius: 6px; }
+.editor-container::-webkit-scrollbar-thumb:hover { background: var(--accent-color); }
+.typing-active { caret-color: lime; animation: blink 1s infinite; }
+</style>
+</head>
+<body class="font-['Fira_Code'] text-xs-editor leading-baseline bg-theme-bg text-[#f0f0e0] overflow-hidden grid grid-rows-[theme(spacing.header-h)_theme(spacing.status-h)_1fr_theme(spacing.footer-h)] h-full m-0 p-0">
+    <div id="root"></div>
+    <script type="module">
+// BUNDLED SCRIPT - START
+// All external imports are handled at the top level via the importmap
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom/client';
+import { GoogleGenAI, GenerateContentResponse, GenerateContentParameters } from "@google/genai";
+import gsap from 'gsap';
 
-                agents.forEach(agent => {
-                    this.agents.set(agent.id, {
-                        ...agent,
-                        status: 'IDLE',
-                        progress: 0
-                    });
-                });
+// --- START: Inlined types.ts ---
+interface RecentFile {
+  filename: string;
+  contentPreview: string; 
+  timestamp: number;
+}
 
-                this.renderDashboard();
-            }
+interface QuantumSettings {
+  quantumMode: boolean;
+  hyperthreading: boolean;
+  multiAgentMode: boolean;
+  autoSave: boolean;
+  agentCount: number;
+  maxRounds: number;
+  reasoningDepth: number;
+}
 
-            renderDashboard() {
-                const dashboardContent = document.getElementById('dashboard-content');
-                if (!dashboardContent) return;
+enum AgentType {
+  NEXUS = 'nexus',
+  COGNITO = 'cognito',
+  RELAY = 'relay',
+  SENTINEL = 'sentinel',
+  ECHO = 'echo',
+}
 
-                dashboardContent.innerHTML = '';
+enum LogType {
+  INFO = 'info',
+  GENESIS = 'genesis',
+  ORIGIN = 'origin',
+  EVENT = 'event',
+  FRAGMENT = 'fragment',
+  CONSENSUS = 'consensus',
+}
 
-                for (const [id, agent] of this.agents) {
-                    const card = document.createElement('div');
-                    card.className = 'agent-card';
-                    card.innerHTML = `
-                        <div class="agent-header">
-                            <div class="agent-name">${agent.name}</div>
-                            <div class="agent-status" id="${id}-status">${agent.status}</div>
-                        </div>
-                        <div class="agent-content">
-                            ${agent.role}: Coordinates all agents and manages parallel processing workflow.
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="${id}-progress"></div>
-                        </div>
-                    `;
-                    dashboardContent.appendChild(card);
-                }
-            }
+interface OrchestrationLogEntry {
+  timestamp: string;
+  message: string;
+  type: LogType;
+}
 
-            async processInput(prompt, context) {
-                if (this.isProcessing) {
-                    throw new Error("System is already processing a request");
-                }
+interface AgentStatus {
+  content: string;
+  log: OrchestrationLogEntry[];
+  isActive: boolean;
+}
 
-                this.isProcessing = true;
-                this.performanceMetrics.startTime = Date.now();
-                this.updateDashboard();
+interface AgentInfo {
+  id: string;
+  origin: string;
+}
 
-                try {
-                    // Phase 1: Parallel Initial Processing
-                    await this.executeParallelPhase(prompt, context);
+interface CandidateFragment {
+  agentId: string;
+  origin: string;
+  round: number;
+  candidate: string;
+  entropy: number;
+  timestamp: number;
+}
 
-                    // Phase 2: Analysis and Reasoning
-                    await this.executeAnalysisPhase(prompt, context);
+interface CandidateGroup {
+  key: string;
+  candidates: CandidateFragment[];
+  score: number;
+  agentCount: number;
+  roundCount: number;
+  avgEntropy: number;
+}
 
-                    // Phase 3: Validation and Synthesis
-                    const result = await this.executeValidationPhase(prompt, context);
+interface ConsensusResult {
+  genesis: string;
+  selectedCandidate: string;
+  score: string;
+  agentCount: number;
+  roundCount: number;
+  avgEntropy: string;
+  rootAgent: string;
+  rootEntropy: string;
+  allGroups: CandidateGroup[];
+}
 
-                    this.performanceMetrics.endTime = Date.now();
-                    this.isProcessing = false;
+enum AiConnectionStatus {
+  PROBING = 'Probing...',
+  READY = 'Ready',
+  NO_KEY = 'No Key',
+}
 
-                    return result;
-                } catch (error) {
-                    this.isProcessing = false;
-                    this.resetAgents();
-                    throw error;
-                }
-            }
+enum MemoryStatusEnum {
+  OK = 'OK',
+  WARNING = 'WARNING',
+  CRITICAL = 'CRITICAL',
+}
 
-            async executeParallelPhase(prompt, context) {
-                const parallelTasks = [];
+interface MemoryMetrics {
+  text: string;
+  className: string;
+}
 
-                for (const [agentName] of this.agents) {
-                    parallelTasks.push(this.processAgent(agentName, prompt, context, 0));
-                }
+interface EditorStatus {
+  cursor: { line: number; col: number };
+  lines: number;
+  chars: number;
+  historySize: number;
+  quantumModeActive: boolean;
+  hyperthreadingActive: boolean;
+  multiAgentModeActive: boolean;
+}
 
-                await Promise.all(parallelTasks);
-            }
+type EditorLanguage = 'javascript' | 'typescript' | 'html' | 'css' | 'python' | 'php' | 'sql' | 'markdown' | 'json' | 'jsx' | 'tsx' | 'xml' | 'yaml' | 'yml';
+type BeautifyLanguage = 'js' | 'html' | 'css';
 
-            async executeAnalysisPhase(prompt, context) {
-                await this.processAgent('cognito', prompt, context, 1);
-                await this.delay(800);
-                await this.processAgent('cognito', prompt, context, 2);
-                await this.delay(600);
+interface PromptSuggestion {
+  text: string;
+  onClick: (value: string) => void;
+}
 
-                await this.processAgent('relay', prompt, context, 1);
-                await this.delay(400);
-            }
+type QuantumAppState = {
+  isGenerating: boolean;
+  aiConnectionStatus: AiConnectionStatus;
+  recentFiles: RecentFile[];
+  settings: QuantumSettings;
+  editorContent: string;
+  currentFileName: string | null;
+  currentFileType: EditorLanguage;
+  editorStatus: EditorStatus;
+  memoryMetrics: MemoryMetrics;
+  agents: { [key in AgentType]: AgentStatus };
+  consensusResult: ConsensusResult | null;
+  showOrchestrationPanel: boolean;
+  showPreviewPanel: boolean;
+  previewHtml: string;
+  quantumConsensusCode: string | null;
+};
 
-            async executeValidationPhase(prompt, context) {
-                await this.processAgent('sentinel', prompt, context, 1);
-                await this.delay(500);
-                await this.processAgent('echo', prompt, context, 1);
-                await this.delay(300);
+interface AIStudio {
+  hasSelectedApiKey: () => Promise<boolean>;
+  openSelectKey: () => Promise<void>;
+}
+// --- END: Inlined types.ts ---
 
-                return this.generateFinalResult(prompt, context);
-            }
+// --- START: Inlined constants.ts ---
+const MAX_CONTEXT_LENGTH = 8000;
+const MAX_HISTORY_SIZE = 50;
+const DEBOUNCE_DELAY_MS = 100;
+const AUTOSAVE_INTERVAL_MS = 30000;
+const MEMORY_MONITOR_INTERVAL_MS = 30000;
 
-            async processAgent(agentName, prompt, context, phase) {
-                const agent = this.agents.get(agentName);
-                if (!agent) return;
+const MEMORY_STORAGE_KEY = 'quantum_editor_cache';
+const SETTINGS_STORAGE_KEY = 'quantum_editor_settings';
+const RECENT_FILES_STORAGE_KEY = 'quantum_recent_files';
+const AUTOSAVE_CONTENT_KEY = 'autosave_content';
 
-                agent.status = 'PROCESSING';
+const MAX_MEMORY_THRESHOLD_BYTES = 50 * 1024 * 1024; // 50 MB
+const CACHE_LIMIT = 100;
 
-                const baseTime = 200 + (Math.random() * 300);
-                const phaseMultiplier = 1 + (phase * 0.5);
-                const processingTime = baseTime * phaseMultiplier;
+const AGENT_NAMES_MAP: { [key in AgentType]: string } = {
+  [AgentType.NEXUS]: 'Nexus',
+  [AgentType.COGNITO]: 'Cognito',
+  [AgentType.RELAY]: 'Relay',
+  [AgentType.SENTINEL]: 'Sentinel',
+  [AgentType.ECHO]: 'Echo',
+};
 
-                const steps = 5;
-                for (let i = 1; i <= steps; i++) {
-                    agent.progress = (i / steps) * 100;
-                    this.updateDashboard();
-                    await this.delay(processingTime / steps);
-                }
+const REASONING_STRATEGIES: string[] = [
+  "Apply recursive optimization patterns",
+  "Use quantum efficiency algorithms",
+  "Implement fractal code structure",
+  "Apply hyperthreaded reasoning",
+  "Use entropy-based selection",
+  "Apply mathematical transformation",
+  "Implement parallel processing",
+  "Use consensus validation",
+  "Apply abstract syntax tree manipulation",
+  "Implement heuristic code generation",
+  "Use semantic code analysis",
+  "Apply pattern recognition for refactoring",
+  "Generate declarative programming structures",
+  "Optimize for functional purity",
+  "Implement aspect-oriented programming principles",
+  "Utilize genetic algorithms for code evolution",
+  "Employ symbolic execution for bug detection",
+  "Transform imperative to functional paradigms",
+  "Apply dependency graph optimization",
+  "Integrate formal verification methods"
+];
 
-                agent.status = 'COMPLETE';
-                this.updateDashboard();
+const COMMON_PROMPT_SUGGESTIONS: string[] = [
+  'create a function to sort arrays',
+  'optimize this code for performance',
+  'add error handling to this function',
+  'convert this to TypeScript',
+  'explain this code',
+  'refactor this code',
+  'write unit tests for this function',
+  'create a React component',
+  'implement a database query',
+  'add comments to this code',
+  'fix bugs in this code',
+  'improve code readability',
+  'implement authentication',
+  'create API endpoints',
+  'optimize database queries',
+  'add input validation',
+  'implement caching',
+  'create documentation',
+  'set up logging',
+  'handle edge cases',
+  'debug this React component',
+  'add a feature to this existing component',
+  'improve the UI/UX of this section',
+  'write a custom React hook',
+  'integrate a third-party library',
+  'secure this data transmission',
+  'implement a state management solution',
+  'add a responsive design breakpoint',
+  'create a component library entry',
+  'generate SVG for this icon',
+  'write a serverless function for this task'
+];
 
-                if (!this.performanceMetrics.agentTimes.has(agentName)) {
-                    this.performanceMetrics.agentTimes.set(agentName, []);
-                }
-                this.performanceMetrics.agentTimes.get(agentName).push(processingTime);
-            }
+const INITIAL_EDITOR_CONTENT = `// Quantum Fractal AI Editor - Ready
+// Start coding or use the prompt below for AI assistance
 
-            generateFinalResult(prompt, context) {
-                const code = context || '';
-                const lines = code.split('\n').length;
-                const words = code.split(/\s+/).filter(w => w.length > 0).length;
+function welcome() {
+    return "Welcome to the Quantum Fractal AI Editor!";
+}`;
 
-                let analysis = '';
-                let suggestions = [];
+const DEFAULT_AGENT_COUNT = 5;
+const DEFAULT_MAX_ROUNDS = 3;
+const DEFAULT_REASONING_DEPTH = 3;
 
-                if (prompt.toLowerCase().includes('explain')) {
-                    analysis = `This ${this.detectLanguage(code)} code contains ${lines} lines and approximately ${words} meaningful tokens. `;
-                    analysis += `The structure appears ${this.assessCodeStructure(code)}.`;
-                    suggestions = ['Add more comments for complex functions', 'Consider breaking down large functions', 'Verify variable naming consistency'];
-                }
-                else if (prompt.toLowerCase().includes('optimize')) {
-                    analysis = `Found ${this.identifyOptimizationOpportunities(code)} potential optimization opportunities. `;
-                    analysis += `Code complexity is ${this.assessComplexity(code)}.`;
-                    suggestions = ['Reduce nested loops', 'Cache DOM queries', 'Use more efficient algorithms', 'Minify CSS and JS'];
-                }
-                else if (prompt.toLowerCase().includes('bug')) {
-                    analysis = `Static analysis completed. ${this.identifyPotentialBugs(code)} potential issues detected.`;
-                    suggestions = ['Add error handling', 'Validate user inputs', 'Test edge cases', 'Check for memory leaks'];
-                }
-                else {
-                    analysis = `Quantum analysis complete. Processed ${lines} lines of ${this.detectLanguage(code)} code. `;
-                    analysis += `Overall code quality: ${this.assessCodeQuality(code)}.`;
-                    suggestions = ['Consider adding documentation', 'Implement unit tests', 'Review security practices'];
-                }
+const INITIAL_AGENTS_STATE = {
+  [AgentType.NEXUS]: { content: 'Idle. Awaiting quantum command.', log: [], isActive: false },
+  [AgentType.COGNITO]: { content: 'Ready', log: [], isActive: false },
+  [AgentType.RELAY]: { content: 'Ready', log: [], isActive: false },
+  [AgentType.SENTINEL]: { content: 'Ready', log: [], isActive: false },
+  [AgentType.ECHO]: { content: 'Awaiting assembly instructions...', log: [], isActive: false },
+};
 
-                return {
-                    analysis,
-                    suggestions,
-                    metrics: {
-                        processingTime: Date.now() - this.performanceMetrics.startTime,
-                        agentsUsed: Array.from(this.agents.keys()),
-                        linesAnalyzed: lines,
-                        wordsProcessed: words
-                    },
-                    timestamp: new Date().toISOString()
-                };
-            }
+const INITIAL_SETTINGS = {
+  quantumMode: true,
+  hyperthreading: true,
+  multiAgentMode: true,
+  autoSave: true,
+  agentCount: DEFAULT_AGENT_COUNT,
+  maxRounds: DEFAULT_MAX_ROUNDS,
+  reasoningDepth: DEFAULT_REASONING_DEPTH,
+};
 
-            detectLanguage(code) {
-                if (code.includes('<!DOCTYPE html>') || code.includes('<html')) return 'HTML';
-                if (code.includes('function') || code.includes('const ') || code.includes('let ')) return 'JavaScript';
-                if (code.includes('@media') || code.includes('{') && code.includes('}') && code.includes(':')) return 'CSS';
-                if (code.includes('{') && code.includes('}') && code.includes('"')) return 'JSON';
-                return 'text';
-            }
+const SYNTAX_HIGHLIGHTING_CLASS_PREFIX = 'sh-token sh-';
+// --- END: Inlined constants.ts ---
 
-            assessCodeStructure(code) {
-                const lines = code.split('\n');
-                const avgLineLength = lines.reduce((sum, line) => sum + line.length, 0) / lines.length;
+// --- START: Inlined utils/helpers.ts ---
+function getMimeType(fileType: EditorLanguage): string {
+  const mimeMap: { [key in EditorLanguage]: string } = {
+    'javascript': 'application/javascript',
+    'jsx': 'application/javascript',
+    'typescript': 'application/typescript',
+    'tsx': 'application/typescript',
+    'html': 'text/html',
+    'css': 'text/css',
+    'python': 'text/x-python',
+    'php': 'application/x-httpd-php',
+    'sql': 'application/sql',
+    'markdown': 'text/markdown',
+    'json': 'application/json',
+    'xml': 'application/xml',
+    'yaml': 'application/x-yaml',
+    'yml': 'application/x-yaml',
+  };
+  return mimeMap[fileType] || 'text/plain';
+}
 
-                if (avgLineLength > 80) return 'could be more concise';
-                if (lines.length > 200) return 'moderately complex';
-                return 'well-structured';
-            }
+async function sha256(str: string): Promise<string> {
+  const textAsBuffer = new TextEncoder().encode(str);
+  const hashBuffer = await window.crypto.subtle.digest('SHA-256', textAsBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashAsHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashAsHex;
+}
 
-            identifyOptimizationOpportunities(code) {
-                let opportunities = 0;
-                if (code.includes('for(') || code.includes('for (')) opportunities += 2;
-                if (code.includes('.innerHTML')) opportunities += 1;
-                if (code.includes('.getElementById') && code.split('.getElementById').length > 3) opportunities += 1;
-                if (code.includes('setTimeout') || code.includes('setInterval')) opportunities += 1;
+function generateFractalHash(agentName: string, depth = 3): string {
+  const base = agentName + Date.now().toString();
+  let hash = '';
+  for (let i = 0; i < depth; i++) {
+    let current = base;
+    for (let j = 0; j <= i; j++) {
+      current = btoa(current).substring(0, 16);
+    }
+    hash += current;
+  }
+  return btoa(hash).substring(0, 32);
+}
 
-                return opportunities || 'several';
-            }
+function calculateEntropy(hash: string): number {
+  const charCounts: { [key: string]: number } = {};
+  for (const char of hash) {
+    charCounts[char] = (charCounts[char] || 0) + 1;
+  }
+  let entropy = 0;
+  const length = hash.length;
+  for (const char in charCounts) {
+    const probability = charCounts[char] / length;
+    entropy -= probability * Math.log2(probability);
+  }
+  return entropy;
+}
 
-            assessComplexity(code) {
-                const lines = code.split('\n').length;
-                if (lines < 50) return 'low';
-                if (lines < 200) return 'medium';
-                return 'high';
-            }
+function generateEventId(): string {
+  return 'event_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+}
 
-            identifyPotentialBugs(code) {
-                let potentialBugs = 0;
-                if (code.includes('==') && !code.includes('===')) potentialBugs += 1;
-                if (code.includes('eval(')) potentialBugs += 2;
-                if (code.includes('innerHTML') && code.includes('+')) potentialBugs += 1;
+function stripCodeBlock(content: string): string {
+  const trimmed = content.trim();
+  const codeBlockRegex = /^```(?:\w+)?\n([\s\S]*?)\n```$/;
+  const match = trimmed.match(codeBlockRegex);
+  if (match && match[1]) {
+      return match[1].trim();
+  }
+  return trimmed;
+}
 
-                return potentialBugs || 'no obvious';
-            }
+function getCaretPosition(element: HTMLElement): { line: number; col: number; offset: number } {
+  const selection = window.getSelection();
+  let line = 0;
+  let col = 0;
+  let offset = 0;
+  if (selection && selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(element);
+    preCaretRange.setEnd(range.endContainer, range.endOffset);
+    const preCaretText = preCaretRange.toString();
+    const preCaretLines = preCaretText.split('\n');
+    line = preCaretLines.length;
+    col = preCaretLines[preCaretLines.length - 1].length;
+    offset = preCaretText.length;
+  }
+  return { line, col, offset };
+}
 
-            assessCodeQuality(code) {
-                const lines = code.split('\n');
-                const commentLines = lines.filter(line =>
-                    line.trim().startsWith('//') ||
-                    line.trim().startsWith('/*') ||
-                    line.trim().startsWith('*')
-                ).length;
+function setCaretPosition(element: HTMLElement, offset: number): void {
+  const range = document.createRange();
+  const selection = window.getSelection();
+  let currentNode: Node | null = element;
+  let currentOffset = 0;
 
-                const commentRatio = commentLines / lines.length;
+  function traverseNodes(node: Node) {
+    if (!node) return;
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (currentOffset + (node.textContent?.length || 0) >= offset) {
+        range.setStart(node, offset - currentOffset);
+        range.collapse(true);
+        return true;
+      }
+      currentOffset += node.textContent?.length || 0;
+    } else {
+      for (const childNode of Array.from(node.childNodes)) {
+        if (traverseNodes(childNode)) return true;
+      }
+    }
+    return false;
+  }
 
-                if (commentRatio > 0.2) return 'good';
-                if (commentRatio > 0.1) return 'adequate';
-                return 'needs improvement';
-            }
+  if (traverseNodes(element)) {
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }
+}
+// --- END: Inlined utils/helpers.ts ---
 
-            updateDashboard() {
-                for (const [agentName, agent] of this.agents) {
-                    const statusElement = document.getElementById(`${agentName}-status`);
-                    const progressElement = document.getElementById(`${agentName}-progress`);
+// --- START: Inlined utils/quantumEffects.ts ---
+function quantumNotify(message: string, type: 'info' | 'success' | 'warn' | 'error' = 'info'): void {
+  const notification = document.createElement('div');
+  notification.textContent = message;
+  let bgColor: string;
+  let textColor: string = 'text-white';
+  switch (type) {
+    case 'success':
+      bgColor = 'bg-accent-color';
+      textColor = 'text-black';
+      break;
+    case 'warn':
+      bgColor = 'bg-warn-bg';
+      textColor = 'text-panel-bg';
+      break;
+    case 'error':
+      bgColor = 'bg-err-color';
+      break;
+    case 'info':
+    default:
+      bgColor = 'bg-info-color';
+      break;
+  }
+  notification.className = `fixed top-5 right-5 ${bgColor} ${textColor} p-3 rounded-md z-[1000] text-xs shadow-lg`;
+  document.body.appendChild(notification);
 
-                    if (statusElement) {
-                        statusElement.textContent = agent.status;
-                        statusElement.style.background = agent.status === 'PROCESSING' ? 'var(--quantum-accent)' :
-                                                       agent.status === 'COMPLETE' ? 'var(--quantum-primary)' : 'var(--editor-muted)';
-                    }
+  gsap.fromTo(notification,
+    { opacity: 0, y: -20 },
+    { opacity: 1, y: 0, duration: 0.3 }
+  );
 
-                    if (progressElement) {
-                        progressElement.style.width = `${agent.progress}%`;
-                    }
-                }
-            }
+  setTimeout(() => {
+    gsap.to(notification, {
+      opacity: 0, y: -20, duration: 0.3, onComplete: () => {
+        document.body.removeChild(notification);
+      }
+    });
+  }, 3000);
+}
 
-            resetAgents() {
-                for (const agent of this.agents.values()) {
-                    agent.status = 'IDLE';
-                    agent.progress = 0;
-                }
-                this.updateDashboard();
-            }
+function initQuantumThreads(containerRef: React.RefObject<HTMLDivElement>): () => void {
+  const container = containerRef.current;
+  if (!container) return () => {};
+  container.innerHTML = '';
+  const threads: HTMLElement[] = [];
+  for (let i = 0; i < 5; i++) {
+    const thread = document.createElement('div');
+    thread.className = 'absolute w-[1px] h-full bg-gradient-to-b from-transparent via-agent-nexus to-transparent animate-[threadFlow_2s_infinite_linear]';
+    thread.style.left = `${20 + i * 15}%`;
+    thread.style.animationDelay = `${i * 0.3}s`;
+    container.appendChild(thread);
+    threads.push(thread);
+  }
+  return () => {
+    threads.forEach(thread => container.removeChild(thread));
+  };
+}
 
-            delay(ms) {
-                return new Promise(resolve => setTimeout(resolve, ms));
-            }
+function createFractalNodes(containerRef: React.RefObject<HTMLDivElement>, quantumMode: boolean, hyperthreading: boolean): () => void {
+  const container = containerRef.current;
+  if (!container || !quantumMode) {
+    if (container) container.innerHTML = '';
+    return () => {};
+  }
+  container.innerHTML = '';
+  const nodeCount = hyperthreading ? 12 : 6;
+  const nodes: HTMLElement[] = [];
+  for (let i = 0; i < nodeCount; i++) {
+    const node = document.createElement('div');
+    node.className = 'absolute w-1 h-1 rounded-full animate-[fractalPulse_1.5s_infinite_alternate]';
+    node.style.left = `${Math.random() * 100}%`;
+    node.style.top = `${Math.random() * 100}%`;
+    node.style.animationDelay = `${Math.random() * 2}s`;
+    node.style.backgroundColor = i % 2 === 0 ? 'var(--agent-nexus)' : 'var(--agent-cognito)';
+    container.appendChild(node);
+    nodes.push(node);
+  }
+  return () => {
+    nodes.forEach(node => container.removeChild(node));
+  };
+}
 
-            setupEventListeners() {
-                // Global event listeners can be added here
-            }
+function animateAgentCard(agentType: AgentType, active: boolean): void {
+  const agentCard = document.getElementById(`${agentType}-card`);
+  if (agentCard) {
+    if (active) {
+      agentCard.classList.add('active');
+      gsap.fromTo(agentCard.querySelector('::before'),
+        { left: '-100%' },
+        { left: '100%', duration: 0.5, ease: 'power1.out', overwrite: true }
+      );
+    } else {
+      agentCard.classList.remove('active');
+    }
+  }
+}
+// --- END: Inlined utils/quantumEffects.ts ---
+
+// --- START: Inlined utils/syntaxHighlighter.ts ---
+interface HighlightPattern {
+  pattern: RegExp;
+  type: string;
+}
+class QuantumSyntaxHighlighter {
+  private languagePatterns: { [key in EditorLanguage]: HighlightPattern[] };
+  private currentLanguage: EditorLanguage;
+  private debounceTimer: number | null = null;
+  private debounceDelay = 50;
+  constructor() {
+    this.languagePatterns = {
+      javascript: this.getJavaScriptPatterns(),
+      typescript: this.getTypeScriptPatterns(),
+      html: this.getHTMLPatterns(),
+      css: this.getCSSPatterns(),
+      python: this.getPythonPatterns(),
+      php: this.getPHPPatterns(),
+      sql: this.getSQLPatterns(),
+      markdown: this.getMarkdownPatterns(),
+      json: this.getJSONPatterns(),
+      jsx: this.getJSXPatterns(),
+      tsx: this.getTSXPatterns(),
+      xml: this.getXMLPatterns(),
+      yaml: this.getYAMLPatterns(),
+    };
+    this.currentLanguage = 'javascript';
+  }
+  private getJavaScriptPatterns(): HighlightPattern[] {
+    return [
+      { pattern: /\/\/.*$/gm, type: 'comment' },
+      { pattern: /\/\*[\s\S]*?\*\//g, type: 'comment' },
+      { pattern: /`(?:\\.|[^`\\])*`/g, type: 'template-string' },
+      { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
+      { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+      { pattern: /\/(?![*\/])(?:\\.|[^\/\\\n])+\/[gimuy]*/g, type: 'regex' },
+      { pattern: /\b\d+(\.\d+)?\b/g, type: 'number' },
+      { pattern: /\b0x[a-fA-F0-9]+\b/g, type: 'number' },
+      { pattern: /\b(?:function|class|const|let|var|if|else|for|while|do|switch|case|break|continue|return|try|catch|finally|throw|new|this|super|extends|implements|import|export|from|default|async|await|yield|static|public|private|protected|readonly|abstract|interface|type|namespace|module|declare|get|set|of|in|instanceof|typeof|void|delete)\b/g, type: 'keyword' },
+      { pattern: /\b(?:console|Math|Date|Array|Object|String|Number|Boolean|Symbol|Map|Set|Promise|JSON|RegExp|Error|Function|Proxy|Reflect)\b/g, type: 'type' },
+      { pattern: /\b[a-zA-Z_$][\w$]*(?=\s*\()/g, type: 'function' },
+      { pattern: /[+\-*/%=<>!&|^~?:.,;]/g, type: 'operator' },
+      { pattern: /[{}()[\]<>]/g, type: 'bracket' }
+    ];
+  }
+  private getTypeScriptPatterns(): HighlightPattern[] {
+    const jsPatterns = this.getJavaScriptPatterns();
+    jsPatterns.push(
+      { pattern: /\b(?:interface|type|implements|namespace|module|declare|readonly|abstract|public|private|protected)\b/g, type: 'keyword' },
+      { pattern: /:\s*\w+/g, type: 'type' }
+    );
+    return jsPatterns;
+  }
+  private getHTMLPatterns(): HighlightPattern[] {
+    return [
+      { pattern: /<!--[\s\S]*?-->/g, type: 'comment' },
+      { pattern: /<\/?[\w][\w-]*/g, type: 'tag' },
+      { pattern: /(?<=<\/?[\w][\w-]*\s+)[\w-]+(?=\s*=)/g, type: 'property' },
+      { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+      { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
+      { pattern: /<!DOCTYPE\s+[^>]+>/gi, type: 'keyword' }
+    ];
+  }
+  private getCSSPatterns(): HighlightPattern[] {
+    return [
+      { pattern: /\/\*[\s\S]*?\*\//g, type: 'comment' },
+      { pattern: /[.#]?[\w-]+\s*(?={)/g, type: 'css-selector' },
+      { pattern: /[\w-]+(?=\s*:)/g, type: 'css-property' },
+      { pattern: /:\s*[^;]+/g, type: 'css-value' },
+      { pattern: /!important/gi, type: 'keyword' },
+      { pattern: /@\w+/g, type: 'keyword' }
+    ];
+  }
+  private getPythonPatterns(): HighlightPattern[] {
+    return [
+      { pattern: /#.*$/gm, type: 'comment' },
+      { pattern: /"""(?:.|\n)*?"""/g, type: 'string' },
+      { pattern: /'''(?:.|\n)*?'''/g, type: 'string' },
+      { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+      { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
+      { pattern: /\b\d+(\.\d+)?\b/g, type: 'number' },
+      { pattern: /\b(?:def|class|if|elif|else|for|while|try|except|finally|with|import|from|as|return|yield|async|await|lambda|None|True|False|and|or|not|in|is|global|nonlocal|del|pass|break|continue|raise)\b/g, type: 'keyword' },
+      { pattern: /\b[a-zA-Z_][\w]*(?=\s*\()/g, type: 'function' },
+      { pattern: /@\w+/g, type: 'function' }
+    ];
+  }
+  private getPHPPatterns(): HighlightPattern[] {
+    return [
+      { pattern: /\/\/.*$/gm, type: 'comment' },
+      { pattern: /#.*$/gm, type: 'comment' },
+      { pattern: /\/\*[\s\S]*?\*\//g, type: 'comment' },
+      { pattern: /<\?php|\?>/g, type: 'tag' },
+      { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
+      { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+      { pattern: /\$\w+/g, type: 'variable' },
+      { pattern: /\b(?:function|class|interface|trait|namespace|use|public|private|protected|static|final|abstract|const|if|else|elseif|for|foreach|while|do|switch|case|break|continue|return|try|catch|finally|throw|new|clone|instanceof|echo|print|die|exit|isset|unset|empty)\b/g, type: 'keyword' }
+    ];
+  }
+  private getSQLPatterns(): HighlightPattern[] {
+    return [
+      { pattern: /--.*$/gm, type: 'comment' },
+      { pattern: /\/\*[\s\S]*?\*\//g, type: 'comment' },
+      { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
+      { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+      { pattern: /\b(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|INNER|LEFT|RIGHT|OUTER|ON|AND|OR|NOT|IN|BETWEEN|LIKE|IS|NULL|ORDER BY|GROUP BY|HAVING|LIMIT|OFFSET|UNION|CREATE|ALTER|DROP|TABLE|INDEX|VIEW|DATABASE|TRIGGER|PROCEDURE|FUNCTION|VALUES|SET|DEFAULT|PRIMARY KEY|FOREIGN KEY|REFERENCES|CASCADE|UNIQUE|CHECK|EXISTS|CASE|WHEN|THEN|ELSE|END|DISTINCT|COUNT|SUM|AVG|MIN|MAX)\b/gi, type: 'keyword' },
+      { pattern: /\b\d+(\.\d+)?\b/g, type: 'number' }
+    ];
+  }
+  private getMarkdownPatterns(): HighlightPattern[] {
+    return [
+      { pattern: /^#{1,6}\s+.+$/gm, type: 'keyword' },
+      { pattern: /\*\*(.*?)\*\*/g, type: 'keyword' },
+      { pattern: /\*(.*?)\*/g, type: 'comment' },
+      { pattern: /`[^`]*`/g, type: 'string' },
+      { pattern: /```[\s\S]*?```/g, type: 'template-string' },
+      { pattern: /\[([^\]]+)\]\(([^)]+)\)/g, type: 'function' },
+      { pattern: /^\s*[\-\*\+]\s+/gm, type: 'operator' },
+      { pattern: /^\s*\d+\.\s+/gm, type: 'number' }
+    ];
+  }
+  private getJSONPatterns(): HighlightPattern[] {
+    return [
+      { pattern: /"(?:\\.|[^"\\])*"(?=\s*:)/g, type: 'key' },
+      { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+      { pattern: /\b\d+(\.\d+)?\b/g, type: 'number' },
+      { pattern: /\b(?:true|false|null)\b/g, type: 'keyword' }
+    ];
+  }
+  private getJSXPatterns(): HighlightPattern[] {
+    const jsPatterns = this.getJavaScriptPatterns();
+    jsPatterns.push(
+      { pattern: /<\/?[A-Z][\w]*|<\/?[a-z][\w-]*/g, type: 'jsx-tag' },
+      { pattern: /(?<=<[A-Z][\w]*\s+)[\w-]+(?=\s*=)/g, type: 'jsx-attribute' }
+    );
+    return jsPatterns;
+  }
+  private getTSXPatterns(): HighlightPattern[] {
+    const tsPatterns = this.getTypeScriptPatterns();
+    tsPatterns.push(
+      { pattern: /<\/?[A-Z][\w]*|<\/?[a-z][\w-]*/g, type: 'jsx-tag' },
+      { pattern: /(?<=<[A-Z][\w]*\s+)[\w-]+(?=\s*=)/g, type: 'jsx-attribute' }
+    );
+    return tsPatterns;
+  }
+  private getXMLPatterns(): HighlightPattern[] {
+    return [
+      { pattern: /<!--[\s\S]*?-->/g, type: 'comment' },
+      { pattern: /<\/?[\w][\w-]*/g, type: 'tag' },
+      { pattern: /(?<=<\/?[\w][\w-]*\s+)[\w-]+(?=\s*=)/g, type: 'property' },
+      { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+      { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' }
+    ];
+  }
+  private getYAMLPatterns(): HighlightPattern[] {
+    return [
+      { pattern: /#.*$/gm, type: 'comment' },
+      { pattern: /"(?:\\.|[^"\\])*"/g, type: 'string' },
+      { pattern: /'(?:\\.|[^'\\])*'/g, type: 'string' },
+      { pattern: /\b\d+(\.\d+)?\b/g, type: 'number' },
+      { pattern: /^(?:\s*)[\w-]+(?=\s*:)/gm, type: 'key' },
+      { pattern: /\b(?:true|false|null|yes|no|on|off)\b/gi, type: 'keyword' }
+    ];
+  }
+  public detectLanguage(filename: string): EditorLanguage {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const languageMap: { [key: string]: EditorLanguage } = {
+      'js': 'javascript', 'jsx': 'jsx', 'ts': 'typescript', 'tsx': 'tsx',
+      'html': 'html', 'htm': 'html', 'css': 'css', 'py': 'python',
+      'php': 'php', 'sql': 'sql', 'md': 'markdown', 'json': 'json',
+      'txt': 'javascript', 'xml': 'xml', 'yaml': 'yaml', 'yml': 'yaml'
+    };
+    return languageMap[ext || ''] || 'javascript';
+  }
+  public setLanguage(language: EditorLanguage): void {
+    this.currentLanguage = language;
+  }
+  public escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  public highlightText(text: string, language: EditorLanguage | null = null): string {
+    const lang = language || this.currentLanguage;
+    if (!text) return '';
+    const patterns = this.languagePatterns[lang] || this.languagePatterns.javascript;
+    const tokens: { start: number; end: number; type: string; priority: number; length: number; }[] = [];
+    patterns.forEach(({ pattern, type }, priority) => {
+      const globalPattern = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g');
+      for (const match of text.matchAll(globalPattern)) {
+        if (match[0].length === 0) continue;
+        tokens.push({
+          start: match.index as number,
+          end: (match.index as number) + match[0].length,
+          type: type,
+          priority: priority,
+          length: match[0].length,
+        });
+      }
+    });
+    tokens.sort((a, b) => {
+      if (a.start !== b.start) return a.start - b.start;
+      if (b.length !== a.length) return b.length - a.length;
+      return a.priority - b.priority;
+    });
+    const filteredTokens: typeof tokens = [];
+    let lastEnd = -1;
+    for (const token of tokens) {
+      if (token.start >= lastEnd) {
+        filteredTokens.push(token);
+        lastEnd = token.end;
+      }
+    }
+    let result = '';
+    let lastIndex = 0;
+    filteredTokens.forEach(token => {
+      result += this.escapeHtml(text.substring(lastIndex, token.start));
+      const tokenText = text.substring(token.start, token.end);
+      result += `<span class="${SYNTAX_HIGHLIGHTING_CLASS_PREFIX}${token.type}">${this.escapeHtml(tokenText)}</span>`;
+      lastIndex = token.end;
+    });
+    if (lastIndex < text.length) {
+      result += this.escapeHtml(text.substring(lastIndex));
+    }
+    return result;
+  }
+  public highlightElement(element: HTMLElement, language: EditorLanguage | null = null): void {
+    const text = element.textContent || '';
+    const selection = window.getSelection();
+    const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    let startOffset = range ? range.startOffset : 0;
+    let startContainer = range ? range.startContainer : null;
+    let path: number[] = [];
+    let node: Node | null = startContainer;
+    while (node && node !== element) {
+      let i = 0;
+      let sibling: Node | null = node;
+      while ((sibling = sibling.previousSibling) != null) i++;
+      path.unshift(i);
+      node = node.parentNode;
+    }
+    element.innerHTML = this.highlightText(text, language);
+    try {
+      if (startContainer) {
+        node = element;
+        path.forEach(index => {
+          if (node && node.childNodes[index]) {
+            node = node.childNodes[index];
+          } else {
+            node = null; // Path invalidates, break
+          }
+        });
+        if (node) {
+          const newRange = document.createRange();
+          newRange.setStart(node, Math.min(startOffset, node.textContent?.length || 0));
+          newRange.collapse(true);
+          selection?.removeAllRanges();
+          selection?.addRange(newRange);
         }
+      }
+    } catch (e) {
+      console.warn("Could not restore cursor position.", e);
+    }
+  }
+  public enableRealtimeHighlighting(editorElement: HTMLElement, language: EditorLanguage | null = null): () => void {
+    let isComposing = false;
+    const highlight = () => {
+      if (isComposing) return;
+      if (this.debounceTimer !== null) {
+        clearTimeout(this.debounceTimer);
+      }
+      this.debounceTimer = window.setTimeout(() => {
+        this.highlightElement(editorElement, language);
+        this.debounceTimer = null;
+      }, this.debounceDelay);
+    };
+    const handleCompositionStart = () => { isComposing = true; };
+    const handleCompositionEnd = () => {
+      isComposing = false;
+      highlight();
+    };
+    const handlePaste = () => setTimeout(highlight, 10);
+    editorElement.addEventListener('input', highlight);
+    editorElement.addEventListener('compositionstart', handleCompositionStart);
+    editorElement.addEventListener('compositionend', handleCompositionEnd);
+    editorElement.addEventListener('paste', handlePaste);
+    highlight();
+    return () => {
+      if (this.debounceTimer !== null) {
+        clearTimeout(this.debounceTimer);
+      }
+      editorElement.removeEventListener('input', highlight);
+      editorElement.removeEventListener('compositionstart', handleCompositionStart);
+      editorElement.removeEventListener('compositionend', handleCompositionEnd);
+      editorElement.removeEventListener('paste', handlePaste);
+    };
+  }
+}
+// --- END: Inlined utils/syntaxHighlighter.ts ---
 
-        // ==================== EDITOR LOGIC ====================
-        const editor = document.getElementById('editor');
-        const highlighted = document.getElementById('highlighted');
-        const lineGutter = document.getElementById('line-gutter');
-        const statusEditor = document.getElementById('editor-meta');
-        const statusFile = document.getElementById('file-meta');
-        const previewPanel = document.getElementById('preview-panel');
-        const previewContent = document.getElementById('preview-content');
-        const aiResponsePanel = document.getElementById('ai-response-panel');
-        const aiResponseContent = document.getElementById('ai-response-content');
-        const leftPanel = document.getElementById('left-panel');
-        const panelOverlay = document.getElementById('panel-overlay');
-        const quantumDashboard = document.getElementById('quantum-dashboard');
-
-        let currentFileName = null,
-            currentFileType = 'html',
-            historyStack = [],
-            redoStack = [],
-            quantumSystem;
-
-        // Initialize the editor
-        function initEditor() {
-            renderEditor(editor.value);
-            pushHistory();
-            initQuantumSystem();
-
-            // Add event listeners
-            setupEventListeners();
-
-            console.log("Nemodian 2244-1 Quantum Editor initialized");
+// --- START: Inlined utils/memoryManager.ts ---
+class QuantumMemoryManager {
+  private cleanupInterval: number | null = null;
+  constructor() {
+    if (!window.quantumMemoryCache) {
+      window.quantumMemoryCache = new Map<string, any>();
+    }
+  }
+  public init(): void {
+    this.startMemoryMonitoring();
+    this.cleanupOldCache();
+  }
+  public cleanup(): void {
+    if (this.cleanupInterval !== null) {
+      clearInterval(this.cleanupInterval);
+    }
+  }
+  private startMemoryMonitoring(): void {
+    this.cleanupInterval = window.setInterval(() => {
+      this.checkMemoryUsage();
+    }, MEMORY_MONITOR_INTERVAL_MS);
+    window.addEventListener('beforeunload', () => this.cleanup());
+  }
+  public checkMemoryUsage(): MemoryMetrics {
+    try {
+      if ('memory' in performance && performance.memory) {
+        const memory = performance.memory;
+        const used = memory.usedJSHeapSize;
+        const limit = memory.jsHeapSizeLimit;
+        const usagePercent = (used / limit) * 100;
+        if (usagePercent > 80) {
+          this.emergencyCleanup();
+          return { text: 'RAM: CRITICAL', className: 'bg-red-700 text-white' };
+        } else if (usagePercent > 60) {
+          this.aggressiveCleanup();
+          return { text: 'RAM: WARNING', className: 'bg-orange-500 text-black' };
+        } else {
+          return { text: 'RAM: OK', className: 'bg-accent-color text-black' };
         }
+      }
+    } catch (error) {
+      console.warn('Memory monitoring unavailable:', error);
+    }
+    return { text: 'RAM: N/A', className: 'bg-gray-500 text-white' };
+  }
+  public loadSettings(): QuantumSettings {
+    try {
+      const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored) as QuantumSettings;
+      }
+    } catch (error) {
+      console.warn('Settings load failed:', error);
+    }
+    return {
+      quantumMode: true,
+      hyperthreading: true,
+      multiAgentMode: true,
+      autoSave: true,
+      agentCount: 5,
+      maxRounds: 3,
+      reasoningDepth: 3
+    };
+  }
+  public saveSettings(settings: QuantumSettings): void {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    } catch (error) {
+      console.warn('Settings save failed:', error);
+    }
+  }
+  public loadRecentFiles(): RecentFile[] {
+    try {
+      const stored = localStorage.getItem(RECENT_FILES_STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored) as RecentFile[];
+      }
+    } catch (error) {
+      console.warn('Recent files load failed:', error);
+    }
+    return [];
+  }
+  public saveRecentFiles(recentFiles: RecentFile[]): void {
+    try {
+      localStorage.setItem(RECENT_FILES_STORAGE_KEY, JSON.stringify(recentFiles));
+    } catch (error) {
+      console.warn('Recent files save failed:', error);
+    }
+  }
+  public addRecentFile(currentRecentFiles: RecentFile[], filename: string, content: string): RecentFile[] {
+    const newRecentFiles = currentRecentFiles.filter(f => f.filename !== filename);
+    newRecentFiles.unshift({
+      filename,
+      contentPreview: content.substring(0, 1000),
+      timestamp: Date.now()
+    });
+    return newRecentFiles.slice(0, 10);
+  }
+  public async store(key: string, data: any, priority: 'low' | 'medium' | 'high' = 'medium'): Promise<boolean> {
+    try {
+      const cache = this.getCache();
+      const dataSize = new Blob([JSON.stringify(data)]).size;
+      if (dataSize > MAX_MEMORY_THRESHOLD_BYTES) {
+        throw new Error('Data too large for storage');
+      }
+      cache[key] = {
+        data: data,
+        timestamp: Date.now(),
+        priority: priority,
+        size: dataSize
+      };
+      if (Object.keys(cache).length > CACHE_LIMIT) {
+        this.cleanupCache();
+      }
+      this.saveCache(cache);
+      return true;
+    } catch (error) {
+      console.warn('Storage failed, falling back to window.quantumMemoryCache:', error);
+      window.quantumMemoryCache?.set(key, data);
+      return false;
+    }
+  }
+  public async retrieve(key: string): Promise<any | null> {
+    try {
+      const cache = this.getCache();
+      if (cache[key]) {
+        return cache[key].data;
+      }
+      if (window.quantumMemoryCache?.has(key)) {
+        return window.quantumMemoryCache.get(key);
+      }
+      return null;
+    } catch (error) {
+      console.warn('Retrieval failed:', error);
+      return null;
+    }
+  }
+  private cleanupCache(): void {
+    try {
+      const cache = this.getCache();
+      const entries = Object.entries(cache);
+      if (entries.length > CACHE_LIMIT) {
+        entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+        const toRemove = entries.slice(0, Math.floor(entries.length * 0.3));
+        toRemove.forEach(([key]) => delete cache[key]);
+        this.saveCache(cache);
+      }
+    } catch (error) {
+      console.warn('Cache cleanup failed:', error);
+    }
+  }
+  private cleanupOldCache(): void {
+    const cache = this.getCache();
+    const now = Date.now();
+    const oneHour = 60 * 60 * 1000;
+    Object.keys(cache).forEach(key => {
+      if (now - cache[key].timestamp > oneHour && cache[key].priority !== 'high') {
+        delete cache[key];
+      }
+    });
+    this.saveCache(cache);
+  }
+  private getCache(): { [key: string]: { data: any; timestamp: number; priority: string; size: number; } } {
+    try {
+      const stored = localStorage.getItem(MEMORY_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+      console.warn('Cache retrieval failed:', error);
+      return {};
+    }
+  }
+  private saveCache(cache: { [key: string]: { data: any; timestamp: number; priority: string; size: number; } }): void {
+    try {
+      localStorage.setItem(MEMORY_STORAGE_KEY, JSON.stringify(cache));
+    } catch (error) {
+      console.warn('Cache save failed:', error);
+    }
+  }
+  public emergencyCleanup(): void {
+    try {
+      localStorage.removeItem(MEMORY_STORAGE_KEY);
+      sessionStorage.clear();
+      if (window.quantumMemoryCache) {
+        window.quantumMemoryCache.clear();
+      }
+      if (window.gc) window.gc();
+      quantumNotify('Emergency memory cleanup completed', 'warn');
+    } catch (error) {
+      console.error('Emergency cleanup failed:', error);
+    }
+  }
+  public aggressiveCleanup(): void {
+    try {
+      const cache = this.getCache();
+      const entries = Object.entries(cache);
+      const toKeep = entries.filter(([, entry]) =>
+        entry.priority === 'high' && entry.size < 1024 * 1024
+      );
+      this.saveCache(Object.fromEntries(toKeep));
+      if (window.quantumMemoryCache) {
+        const keys = Array.from(window.quantumMemoryCache.keys());
+        keys.slice(0, Math.floor(keys.length * 0.5)).forEach(key =>
+          window.quantumMemoryCache?.delete(key)
+        );
+      }
+      quantumNotify('Aggressive memory cleanup completed', 'info');
+    } catch (error) {
+      console.warn('Aggressive cleanup failed:', error);
+    }
+  }
+  public async exportSession(): Promise<boolean> {
+    try {
+      const sessionData = {
+        timestamp: Date.now(),
+        cache: this.getCache(),
+        memoryCache: window.quantumMemoryCache ?
+          Array.from(window.quantumMemoryCache.entries()) : [],
+        recentFiles: this.loadRecentFiles(),
+        settings: this.loadSettings()
+      };
+      const blob = new Blob([JSON.stringify(sessionData, null, 2)],
+        { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quantum_session_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return true;
+    } catch (error) {
+      console.error('Session export failed:', error);
+      return false;
+    }
+  }
+  public async clearAllCache(): Promise<boolean> {
+    try {
+      localStorage.removeItem(MEMORY_STORAGE_KEY);
+      localStorage.removeItem(SETTINGS_STORAGE_KEY);
+      localStorage.removeItem(RECENT_FILES_STORAGE_KEY);
+      localStorage.removeItem(AUTOSAVE_CONTENT_KEY);
+      if (window.quantumMemoryCache) {
+        window.quantumMemoryCache.clear();
+      }
+      sessionStorage.clear();
+      return true;
+    } catch (error) {
+      console.error('Cache clearance failed:', error);
+      return false;
+    }
+  }
+}
+// --- END: Inlined utils/memoryManager.ts ---
 
-        function setupEventListeners() {
-            // Editor events
-            editor.addEventListener('input', handleEditorInput);
-            editor.addEventListener('scroll', syncScroll);
-            editor.addEventListener('keyup', updateStatus);
-            editor.addEventListener('click', updateStatus);
-            editor.addEventListener('keydown', handleKeydown);
-
-            // File operations
-            document.getElementById('open-file').addEventListener('click', openFile);
-            document.getElementById('save-file').addEventListener('click', saveFile);
-            document.getElementById('save-as').addEventListener('click', saveAsFile);
-            document.getElementById('file-input').addEventListener('change', handleFileSelect);
-
-            // Editor actions
-            document.getElementById('btn-undo').addEventListener('click', undo);
-            document.getElementById('btn-redo').addEventListener('click', redo);
-            document.getElementById('btn-beautify').addEventListener('click', beautifyCode);
-
-            // HTML Rendering
-            document.getElementById('btn-render').addEventListener('click', renderHTML);
-            document.getElementById('render-html').addEventListener('click', renderHTML);
-            document.getElementById('close-preview').addEventListener('click', closePreview);
-
-            // Quantum AI
-            document.getElementById('send-button').addEventListener('click', runQuantumAI);
-            document.getElementById('run-quantum-ai').addEventListener('click', runQuantumAI);
-            document.getElementById('btn-quantum').addEventListener('click', runQuantumAI);
-            document.getElementById('prompt-input').addEventListener('keydown', handlePromptKeydown);
-            document.getElementById('close-ai-panel').addEventListener('click', closeAIPanel);
-
-            // Dashboard
-            document.getElementById('show-dashboard').addEventListener('click', showDashboard);
-            document.getElementById('close-dashboard').addEventListener('click', closeDashboard);
-
-            // Panel toggle
-            document.getElementById('left-toggle').addEventListener('click', toggleLeftPanel);
-            panelOverlay.addEventListener('click', closeLeftPanel);
-
-            // Window resize
-            window.addEventListener('resize', handleResize);
+// --- START: Inlined services/geminiService.ts ---
+class GeminiService {
+  private ai: GoogleGenAI | null = null;
+  private isConnected: boolean = false;
+  constructor() {
+    this.init();
+  }
+  private init() {
+    if (process.env.API_KEY) {
+      this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      this.isConnected = true;
+    } else {
+      console.warn("API_KEY not found. Gemini service will operate in disconnected mode.");
+      this.isConnected = false;
+    }
+  }
+  public getIsConnected(): boolean {
+    return this.isConnected;
+  }
+  public async ensureApiKeySelected(): Promise<boolean> {
+    if (this.isConnected) return true;
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        if (process.env.API_KEY) {
+          this.init();
+          quantumNotify('Gemini API key detected!', 'success');
+          resolve(true);
+        } else {
+          quantumNotify('Gemini API key not found. Please ensure it is set up.', 'error');
+          resolve(false);
         }
+      }, 500);
+    });
+  }
+  public async generateGeminiContent(prompt: string, model: string = 'gemini-2.5-flash', systemInstruction?: string): Promise<string> {
+    if (!this.ai) {
+      throw new Error("Gemini service is not initialized. API key might be missing.");
+    }
+    try {
+      const config: GenerateContentParameters = {
+        model: model,
+        contents: [{text: prompt}],
+      };
+      if (systemInstruction) {
+        config.config = { systemInstruction };
+      }
+      const response: GenerateContentResponse = await this.ai.models.generateContent(config);
+      return response.text;
+    } catch (error: any) {
+      console.error("Error generating content from Gemini:", error);
+      if (error.message.includes("Requested entity was not found.")) {
+        quantumNotify("Gemini API call failed: Invalid API key or model not found. Please try re-selecting your API key.", "error");
+        this.isConnected = false;
+      }
+      throw error;
+    }
+  }
+  public async runOrchestrationAgentStep(
+    agent: AgentInfo,
+    prompt: string,
+    context: string,
+    round: number,
+    editorLanguage: EditorLanguage,
+    reasoningDepth: number
+  ): Promise<string> {
+    if (!this.ai) {
+      console.warn(`Agent ${agent.id} falling back to simulation (no AI connection).`);
+      await new Promise(r => setTimeout(r, 200 + (Math.random() * 400)));
+      return `// SIMULATED RESPONSE for Agent ${agent.id}
+function simulated_task_for_${agent.id.replace('-', '_')}() {
+    console.log("This is a simulated response due to lack of AI connection.");
+}`;
+    }
+    const strategyIndex = (round * reasoningDepth) % REASONING_STRATEGIES.length;
+    const strategy = REASONING_STRATEGIES[strategyIndex];
+    let truncatedContext = context;
+    if (context.length > MAX_CONTEXT_LENGTH) {
+      const half = MAX_CONTEXT_LENGTH / 2;
+      truncatedContext = context.substring(0, half) +
+        `\n\n// ... [CODE TRUNCATED FOR BREVITY] ...\n\n` +
+        context.substring(context.length - half);
+    }
+    const fullPrompt = `You are an expert coding agent in a multi-agent system.
+Your agent ID is ${agent.id}.
+You are in round ${round + 1} of a multi-round reasoning process.
+Your assigned strategy is: "${strategy}".
 
-        // Editor functions
-        function detectLanguage(filename) {
-            if (!filename) return 'html';
-            const ext = filename.split('.').pop().toLowerCase();
-            const languageMap = {
-                'js': 'javascript', 'html': 'html', 'htm': 'html', 'css': 'css',
-                'json': 'json', 'py': 'python', 'md': 'markdown'
-            };
-            return languageMap[ext] || 'html';
+Based on this strategy, analyze the user's request and the provided code to generate an improved or new code snippet.
+
+USER REQUEST: "${prompt}"
+
+CODE CONTEXT:
+\`\`\`${editorLanguage}
+${truncatedContext}
+\`\`\`
+
+Provide only the generated code snippet as your response. Do not include explanations or markdown formatting around the code.`;
+    try {
+      const response: GenerateContentResponse = await this.ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: [{text: fullPrompt}],
+      });
+      const codeCandidate = stripCodeBlock(response.text);
+      return `// Agent: ${agent.id} | Round: ${round + 1} | Strategy: ${strategy}
+// Seed: ${agent.origin.substring(0, 12)} | Entropy: ${calculateEntropy(agent.origin).toFixed(3)}
+${codeCandidate}`;
+    } catch (error: any) {
+      console.error(`Agent ${agent.id} failed:`, error);
+      if (error.message.includes("Requested entity was not found.")) {
+        quantumNotify("Gemini API call failed: Invalid API key or model not found. Please try re-selecting your API key.", "error");
+        this.isConnected = false;
+      }
+      throw error;
+    }
+  }
+}
+const geminiService = new GeminiService();
+// --- END: Inlined services/geminiService.ts ---
+
+// --- START: Inlined components ---
+const StatusBar: React.FC<{ fileName: string | null; editorStatus: EditorStatus; memoryMetrics: MemoryMetrics; }> = ({ fileName, editorStatus, memoryMetrics }) => {
+  const quantumThreadsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const cleanupThreads = initQuantumThreads(quantumThreadsRef);
+    return () => {
+      cleanupThreads();
+    };
+  }, []);
+  return (
+    React.createElement('div', { id: "status-bar", className: "relative bg-status-bg flex justify-between items-center px-3 py-1 text-xs" },
+      React.createElement('div', { ref: quantumThreadsRef, className: "absolute inset-0 pointer-events-none opacity-30" }),
+      React.createElement('div', { id: "file-meta", className: "relative z-10" }, fileName || 'No File Loaded'),
+      React.createElement('div', { id: "editor-meta", className: "relative z-10" },
+        `Cursor: ${editorStatus.cursor.line}:${editorStatus.cursor.col} | Lines: ${editorStatus.lines} | Chars: ${editorStatus.chars} | History: ${editorStatus.historySize}`,
+        editorStatus.quantumModeActive ? ` | Quantum: ${editorStatus.hyperthreadingActive ? 'Hyperthreaded' : 'Standard'}` : ' | Classical Mode',
+        editorStatus.multiAgentModeActive ? ' | Multi-Agent' : ' | Single-Agent'
+      ),
+      React.createElement('div', { id: "memory-status", className: `relative z-10 px-1.5 py-0.5 rounded-sm text-[10px] ${memoryMetrics.className}` },
+        memoryMetrics.text
+      )
+    )
+  );
+};
+
+const PreviewPanel: React.FC<{ show: boolean; onClose: () => void; htmlContent: string; }> = ({ show, onClose, htmlContent }) => {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const blobUrl = useRef<string | null>(null);
+  useEffect(() => {
+    if (show && htmlContent) {
+      if (blobUrl.current) {
+        URL.revokeObjectURL(blobUrl.current);
+      }
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      blobUrl.current = URL.createObjectURL(blob);
+      if (iframeRef.current) {
+        iframeRef.current.src = blobUrl.current;
+      }
+    } else if (!show && blobUrl.current) {
+      URL.revokeObjectURL(blobUrl.current);
+      blobUrl.current = null;
+      if (iframeRef.current) {
+        iframeRef.current.src = '';
+      }
+    }
+    return () => {
+      if (blobUrl.current) {
+        URL.revokeObjectURL(blobUrl.current);
+        blobUrl.current = null;
+      }
+    };
+  }, [show, htmlContent]);
+  if (!show) return null;
+  return (
+    React.createElement('div', { id: "preview-panel", className: "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 h-4/5 bg-white border-2 border-accent-color rounded-md z-[1000] flex flex-col shadow-2xl sm:w-[95%] sm:h-[85%]" },
+      React.createElement('div', { id: "preview-header", className: "bg-header-bg text-[#f0f0e0] px-3 py-2 flex justify-between items-center border-b border-accent-color" },
+        React.createElement('span', null, "Quantum Preview"),
+        React.createElement('button', { id: "close-preview", onClick: onClose, className: "bg-transparent border-none text-[#f0f0e0] text-xl cursor-pointer p-0 w-6 h-6 flex items-center justify-center" }, "×")
+      ),
+      React.createElement('iframe', { ref: iframeRef, id: "preview-content", className: "w-full h-full border-none bg-white" })
+    )
+  );
+};
+
+const OrchestrationPanel: React.FC<{ agents: { [key in AgentType]: AgentStatus }; consensusResult: ConsensusResult | null; show: boolean; onClose: () => void; onCopyAssembledCode: () => void; onApplyAssembledCode: () => void; onRerunOrchestration: () => void; editorLanguage: string; }> = ({ agents, consensusResult, show, onClose, onCopyAssembledCode, onApplyAssembledCode, onRerunOrchestration, editorLanguage }) => {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const logRefs = {
+    [AgentType.NEXUS]: useRef<HTMLDivElement>(null),
+    [AgentType.COGNITO]: useRef<HTMLDivElement>(null),
+    [AgentType.RELAY]: useRef<HTMLDivElement>(null),
+    [AgentType.SENTINEL]: useRef<HTMLDivElement>(null),
+    [AgentType.ECHO]: useRef<HTMLDivElement>(null),
+  };
+  const highlighter = new QuantumSyntaxHighlighter();
+  const getLogEntryClass = useCallback((type: LogType) => {
+    switch (type) {
+      case LogType.GENESIS: return 'border-l-agent-nexus text-agent-nexus';
+      case LogType.ORIGIN: return 'border-l-agent-cognito text-agent-cognito';
+      case LogType.EVENT: return 'border-l-agent-relay text-agent-relay';
+      case LogType.FRAGMENT: return 'border-l-agent-sentinel text-agent-sentinel';
+      case LogType.CONSENSUS: return 'border-l-accent-color text-accent-color';
+      default: return 'border-l-muted-text text-muted-text';
+    }
+  }, []);
+  useEffect(() => {
+    if (show && panelRef.current) {
+      panelRef.current.scrollTop = panelRef.current.scrollHeight;
+    }
+    Object.values(AgentType).forEach((agentType) => {
+      if (agents[agentType].isActive) {
+        animateAgentCard(agentType, true);
+        const logElement = logRefs[agentType as AgentType].current;
+        if (logElement) logElement.scrollTop = logElement.scrollHeight;
+      } else {
+        animateAgentCard(agentType, false);
+      }
+    });
+  }, [show, agents, logRefs]);
+  if (!show) return null;
+  return (
+    React.createElement('div', { id: "ai-response-panel", ref: panelRef, className: "fixed bottom-16 right-5 w-[500px] max-h-[600px] bg-panel-bg border border-accent-color rounded-md p-4 overflow-y-auto z-50 shadow-xl sm:w-[calc(100%-40px)] sm:left-5" },
+      React.createElement('button', { onClick: onClose, className: "absolute top-1 right-1 bg-transparent border-none text-muted-text text-lg cursor-pointer" }, "×"),
+      React.createElement('div', { id: "ai-response-content" },
+        Object.values(AgentType).map((agentType) => (
+          React.createElement('div', { key: agentType, id: `${agentType}-card`, className: `agent-card ${agentType === AgentType.NEXUS ? 'agent-nexus' : ''} ${agents[agentType].isActive ? 'active' : ''} bg-panel-bg rounded-lg p-3 mb-2 border-l-4 transition-all duration-300 relative overflow-hidden ${agentType === AgentType.NEXUS ? 'border-l-agent-nexus' : ''} ${agentType === AgentType.COGNITO ? 'border-l-agent-cognito' : ''} ${agentType === AgentType.RELAY ? 'border-l-agent-relay' : ''} ${agentType === AgentType.SENTINEL ? 'border-l-agent-sentinel' : ''} ${agentType === AgentType.ECHO ? 'border-l-accent-color' : ''}` },
+            React.createElement('div', { className: `font-bold text-sm mb-1 ${agentType === AgentType.NEXUS ? 'text-agent-nexus' : ''} ${agentType === AgentType.COGNITO ? 'text-agent-cognito' : ''} ${agentType === AgentType.RELAY ? 'text-agent-relay' : ''} ${agentType === AgentType.SENTINEL ? 'text-agent-sentinel' : ''} ${agentType === AgentType.ECHO ? 'text-accent-color' : ''}` }, AGENT_NAMES_MAP[agentType]),
+            React.createElement('div', { className: "text-xs text-muted-text mb-1" },
+              agentType === AgentType.NEXUS ? 'Quantum Orchestrator (Fractal Core)' :
+              agentType === AgentType.COGNITO ? 'Fractal Analyzer (Quantum Loop)' :
+              agentType === AgentType.RELAY ? 'Quantum Communicator (2244)' :
+              agentType === AgentType.SENTINEL ? 'Quantum Monitor (Fractal Coin)' :
+              'Quantum Assembler (Final Code)'
+            ),
+            React.createElement('div', { className: "text-xs leading-tight min-h-5" }, agents[agentType].content),
+            React.createElement('div', { ref: logRefs[agentType as AgentType], className: "bg-black/30 rounded-sm p-2 mt-2 max-h-32 overflow-y-auto text-xs font-['Fira_Code']" },
+              agents[agentType].log.map((entry, idx) => (
+                React.createElement('div', { key: idx, className: `mb-1 pl-2 border-l-2 ${getLogEntryClass(entry.type)}` }, `[${entry.timestamp}] ${entry.message}`)
+              ))
+            ),
+            agentType === AgentType.NEXUS && (
+              React.createElement('div', { className: "flex items-center gap-1 text-xs mt-1" },
+                React.createElement('div', { className: "w-2 h-2 rounded-full bg-accent-color animate-[quantumPulseDot_2s_infinite]" }),
+                React.createElement('span', null, "Quantum State: Entangled")
+              )
+            )
+          )
+        )),
+        consensusResult && (
+          React.createElement('div', { id: "consensus-panel", className: "bg-panel-bg border border-agent-nexus rounded-lg p-3 mt-4 max-h-[300px] overflow-y-auto" },
+            React.createElement('div', { className: "font-bold text-agent-nexus mb-2 flex justify-between items-center" },
+              React.createElement('span', null, "Multi-Agent Consensus Results"),
+              React.createElement('span', { id: "consensus-score", className: "bg-agent-nexus text-white px-1.5 py-0.5 rounded-xl text-xs" }, `Score: ${consensusResult.score}`)
+            ),
+            React.createElement('div', { id: "candidates-list" },
+              consensusResult.allGroups.map((group, index) => (
+                React.createElement('div', { key: index, className: `bg-white/[0.05] rounded-sm p-2 mb-2 border-l-3 border-agent-cognito ${index === 0 ? 'selected-candidate border-l-accent-color bg-accent-color/[0.1]' : ''}` },
+                  React.createElement('div', { className: "text-xs text-muted-text flex justify-between mb-1" },
+                    React.createElement('span', null, `Agents: ${group.agentCount} | Rounds: ${group.roundCount}`),
+                    React.createElement('span', null, `Score: ${group.score.toFixed(2)} | Entropy: ${group.avgEntropy.toFixed(3)}`)
+                  ),
+                  React.createElement('pre', { className: "text-xs font-['Fira_Code'] whitespace-pre-wrap max-h-20 overflow-hidden text-sh-text", dangerouslySetInnerHTML: { __html: highlighter.highlightText(group.candidates[0].candidate.substring(0, 200), editorLanguage as EditorLanguage) + (group.candidates[0].candidate.length > 200 ? '...' : '') } })
+                )
+              ))
+            ),
+            React.createElement('div', { className: "mt-4 pt-2 border-t border-muted-text flex gap-2" },
+              React.createElement('button', { className: "flex-1 px-2 py-1 text-xs rounded-sm bg-accent-color hover:bg-hover-blue text-[#f0f0e0]", onClick: onCopyAssembledCode }, "Copy Assembled Code"),
+              React.createElement('button', { className: "flex-1 px-2 py-1 text-xs rounded-sm bg-info-bg hover:bg-hover-blue text-[#f0f0e0]", onClick: onApplyAssembledCode }, "Apply Assembled Code"),
+              React.createElement('button', { className: "flex-1 px-2 py-1 text-xs rounded-sm bg-agent-nexus hover:bg-hover-blue text-[#f0f0e0]", onClick: onRerunOrchestration }, "Rerun Orchestration")
+            )
+          )
+        )
+      )
+    )
+  );
+};
+
+const LeftPanel: React.FC<{ isOpen: boolean; settings: QuantumSettings; onSettingChange: (key: keyof QuantumSettings, value: any) => void; onEditorAction: (action: 'undo' | 'redo' | 'beautify', lang?: BeautifyLanguage) => void; onQuantumAction: (action: 'optimize' | 'document' | 'refactor' | 'orchestrate') => void; onMemoryAction: (action: 'clearCache' | 'optimizeMemory' | 'exportSession') => void; recentFiles: RecentFile[]; onRecentFileClick: (filename: string) => void; onRenderHtml: () => void; setPromptInput: (prompt: string) => void; }> = ({ isOpen, settings, onSettingChange, onEditorAction, onQuantumAction, onMemoryAction, recentFiles, onRecentFileClick, onRenderHtml, setPromptInput }) => {
+  const panelRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (panelRef.current) {
+      (panelRef.current.querySelector('#agent-count') as HTMLInputElement).value = settings.agentCount.toString();
+      (panelRef.current.querySelector('#max-rounds') as HTMLInputElement).value = settings.maxRounds.toString();
+      (panelRef.current.querySelector('#reasoning-depth') as HTMLInputElement).value = settings.reasoningDepth.toString();
+    }
+  }, [settings]);
+  const handleSettingChange = useCallback((key: keyof QuantumSettings, value: any) => {
+    onSettingChange(key, value);
+  }, [onSettingChange]);
+  const handleNumericSettingChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, key: keyof QuantumSettings) => {
+    const value = parseInt(e.target.value);
+    if (!isNaN(value)) {
+      onSettingChange(key, value);
+    }
+  }, [onSettingChange]);
+  const handleRecentFileClick = useCallback((filename: string, contentPreview: string) => {
+    onRecentFileClick(filename);
+    quantumNotify(`Loaded file: ${filename}`, 'info');
+  }, [onRecentFileClick]);
+  return (
+    React.createElement('aside', { ref: panelRef, id: "left-panel", className: `bg-panel-bg border-r border-[#22241e] p-2 flex flex-col gap-2 overflow-y-auto w-60 z-30 transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full md:w-0 md:p-0 md:border-0'}` },
+      React.createElement('button', { onClick: () => onEditorAction('undo'), className: "small bg-err-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "UNDO"),
+      React.createElement('button', { onClick: () => onEditorAction('redo'), className: "small bg-err-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "REDO"),
+      React.createElement('button', { onClick: () => onEditorAction('beautify', 'js'), className: "small bg-err-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Beautify (JS)"),
+      React.createElement('button', { onClick: onRenderHtml, className: "small bg-warn-bg text-panel-bg hover:bg-hover-blue hover:text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Render HTML"),
+      React.createElement('div', { className: "mt-5 text-xs text-muted-text" },
+        React.createElement('p', { className: "font-bold" }, "Quantum AI Commands:"),
+        React.createElement('ul', { className: "pl-4 list-disc list-inside" },
+          COMMON_PROMPT_SUGGESTIONS.slice(0, 5).map((suggestion, index) => (
+            React.createElement('li', { key: index, className: "cursor-pointer hover:text-accent-color", onClick: () => setPromptInput(suggestion) }, suggestion)
+          ))
+        )
+      ),
+      React.createElement('div', { className: "mt-5 text-xs text-muted-text" },
+        React.createElement('p', { className: "font-bold" }, "Quantum Actions:"),
+        React.createElement('button', { onClick: () => onQuantumAction('optimize'), className: "small w-full mb-1 bg-err-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Quantum Optimize"),
+        React.createElement('button', { onClick: () => onQuantumAction('document'), className: "small w-full mb-1 bg-err-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Fractal Document"),
+        React.createElement('button', { onClick: () => onQuantumAction('refactor'), className: "small w-full bg-err-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Hyper Refactor"),
+        React.createElement('button', { onClick: () => onQuantumAction('orchestrate'), className: "small w-full mt-1 bg-accent-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Multi-Agent Consensus")
+      ),
+      React.createElement('div', { className: "mt-5 text-xs text-muted-text" },
+        React.createElement('p', { className: "font-bold" }, "Memory Management:"),
+        React.createElement('button', { onClick: () => onMemoryAction('clearCache'), className: "small w-full mb-1 bg-err-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Clear Cache"),
+        React.createElement('button', { onClick: () => onMemoryAction('optimizeMemory'), className: "small w-full mb-1 bg-info-bg hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Optimize Memory"),
+        React.createElement('button', { onClick: () => onMemoryAction('exportSession'), className: "small w-full bg-err-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Export Session")
+      ),
+      React.createElement('div', { className: "mt-5 text-xs text-muted-text" },
+        React.createElement('p', { className: "font-bold" }, "Quantum Settings:"),
+        React.createElement('div', { className: "flex items-center gap-2 mb-1" },
+          React.createElement('input', { type: "checkbox", id: "quantum-mode", checked: settings.quantumMode, onChange: (e) => handleSettingChange('quantumMode', e.target.checked), className: "form-checkbox h-3 w-3 text-accent-color rounded-sm border-gray-600 focus:ring-accent-color bg-gray-700" }),
+          React.createElement('label', { htmlFor: "quantum-mode" }, "Quantum Fractal Mode")
+        ),
+        React.createElement('div', { className: "flex items-center gap-2" },
+          React.createElement('input', { type: "checkbox", id: "hyperthreading", checked: settings.hyperthreading, onChange: (e) => handleSettingChange('hyperthreading', e.target.checked), className: "form-checkbox h-3 w-3 text-accent-color rounded-sm border-gray-600 focus:ring-accent-color bg-gray-700" }),
+          React.createElement('label', { htmlFor: "hyperthreading" }, "Hyperthreading")
+        ),
+        React.createElement('div', { className: "flex items-center gap-2 mt-1" },
+          React.createElement('input', { type: "checkbox", id: "multi-agent-mode", checked: settings.multiAgentMode, onChange: (e) => handleSettingChange('multiAgentMode', e.target.checked), className: "form-checkbox h-3 w-3 text-accent-color rounded-sm border-gray-600 focus:ring-accent-color bg-gray-700" }),
+          React.createElement('label', { htmlFor: "multi-agent-mode" }, "Multi-Agent Consensus")
+        ),
+        React.createElement('div', { className: "flex items-center gap-2 mt-1" },
+          React.createElement('input', { type: "checkbox", id: "auto-save", checked: settings.autoSave, onChange: (e) => handleSettingChange('autoSave', e.target.checked), className: "form-checkbox h-3 w-3 text-accent-color rounded-sm border-gray-600 focus:ring-accent-color bg-gray-700" }),
+          React.createElement('label', { htmlFor: "auto-save" }, "Auto Save")
+        )
+      ),
+      React.createElement('div', { className: "mt-5 text-xs text-muted-text" },
+        React.createElement('p', { className: "font-bold" }, "Orchestrator Settings:"),
+        React.createElement('div', { className: "mb-1 flex items-center gap-2" },
+          React.createElement('label', { htmlFor: "agent-count", className: "w-fit" }, "Agent Count:"),
+          React.createElement('input', { type: "number", id: "agent-count", min: "2", max: "8", value: settings.agentCount, onChange: (e) => handleNumericSettingChange(e, 'agentCount'), className: "w-16 bg-status-bg text-white border border-muted-text p-0.5 rounded-sm text-xs" })
+        ),
+        React.createElement('div', { className: "mb-1 flex items-center gap-2" },
+          React.createElement('label', { htmlFor: "max-rounds", className: "w-fit" }, "Max Rounds:"),
+          React.createElement('input', { type: "number", id: "max-rounds", min: "1", max: "10", value: settings.maxRounds, onChange: (e) => handleNumericSettingChange(e, 'maxRounds'), className: "w-16 bg-status-bg text-white border border-muted-text p-0.5 rounded-sm text-xs" })
+        ),
+        React.createElement('div', { className: "mb-1 flex items-center gap-2" },
+          React.createElement('label', { htmlFor: "reasoning-depth", className: "w-fit" }, "Reasoning Depth:"),
+          React.createElement('input', { type: "number", id: "reasoning-depth", min: "1", max: "5", value: settings.reasoningDepth, onChange: (e) => handleNumericSettingChange(e, 'reasoningDepth'), className: "w-16 bg-status-bg text-white border border-muted-text p-0.5 rounded-sm text-xs" })
+        )
+      ),
+      React.createElement('div', { className: "mt-5 text-xs text-muted-text" },
+        React.createElement('p', { className: "font-bold" }, "Recent Files:"),
+        React.createElement('div', { id: "recent-files", className: "max-h-24 overflow-y-auto" },
+          recentFiles.length > 0 ? (
+            recentFiles.map((file, index) => (
+              React.createElement('div', { key: index, className: "px-2 py-1 border-b border-muted-text last:border-b-0 cursor-pointer hover:bg-white/[0.1]", onClick: () => handleRecentFileClick(file.filename, file.contentPreview) },
+                React.createElement('div', { className: "font-bold" }, file.filename),
+                React.createElement('div', { className: "text-[9px] text-muted-text" }, new Date(file.timestamp).toLocaleDateString())
+              )
+            ))
+          ) : (
+            React.createElement('div', { className: "p-2 text-muted-text text-xs" }, "No recent files")
+          )
+        )
+      )
+    )
+  );
+};
+
+const Editor = React.forwardRef(({ content, onContentChange, currentFileType, onEditorStatusChange, settings }, ref) => {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const lineNumbersRef = useRef<HTMLDivElement>(null);
+  const quantumThinkingRef = useRef<HTMLDivElement>(null);
+  const historyStack = useRef<string[]>([]);
+  const redoStack = useRef<string[]>([]);
+  const isComposing = useRef(false);
+  const debounceTimer = useRef<number | null>(null);
+  const highlighter = new QuantumSyntaxHighlighter();
+
+  useEffect(() => {
+    historyStack.current = [content];
+    redoStack.current = [];
+    if (editorRef.current) {
+      editorRef.current.textContent = content;
+      highlighter.setLanguage(currentFileType);
+      highlighter.highlightElement(editorRef.current, currentFileType);
+      updateLineNumbers();
+      updateStatus();
+    }
+  }, [content, currentFileType]);
+
+  const updateLineNumbers = useCallback(() => {
+    if (editorRef.current && lineNumbersRef.current) {
+      const text = editorRef.current.textContent || '';
+      const lineCount = text.split('\n').length;
+      let lineNumbersHTML = '';
+      for (let i = 1; i <= lineCount; i++) {
+        lineNumbersHTML += i + '<br>';
+      }
+      lineNumbersRef.current.innerHTML = lineNumbersHTML;
+    }
+  }, []);
+
+  const updateStatus = useCallback(() => {
+    if (!editorRef.current) return;
+    const text = editorRef.current.textContent || '';
+    const lines = text.split('\n');
+    const { line: lineNum, col: colNum } = getCaretPosition(editorRef.current);
+    onEditorStatusChange({
+      cursor: { line: lineNum, col: colNum },
+      lines: lines.length,
+      chars: text.length,
+      historySize: historyStack.current.length,
+      quantumModeActive: settings.quantumMode,
+      hyperthreadingActive: settings.hyperthreading,
+      multiAgentModeActive: settings.multiAgentMode,
+    });
+  }, [onEditorStatusChange, settings.quantumMode, settings.hyperthreading, settings.multiAgentMode]);
+
+  const pushHistory = useCallback(() => {
+    if (!editorRef.current) return;
+    const currentContent = editorRef.current.textContent || '';
+    if (historyStack.current.length && historyStack.current[historyStack.current.length - 1] === currentContent) return;
+    historyStack.current.push(currentContent);
+    redoStack.current = [];
+    if (historyStack.current.length > MAX_HISTORY_SIZE) {
+      historyStack.current.shift();
+    }
+    updateStatus();
+  }, [updateStatus]);
+
+  const applyContentAndHighlight = useCallback((newContent: string) => {
+    if (editorRef.current) {
+      const { offset } = getCaretPosition(editorRef.current);
+      editorRef.current.textContent = newContent;
+      highlighter.highlightElement(editorRef.current, currentFileType);
+      setCaretPosition(editorRef.current, offset);
+      onContentChange(newContent);
+      updateLineNumbers();
+      updateStatus();
+    }
+  }, [currentFileType, onContentChange, updateLineNumbers, updateStatus]);
+
+  const handleInput = useCallback(() => {
+    if (isComposing.current) return;
+    if (debounceTimer.current !== null) {
+      clearTimeout(debounceTimer.current);
+    }
+    debounceTimer.current = window.setTimeout(() => {
+      pushHistory();
+      if (editorRef.current) {
+        onContentChange(editorRef.current.textContent || '');
+        highlighter.highlightElement(editorRef.current, currentFileType);
+      }
+      updateLineNumbers();
+      updateStatus();
+      debounceTimer.current = null;
+    }, DEBOUNCE_DELAY_MS);
+  }, [pushHistory, onContentChange, currentFileType, updateLineNumbers, updateStatus]);
+
+  const insertText = useCallback((text: string) => {
+    if (editorRef.current) {
+      document.execCommand('insertText', false, text);
+      handleInput();
+    }
+  }, [handleInput]);
+
+  const undo = useCallback(() => {
+    if (historyStack.current.length > 1) {
+      redoStack.current.push(historyStack.current.pop() as string);
+      applyContentAndHighlight(historyStack.current[historyStack.current.length - 1]);
+    } else {
+      quantumNotify('No more undo history.', 'info');
+    }
+  }, [applyContentAndHighlight]);
+
+  const redo = useCallback(() => {
+    if (redoStack.current.length) {
+      const poppedContent = redoStack.current.pop() as string;
+      historyStack.current.push(poppedContent);
+      applyContentAndHighlight(poppedContent);
+    } else {
+      quantumNotify('No more redo history.', 'info');
+    }
+  }, [applyContentAndHighlight]);
+
+  const beautifyCode = useCallback((language: 'js' | 'html' | 'css') => {
+    if (!editorRef.current) return;
+    const currentContent = editorRef.current.textContent || '';
+    let beautified = currentContent;
+    if (typeof (window as any).js_beautify === 'undefined') {
+      quantumNotify('Beautify library not loaded. Make sure js-beautify CDN is included.', 'warn');
+      return;
+    }
+    const options = { indent_size: 2, space_in_empty_paren: true };
+    try {
+      if (language === 'js') {
+        beautified = (window as any).js_beautify(currentContent, options);
+      } else if (language === 'html') {
+        beautified = (window as any).html_beautify(currentContent, options);
+      } else if (language === 'css') {
+        beautified = (window as any).css_beautify(currentContent, { indent_size: 2 });
+      }
+      applyContentAndHighlight(beautified);
+      quantumNotify('Code beautified', 'success');
+    } catch (error) {
+      console.error("Beautify error:", error);
+      quantumNotify('Beautification failed', 'error');
+    }
+  }, [applyContentAndHighlight]);
+
+  const duplicateLine = useCallback(() => {
+    if (!editorRef.current) return;
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    const editorText = editorRef.current.textContent || '';
+    const lines = editorText.split('\n');
+    let startLine = 0, endLine = 0, currentOffset = 0;
+    for (let i = 0; i < lines.length; i++) {
+        const lineLength = lines[i].length + (i < lines.length - 1 ? 1 : 0);
+        if (range.startOffset >= currentOffset && range.startOffset < currentOffset + lineLength) {
+            startLine = i;
         }
+        if (range.endOffset >= currentOffset && range.endOffset < currentOffset + lineLength) {
+            endLine = i;
+        }
+        currentOffset += lineLength;
+    }
+    if (startLine > endLine) [startLine, endLine] = [endLine, startLine];
+    const linesToDuplicate = lines.slice(startLine, endLine + 1).join('\n');
+    insertText('\n' + linesToDuplicate);
+  }, [insertText]);
 
-        function highlightAndRender(code) {
-            try {
-                // Simple syntax highlighting fallback
-                highlighted.textContent = code;
-                highlighted.innerHTML = code
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/".*?"/g, '<span class="token string">$&</span>')
-                    .replace(/'.*?'/g, '<span class="token string">$&</span>')
-                    .replace(/\b(function|return|if|else|for|while|var|let|const)\b/g, '<span class="token keyword">$1</span>')
-                    .replace(/&lt;\/?[\w\s="'-]+&gt;/g, '<span class="token tag">$&</span>');
-            } catch (e) {
-                highlighted.textContent = code;
+  const renameVariable = useCallback(() => {
+    if (!editorRef.current) return;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    const selectedText = range.toString().trim();
+    if (selectedText) {
+      const newName = prompt('Rename variable:', selectedText);
+      if (newName !== null && newName.trim() !== '' && newName !== selectedText) {
+        document.execCommand('insertText', false, newName);
+        handleInput();
+      } else if (newName === null) {
+      } else {
+          quantumNotify('Variable name cannot be empty or the same.', 'warn');
+      }
+    } else {
+      quantumNotify('Select a variable to rename', 'warn');
+    }
+  }, [handleInput]);
+
+  const handleKeydown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      insertText('    ');
+    }
+    if (event.ctrlKey || event.metaKey) {
+      if (event.key === 'z' && !event.shiftKey) {
+        event.preventDefault(); undo();
+      } else if ((event.key === 'z' && event.shiftKey) || event.key === 'y') {
+        event.preventDefault(); redo();
+      } else if (event.key === 'd') {
+        event.preventDefault(); duplicateLine();
+      }
+    } else if (event.key === 'F2') {
+      event.preventDefault(); renameVariable();
+    }
+  }, [insertText, undo, redo, duplicateLine, renameVariable]);
+
+  const syncScroll = useCallback(() => {
+    if (editorRef.current && lineNumbersRef.current && editorRef.current.parentElement) {
+      lineNumbersRef.current.scrollTop = editorRef.current.parentElement.scrollTop;
+    }
+  }, []);
+
+  useEffect(() => {
+    const editorElement = editorRef.current;
+    const parentElement = editorRef.current?.parentElement;
+    if (editorElement && parentElement) {
+      highlighter.setLanguage(currentFileType);
+      const cleanupHighlighting = highlighter.enableRealtimeHighlighting(editorElement, currentFileType);
+      const onCompositionStart = () => isComposing.current = true;
+      const onCompositionEnd = () => { isComposing.current = false; handleInput(); };
+      editorElement.addEventListener('compositionstart', onCompositionStart);
+      editorElement.addEventListener('compositionend', onCompositionEnd);
+      editorElement.addEventListener('click', updateStatus);
+      editorElement.addEventListener('keyup', updateStatus);
+      parentElement.addEventListener('scroll', syncScroll);
+      updateLineNumbers();
+      updateStatus();
+      return () => {
+        cleanupHighlighting();
+        editorElement.removeEventListener('compositionstart', onCompositionStart);
+        editorElement.removeEventListener('compositionend', onCompositionEnd);
+        editorElement.removeEventListener('click', updateStatus);
+        editorElement.removeEventListener('keyup', updateStatus);
+        parentElement.removeEventListener('scroll', syncScroll);
+        if (debounceTimer.current !== null) {
+          clearTimeout(debounceTimer.current);
+        }
+      };
+    }
+  }, [currentFileType, handleInput, syncScroll, updateLineNumbers, updateStatus]);
+
+  React.useImperativeHandle(ref, () => ({
+    ...editorRef.current,
+    undo, redo,
+    beautify: (lang: 'js' | 'html' | 'css') => beautifyCode(lang),
+    setContent: (newContent: string) => applyContentAndHighlight(newContent),
+    getContent: () => editorRef.current?.textContent || '',
+    getHighlighter: () => highlighter,
+  }));
+
+  return (
+    React.createElement('div', { className: "relative flex flex-1 bg-theme-bg overflow-auto" },
+      React.createElement('div', { ref: quantumThinkingRef, className: "absolute inset-0 pointer-events-none z-10" }),
+      React.createElement('div', { ref: lineNumbersRef, className: "w-[var(--ln-width)] p-2 pr-2 bg-panel-bg text-muted-text font-['Fira_Code'] tabular-nums text-right select-none leading-baseline flex-shrink-0 sticky left-0 z-10 text-xs-editor" }),
+      React.createElement('div', {
+        ref: editorRef,
+        id: "editor",
+        className: "flex-1 min-h-full p-2 pl-3 box-border whitespace-pre leading-baseline font-['Fira_Code'] tab-size-4 caret-accent-color outline-none overflow-auto sh-text",
+        contentEditable: "true",
+        spellCheck: "false",
+        "data-gramm": "false",
+        "data-gramm_editor": "false",
+        "data-enable-grammarly": "false",
+        onInput: handleInput,
+        onKeyDown: handleKeydown,
+        onClick: updateStatus,
+        onKeyUp: updateStatus,
+      }, content)
+    )
+  );
+});
+// --- END: Inlined components ---
+
+// --- START: Inlined App.tsx ---
+const memoryManager = new QuantumMemoryManager();
+const App: React.FC = () => {
+  const [state, setState] = useState<QuantumAppState>({
+    isGenerating: false,
+    aiConnectionStatus: AiConnectionStatus.PROBING,
+    recentFiles: memoryManager.loadRecentFiles(),
+    settings: memoryManager.loadSettings(),
+    editorContent: INITIAL_EDITOR_CONTENT,
+    currentFileName: null,
+    currentFileType: 'javascript',
+    editorStatus: {
+      cursor: { line: 0, col: 0 }, lines: 1, chars: INITIAL_EDITOR_CONTENT.length, historySize: 1,
+      quantumModeActive: INITIAL_SETTINGS.quantumMode, hyperthreadingActive: INITIAL_SETTINGS.hyperthreading, multiAgentModeActive: INITIAL_SETTINGS.multiAgentMode,
+    },
+    memoryMetrics: memoryManager.checkMemoryUsage(),
+    agents: INITIAL_AGENTS_STATE,
+    consensusResult: null,
+    showOrchestrationPanel: false, showPreviewPanel: false, previewHtml: '', quantumConsensusCode: null,
+  });
+  const editorRef = useRef<any>(null);
+  const promptInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsPanelRef = useRef<HTMLDivElement>(null);
+  const quantumThinkingRef = useRef<HTMLDivElement>(null);
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<PromptSuggestion[]>([]);
+
+  const checkAiConnection = useCallback(async () => {
+    try {
+      const isConnected = await geminiService.ensureApiKeySelected();
+      setState(prevState => ({ ...prevState, aiConnectionStatus: isConnected ? AiConnectionStatus.READY : AiConnectionStatus.NO_KEY }));
+    } catch (e) {
+      console.error('Failed to check AI connection:', e);
+      setState(prevState => ({ ...prevState, aiConnectionStatus: AiConnectionStatus.NO_KEY }));
+    }
+  }, []);
+
+  useEffect(() => {
+    memoryManager.retrieve(AUTOSAVE_CONTENT_KEY).then(autosaveContent => {
+      if (autosaveContent && !state.editorContent.trim()) {
+        setState(prevState => ({ ...prevState, editorContent: autosaveContent }));
+        quantumNotify('Autosave restored', 'success');
+      }
+    });
+    memoryManager.init();
+    const memoryInterval = setInterval(() => {
+      setState(prevState => ({ ...prevState, memoryMetrics: memoryManager.checkMemoryUsage() }));
+    }, MEMORY_MONITOR_INTERVAL_MS);
+    checkAiConnection();
+    let autoSaveInterval: number;
+    if (state.settings.autoSave) {
+      autoSaveInterval = window.setInterval(() => saveAutosave(), AUTOSAVE_INTERVAL_MS);
+    }
+    const cleanupFractalNodes = createFractalNodes(quantumThinkingRef, state.settings.quantumMode, state.settings.hyperthreading);
+    return () => {
+      clearInterval(memoryInterval);
+      if (autoSaveInterval) clearInterval(autoSaveInterval);
+      memoryManager.cleanup();
+      cleanupFractalNodes();
+    };
+  }, []);
+
+  useEffect(() => {
+    const cleanupFractalNodes = createFractalNodes(quantumThinkingRef, state.settings.quantumMode, state.settings.hyperthreading);
+    return cleanupFractalNodes;
+  }, [state.settings.quantumMode, state.settings.hyperthreading]);
+
+  const saveAutosave = useCallback(async () => {
+    if (!state.settings.autoSave) return;
+    try {
+      if (state.editorContent.trim()) {
+        await memoryManager.store(AUTOSAVE_CONTENT_KEY, state.editorContent, 'high');
+      }
+    } catch (error) { console.warn('Autosave failed:', error); }
+  }, [state.editorContent, state.settings.autoSave]);
+
+  const handleSettingChange = useCallback((key: keyof QuantumSettings, value: any) => {
+    setState(prevState => {
+      const newSettings = { ...prevState.settings, [key]: value };
+      memoryManager.saveSettings(newSettings);
+      return { ...prevState, settings: newSettings };
+    });
+  }, []);
+
+  const handleMemoryAction = useCallback(async (action: 'clearCache' | 'optimizeMemory' | 'exportSession') => {
+    switch (action) {
+      case 'clearCache':
+        const cleared = await memoryManager.clearAllCache();
+        quantumNotify(cleared ? 'All cache cleared' : 'Cache clearance failed', cleared ? 'success' : 'error');
+        setState(prevState => ({ ...prevState, recentFiles: [] }));
+        break;
+      case 'optimizeMemory':
+        memoryManager.aggressiveCleanup();
+        quantumNotify('Memory optimized', 'success');
+        break;
+      case 'exportSession':
+        const exported = await memoryManager.exportSession();
+        quantumNotify(exported ? 'Session exported' : 'Export failed', exported ? 'success' : 'error');
+        break;
+    }
+  }, []);
+
+  const handleFileOpen = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const fileName = file.name;
+      const fileType = editorRef.current?.getHighlighter().detectLanguage(fileName) || 'javascript';
+      const content = ev.target?.result as string;
+      setState(prevState => {
+        const newRecentFiles = memoryManager.addRecentFile(prevState.recentFiles, fileName, content);
+        memoryManager.saveRecentFiles(newRecentFiles);
+        return { ...prevState, editorContent: content, currentFileName: fileName, currentFileType: fileType, recentFiles: newRecentFiles };
+      });
+      quantumNotify(`Loaded file: ${fileName}`, 'success');
+    };
+    reader.readAsText(file);
+  }, [state.recentFiles]);
+
+  const quantumSaveAsFile = useCallback(() => {
+    const fileName = prompt('Enter file name:', state.currentFileName || 'quantum_code.js');
+    if (fileName) {
+      const fileType = editorRef.current?.getHighlighter().detectLanguage(fileName) || 'javascript';
+      setState(prevState => ({ ...prevState, currentFileName: fileName, currentFileType: fileType, }));
+      // Use a timeout to ensure state update before calling save
+      setTimeout(() => {
+        const mimeType = getMimeType(fileType);
+        const blob = new Blob([state.editorContent], { type: mimeType });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+        quantumNotify('File saved successfully', 'success');
+      }, 0);
+    }
+  }, [state.currentFileName, state.editorContent]);
+
+  const quantumSaveFile = useCallback(() => {
+    if (!state.currentFileName) {
+      quantumSaveAsFile();
+      return;
+    }
+    const mimeType = getMimeType(state.currentFileType);
+    const blob = new Blob([state.editorContent], { type: mimeType });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = state.currentFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    quantumNotify('File saved successfully', 'success');
+  }, [state.currentFileName, state.editorContent, state.currentFileType, quantumSaveAsFile]);
+
+  const handleEditorContentChange = useCallback((newContent: string) => {
+    setState(prevState => ({ ...prevState, editorContent: newContent }));
+  }, []);
+  const handleEditorStatusChange = useCallback((status: EditorStatus) => {
+    setState(prevState => ({ ...prevState, editorStatus: status }));
+  }, []);
+  const handleEditorAction = useCallback((action: 'undo' | 'redo' | 'beautify', lang?: BeautifyLanguage) => {
+    if (editorRef.current) {
+      if (action === 'undo') editorRef.current.undo();
+      if (action === 'redo') editorRef.current.redo();
+      if (action === 'beautify' && lang) editorRef.current.beautify(lang);
+    }
+  }, []);
+
+  const addLog = useCallback((agentType: AgentType, message: string, type: LogType = LogType.INFO) => {
+    setState(prevState => {
+      const newAgents = { ...prevState.agents };
+      const logEntry: OrchestrationLogEntry = { timestamp: new Date().toLocaleTimeString(), message, type };
+      newAgents[agentType] = { ...newAgents[agentType], log: [...newAgents[agentType].log, logEntry] };
+      return { ...prevState, agents: newAgents };
+    });
+  }, []);
+
+  const setAgentStatus = useCallback((agentType: AgentType, content: string, isActive: boolean = false) => {
+    setState(prevState => ({
+      ...prevState,
+      agents: { ...prevState.agents, [agentType]: { ...prevState.agents[agentType], content, isActive } },
+    }));
+  }, []);
+  
+  const assembleFinalAnswer = useCallback(async (allCandidates: CandidateFragment[], genesis: string): Promise<ConsensusResult> => {
+    const candidateGroups: { [key: string]: { candidates: CandidateFragment[]; totalEntropy: number; agents: Set<string>; rounds: Set<number> } } = {};
+    for (const candidate of allCandidates) {
+      const key = candidate.candidate.substring(0, 100);
+      if (!candidateGroups[key]) {
+        candidateGroups[key] = { candidates: [], totalEntropy: 0, agents: new Set(), rounds: new Set() };
+      }
+      candidateGroups[key].candidates.push(candidate);
+      candidateGroups[key].totalEntropy += candidate.entropy;
+      candidateGroups[key].agents.add(candidate.agentId);
+      candidateGroups[key].rounds.add(candidate.round);
+    }
+    const scoredGroups = Object.entries(candidateGroups).map(([key, group]) => {
+      const agentCount = group.agents.size;
+      const roundCount = group.rounds.size;
+      const avgEntropy = group.totalEntropy / group.candidates.length;
+      const score = (agentCount * 2) + (roundCount * 1.5) + (avgEntropy * 3);
+      return { key, candidates: group.candidates, score, agentCount, roundCount, avgEntropy };
+    });
+    if (scoredGroups.length === 0) {
+      return {
+        genesis, selectedCandidate: "// No valid candidates were generated by the agents.",
+        score: '0', agentCount: 0, roundCount: 0, avgEntropy: '0', rootAgent: 'N/A', rootEntropy: '0', allGroups: []
+      };
+    }
+    scoredGroups.sort((a, b) => b.score - a.score);
+    const topGroup = scoredGroups[0];
+    const rootCandidate = topGroup.candidates.reduce((best, current) => current.entropy > best.entropy ? current : best);
+    return {
+      genesis, selectedCandidate: topGroup.candidates[0].candidate, score: topGroup.score.toFixed(3),
+      agentCount: topGroup.agentCount, roundCount: topGroup.roundCount, avgEntropy: topGroup.avgEntropy.toFixed(3),
+      rootAgent: rootCandidate.agentId, rootEntropy: rootCandidate.entropy.toFixed(3), allGroups: scoredGroups,
+    };
+  }, []);
+
+  const runEnhancedOrchestrator = useCallback(async (promptOverride?: string) => {
+    if (state.isGenerating) return;
+    setState(prevState => ({ ...prevState, isGenerating: true, showOrchestrationPanel: true, consensusResult: null, agents: INITIAL_AGENTS_STATE }));
+    const promptText = promptOverride || promptInputRef.current?.value.trim() || 'Optimize this code with quantum fractal patterns';
+    const editorContext = state.editorContent;
+    const editorLanguage = state.currentFileType;
+    setAgentStatus(AgentType.NEXUS, '<div class="quantum-spinner"></div>Starting enhanced quantum orchestration...', true);
+    try {
+      addLog(AgentType.NEXUS, 'Generating genesis hash from current code...', LogType.GENESIS);
+      const genesisHash = await sha256('GENESIS' + Date.now().toString() + editorContext);
+      addLog(AgentType.NEXUS, `Genesis: ${genesisHash.substring(0, 16)}...`, LogType.GENESIS);
+      addLog(AgentType.NEXUS, 'Generating origin hashes for agents...', LogType.ORIGIN);
+      const agentsInfo: AgentInfo[] = [];
+      for (let i = 0; i < state.settings.agentCount; i++) {
+        const agentId = `agent-${i}`;
+        const originHash = await generateFractalHash(genesisHash, agentId);
+        agentsInfo.push({ id: agentId, origin: originHash });
+        addLog(AgentType.NEXUS, `${agentId}: ${originHash.substring(0, 12)}...`, LogType.ORIGIN);
+      }
+      addLog(AgentType.NEXUS, `Event: ${generateEventId()} logged`, LogType.EVENT);
+      setAgentStatus(AgentType.COGNITO, `<div class="quantum-spinner"></div>Spawning ${state.settings.agentCount} fractal agents...`, true);
+      const allCandidates: CandidateFragment[] = [];
+      for (let round = 0; round < state.settings.maxRounds; round++) {
+        addLog(AgentType.RELAY, `<div class="quantum-spinner"></div>Round ${round + 1}/${state.settings.maxRounds}...`, LogType.INFO);
+        setAgentStatus(AgentType.RELAY, `Processing round ${round + 1} with ${state.settings.agentCount} agents...`, true);
+        const roundPromises = agentsInfo.map(async (agent) => {
+          agent.origin = await sha256(agent.origin + genesisHash + round.toString());
+          const candidateContent = await geminiService.runOrchestrationAgentStep(agent, promptText, editorContext, round, editorLanguage, state.settings.reasoningDepth);
+          const fragment: CandidateFragment = { agentId: agent.id, origin: agent.origin, round, candidate: candidateContent, entropy: calculateEntropy(agent.origin), timestamp: Date.now() };
+          addLog(AgentType.SENTINEL, `Fragment from ${agent.id} (round ${round})`, LogType.FRAGMENT);
+          allCandidates.push(fragment);
+          return fragment;
+        });
+        await Promise.all(roundPromises);
+        await new Promise(r => setTimeout(r, 500));
+      }
+      addLog(AgentType.SENTINEL, `<div class="quantum-spinner"></div>Assembling final consensus...`, LogType.INFO);
+      setAgentStatus(AgentType.SENTINEL, `Evaluating ${allCandidates.length} fragments for consensus...`, true);
+      const consensus = await assembleFinalAnswer(allCandidates, genesisHash);
+      setAgentStatus(AgentType.ECHO, `<div class="quantum-spinner"></div>Reassembling script from consensus...`, true);
+      addLog(AgentType.ECHO, `Assembly started. Verified Genesis: ${consensus.genesis.substring(0, 12)}...`, LogType.CONSENSUS);
+      addLog(AgentType.ECHO, `Selected candidate from Agent ${consensus.rootAgent} with score ${consensus.score}.`, LogType.CONSENSUS);
+      addLog(AgentType.ECHO, `Verified final code hash: ${(await sha256(consensus.selectedCandidate)).substring(0, 12)}...`, LogType.CONSENSUS);
+      addLog(AgentType.ECHO, `Reassembly complete. Quantum script generated.`, LogType.CONSENSUS);
+      setState(prevState => ({ ...prevState, consensusResult: consensus, quantumConsensusCode: consensus.selectedCandidate }));
+    } catch (e: any) {
+      console.error("Enhanced orchestrator error:", e);
+      addLog(AgentType.ECHO, `<span style="color: #ff4444">Orchestrator Error: ${e.message}</span>`, LogType.INFO);
+      setAgentStatus(AgentType.ECHO, `<span class="text-error-color">Error: ${e.message}</span>`);
+    } finally {
+      Object.values(AgentType).forEach(type => setAgentStatus(type, INITIAL_AGENTS_STATE[type].content, false));
+      setAgentStatus(AgentType.NEXUS, 'Enhanced orchestration complete');
+      setState(prevState => ({ ...prevState, isGenerating: false }));
+    }
+  }, [state.isGenerating, state.editorContent, state.currentFileType, state.settings.agentCount, state.settings.maxRounds, state.settings.reasoningDepth, addLog, setAgentStatus, assembleFinalAnswer]);
+  
+  const handleQuantumAction = useCallback((action: 'optimize' | 'document' | 'refactor' | 'orchestrate') => {
+    if (!state.settings.multiAgentMode) {
+      quantumNotify('Multi-Agent Consensus must be enabled for Quantum Actions.', 'warn'); return;
+    }
+    let prompt = '';
+    switch (action) {
+      case 'optimize': prompt = 'Optimize this code for performance and readability'; break;
+      case 'document': prompt = 'Add comprehensive documentation and comments to this code'; break;
+      case 'refactor': prompt = 'Refactor this code to improve its structure, maintainability, and apply modern best practices'; break;
+    }
+    if (promptInputRef.current) promptInputRef.current.value = prompt;
+    runEnhancedOrchestrator(prompt);
+  }, [state.settings.multiAgentMode, runEnhancedOrchestrator]);
+
+  const handleSendPrompt = useCallback(() => {
+    const prompt = promptInputRef.current?.value.trim();
+    if (!prompt) return;
+    if (state.settings.multiAgentMode) {
+      runEnhancedOrchestrator(prompt);
+    } else {
+      setState(prevState => ({ ...prevState, showOrchestrationPanel: true }));
+      setAgentStatus(AgentType.NEXUS, '<div class="quantum-spinner"></div>Sending prompt to single agent...', true);
+      geminiService.generateGeminiContent(prompt, 'gemini-2.5-flash').then(response => {
+        setAgentStatus(AgentType.ECHO, response);
+        addLog(AgentType.ECHO, 'Single agent response received.', LogType.CONSENSUS);
+        setAgentStatus(AgentType.NEXUS, 'Single agent task complete');
+      }).catch(error => {
+        addLog(AgentType.ECHO, `Single agent error: ${error.message}`, LogType.INFO);
+        setAgentStatus(AgentType.ECHO, `<span class="text-error-color">Error: ${error.message}</span>`);
+        setAgentStatus(AgentType.NEXUS, 'Single agent task failed');
+      }).finally(() => {
+        setState(prevState => ({ ...prevState, isGenerating: false }));
+        setAgentStatus(AgentType.NEXUS, INITIAL_AGENTS_STATE.nexus.content, false);
+      });
+    }
+  }, [state.settings.multiAgentMode, runEnhancedOrchestrator, setAgentStatus, addLog]);
+
+  const handleCopyAssembledCode = useCallback(() => {
+    if (state.quantumConsensusCode) {
+      navigator.clipboard.writeText(state.quantumConsensusCode).then(() => {
+        quantumNotify('Assembled code copied to clipboard!', 'success');
+      });
+    }
+  }, [state.quantumConsensusCode]);
+  const handleApplyAssembledCode = useCallback(() => {
+    if (state.quantumConsensusCode) {
+      editorRef.current?.setContent(state.quantumConsensusCode);
+      quantumNotify('Assembled code applied!', 'success');
+    }
+  }, [state.quantumConsensusCode]);
+  const toggleLeftPanel = useCallback(() => setIsLeftPanelOpen(prev => !prev), []);
+  const handleRenderHtml = useCallback(() => {
+    if (!['html', 'jsx', 'tsx'].includes(state.currentFileType)) {
+      quantumNotify('Only HTML, JSX, or TSX files can be rendered.', 'warn'); return;
+    }
+    setState(prevState => ({ ...prevState, showPreviewPanel: true, previewHtml: state.editorContent }));
+  }, [state.editorContent, state.currentFileType]);
+  const setPromptInput = useCallback((prompt: string) => {
+    if (promptInputRef.current) promptInputRef.current.value = prompt;
+  }, []);
+  const handlePromptInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value.length < 2) { setShowSuggestions(false); return; }
+    const suggestions = COMMON_PROMPT_SUGGESTIONS.filter(cmd => cmd.toLowerCase().includes(value.toLowerCase())).slice(0, 5).map(s => ({ text: s, onClick: (val: string) => { if (promptInputRef.current) promptInputRef.current.value = val; setShowSuggestions(false); } }));
+    setFilteredSuggestions(suggestions);
+    setShowSuggestions(suggestions.length > 0);
+  }, []);
+  const handlePromptInputBlur = useCallback(() => setTimeout(() => setShowSuggestions(false), 200), []);
+  const handlePromptInputFocus = useCallback(() => {
+    const value = promptInputRef.current?.value || '';
+    if (value.length >= 2) {
+      const suggestions = COMMON_PROMPT_SUGGESTIONS.filter(cmd => cmd.toLowerCase().includes(value.toLowerCase())).slice(0, 5).map(s => ({ text: s, onClick: (val: string) => { if (promptInputRef.current) promptInputRef.current.value = val; setShowSuggestions(false); } }));
+      setFilteredSuggestions(suggestions);
+      setShowSuggestions(suggestions.length > 0);
+    }
+  }, []);
+
+  return (
+    React.createElement('div', { className: "flex flex-col h-full" },
+      React.createElement('header', { className: "relative bg-header-bg border-b border-[#22241e] flex items-center justify-between px-3 py-1.5 overflow-hidden" },
+        React.createElement('div', { className: "absolute inset-0 bg-gradient-to-r from-transparent via-quantum-glow to-transparent animate-[quantumScan_3s_infinite_linear] opacity-30" }),
+        React.createElement('div', { className: "flex gap-3 items-center relative z-20" },
+          React.createElement('button', { onClick: toggleLeftPanel, className: "p-1 text-sm bg-err-color hover:bg-hover-blue text-[#f0f0e0] rounded-sm" }, isLeftPanelOpen ? '✕' : '☰'),
+          React.createElement('div', { className: "font-extrabold text-white animate-[quantumPulse_2s_infinite_alternate]" }, "Nemodian 2244-1 :: Quantum Fractal AI")
+        ),
+        React.createElement('div', { className: "flex gap-2 items-center relative z-20" },
+          React.createElement('div', { className: "flex items-center gap-1" },
+            React.createElement('div', { className: `w-2 h-2 rounded-full ${state.aiConnectionStatus === AiConnectionStatus.READY ? 'bg-accent-color' : 'bg-err-color'} ${state.aiConnectionStatus === AiConnectionStatus.PROBING ? 'animate-pulse' : ''}` }),
+            React.createElement('div', { className: "text-xs text-[#cfcfbd]" }, `Quantum AI: ${state.aiConnectionStatus}`)
+          ),
+          React.createElement('input', { type: "file", id: "file-input", accept: ".js,.html,.css,.txt,.json,.ts,.jsx,.tsx,.py,.php,.sql,.md,.xml,.yaml,.yml", className: "hidden", onChange: handleFileOpen }),
+          React.createElement('button', { onClick: () => document.getElementById('file-input')?.click(), className: "small bg-err-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Open"),
+          React.createElement('button', { onClick: quantumSaveFile, className: "small bg-err-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Save"),
+          React.createElement('button', { onClick: quantumSaveAsFile, className: "small bg-err-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Save As"),
+          React.createElement('button', { onClick: handleRenderHtml, className: "small bg-warn-bg text-panel-bg hover:bg-hover-blue hover:text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Render HTML"),
+          React.createElement('button', { onClick: handleSendPrompt, disabled: state.isGenerating, className: "small bg-info-bg hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Quantum AI"),
+          React.createElement('button', { onClick: () => handleQuantumAction('orchestrate'), disabled: state.isGenerating || !state.settings.multiAgentMode, className: "small bg-accent-color hover:bg-hover-blue text-[#f0f0e0] px-2 py-1 text-xs rounded-sm" }, "Orchestrator")
+        )
+      ),
+      React.createElement(StatusBar, { fileName: state.currentFileName, editorStatus: state.editorStatus, memoryMetrics: state.memoryMetrics }),
+      React.createElement('div', { className: `grid grid-cols-[0px_1fr] md:grid-cols-[240px_1fr] bg-theme-bg overflow-hidden relative transition-all duration-300 ease-in-out ${isLeftPanelOpen ? 'grid-cols-[240px_1fr]' : ''}` },
+        React.createElement(LeftPanel, {
+          isOpen: isLeftPanelOpen, settings: state.settings, onSettingChange: handleSettingChange, onEditorAction: handleEditorAction, onQuantumAction: handleQuantumAction, onMemoryAction: handleMemoryAction, recentFiles: state.recentFiles,
+          onRecentFileClick: (filename) => {
+            const file = state.recentFiles.find(f => f.filename === filename);
+            if (file) {
+              editorRef.current?.setContent(file.contentPreview);
+              setState(prevState => ({ ...prevState, currentFileName: filename, currentFileType: editorRef.current?.getHighlighter().detectLanguage(filename) || 'javascript' }));
+              quantumNotify(`Loaded recent file: ${filename}`, 'success');
             }
-        }
+          },
+          onRenderHtml: handleRenderHtml, setPromptInput: setPromptInput,
+        }),
+        React.createElement(Editor, { ref: editorRef, content: state.editorContent, onContentChange: handleEditorContentChange, currentFileType: state.currentFileType, onEditorStatusChange: handleEditorStatusChange, settings: state.settings })
+      ),
+      React.createElement('footer', { className: "sticky bottom-0 flex items-center justify-between px-3 py-1.5 bg-header-bg border-t border-[#22241e] h-footer-h" },
+        React.createElement('input', {
+          ref: promptInputRef, id: "prompt-input", placeholder: "Enter quantum command (e.g., 'create a function to sort arrays')",
+          className: "flex-1 mr-2 px-2 py-1 bg-status-bg border border-accent-color text-[#f0f0e0] font-['Fira_Code'] rounded-sm text-base",
+          onKeyDown: (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); handleSendPrompt(); } },
+          onChange: handlePromptInputChange, onFocus: handlePromptInputFocus, onBlur: handlePromptInputBlur, disabled: state.isGenerating,
+        }),
+        React.createElement('button', { onClick: handleSendPrompt, disabled: state.isGenerating, className: "bg-accent-color hover:bg-hover-blue text-[#f0f0e0] px-3 py-1.5 rounded-sm" },
+          state.isGenerating ? React.createElement('div', { className: "quantum-spinner" }) : 'QUANTUM PROCESS'
+        ),
+        showSuggestions && (
+          React.createElement('div', { ref: suggestionsPanelRef, className: "absolute bottom-[calc(theme(spacing.footer-h)+5px)] left-3 bg-panel-bg border border-accent-color rounded-md max-h-52 overflow-y-auto z-[1000] shadow-lg w-[calc(100%-120px)]" },
+            filteredSuggestions.map((suggestion, index) => (
+              React.createElement('div', {
+                key: index, className: "px-2 py-1 border-b border-muted-text last:border-b-0 cursor-pointer hover:bg-white/[0.1] text-xs",
+                onMouseDown: (e) => { e.preventDefault(); suggestion.onClick(suggestion.text); },
+              }, suggestion.text)
+            ))
+          )
+        )
+      ),
+      React.createElement(OrchestrationPanel, {
+        agents: state.agents, consensusResult: state.consensusResult, show: state.showOrchestrationPanel,
+        onClose: () => setState(prevState => ({ ...prevState, showOrchestrationPanel: false })),
+        onCopyAssembledCode: handleCopyAssembledCode, onApplyAssembledCode: handleApplyAssembledCode,
+        onRerunOrchestration: () => runEnhancedOrchestrator(), editorLanguage: state.currentFileType,
+      }),
+      React.createElement(PreviewPanel, { show: state.showPreviewPanel, onClose: () => setState(prevState => ({ ...prevState, showPreviewPanel: false })), htmlContent: state.previewHtml })
+    )
+  );
+};
+// --- END: Inlined App.tsx ---
 
-        function generateLineNumbers() {
-            const lines = editor.value.split('\n');
-            lineGutter.innerHTML = lines.map((_, i) => i + 1).join('<br>');
-        }
-
-        function renderEditor(code) {
-            editor.value = code;
-            highlightAndRender(code);
-            generateLineNumbers();
-            updateStatus();
-        }
-
-        function updateStatus() {
-            const pos = editor.selectionStart;
-            const textBeforeCursor = editor.value.substring(0, pos);
-            const lines = textBeforeCursor.split('\n');
-            const currentLine = lines.length;
-            const currentColumn = lines[lines.length - 1].length;
-
-            statusEditor.textContent = `Cursor: ${currentLine}:${currentColumn} | Lines: ${editor.value.split('\n').length} | Chars: ${editor.value.length} | History: ${historyStack.length}`;
-        }
-
-        function syncScroll() {
-            highlighted.parentElement.scrollTop = editor.scrollTop;
-            highlighted.parentElement.scrollLeft = editor.scrollLeft;
-            lineGutter.scrollTop = editor.scrollTop;
-        }
-
-        function pushHistory() {
-            const code = editor.value;
-            if (historyStack.length && historyStack[historyStack.length - 1] === code) return;
-            historyStack.push(code);
-            redoStack = [];
-            updateStatus();
-        }
-
-        function undo() {
-            if (historyStack.length > 1) {
-                redoStack.push(historyStack.pop());
-                renderEditor(historyStack[historyStack.length - 1]);
-            }
-        }
-
-        function redo() {
-            if (redoStack.length) {
-                const nextState = redoStack.pop();
-                historyStack.push(nextState);
-                renderEditor(nextState);
-            }
-        }
-
-        function handleEditorInput() {
-            pushHistory();
-            highlightAndRender(editor.value);
-            generateLineNumbers();
-            updateStatus();
-        }
-
-        function handleKeydown(e) {
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                const start = editor.selectionStart;
-                const end = editor.selectionEnd;
-                editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
-                editor.selectionStart = editor.selectionEnd = start + 4;
-                editor.dispatchEvent(new Event('input'));
-            }
-        }
-
-        // File operations
-        function openFile() {
-            document.getElementById('file-input').click();
-        }
-
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                currentFileName = file.name;
-                currentFileType = detectLanguage(file.name);
-                renderEditor(ev.target.result);
-                statusFile.textContent = currentFileName;
-                historyStack = [ev.target.result];
-                redoStack = [];
-            };
-            reader.readAsText(file);
-        }
-
-        function saveFile() {
-            if (!currentFileName) {
-                saveAsFile();
-                return;
-            }
-            const blob = new Blob([editor.value], { type: 'text/plain' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = currentFileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(a.href);
-        }
-
-        function saveAsFile() {
-            const fname = prompt('Enter file name', currentFileName || 'code.html');
-            if (fname) {
-                currentFileName = fname;
-                currentFileType = detectLanguage(fname);
-                statusFile.textContent = currentFileName;
-                saveFile();
-            }
-        }
-
-        // Code beautification
-        function beautifyCode() {
-            try {
-                let beautified = editor.value
-                    .replace(/\t/g, '    ')
-                    .replace(/\{\s*/g, ' {\n')
-                    .replace(/\}\s*/g, '\n}\n')
-                    .replace(/;\s*/g, ';\n')
-                    .replace(/,\s*/g, ', ')
-                    .replace(/\n\s*\n/g, '\n');
-
-                renderEditor(beautified);
-                pushHistory();
-            } catch (e) {
-                alert('Beautify error: ' + e.message);
-            }
-        }
-
-        // HTML Rendering
-        function renderHTML() {
-            try {
-                const blob = new Blob([editor.value], { type: 'text/html' });
-                previewContent.src = URL.createObjectURL(blob);
-                previewPanel.style.display = 'flex';
-            } catch (e) {
-                alert('Error rendering HTML: ' + e.message);
-            }
-        }
-
-        function closePreview() {
-            previewPanel.style.display = 'none';
-            if (previewContent.src.startsWith('blob:')) {
-                URL.revokeObjectURL(previewContent.src);
-            }
-        }
-
-        // Quantum AI System
-        function initQuantumSystem() {
-            quantumSystem = new QuantumAgentCore();
-            document.getElementById('ai-indicator').textContent = 'Quantum AI: Ready';
-            document.querySelector('.ai-dot').classList.add('connected');
-        }
-
-        async function runQuantumAI() {
-            const prompt = document.getElementById('prompt-input').value.trim();
-            if (!prompt) {
-                alert('Please enter a prompt for the Quantum AI');
-                return;
-            }
-
-            if (!quantumSystem) {
-                initQuantumSystem();
-            }
-
-            aiResponseContent.textContent = 'Quantum AI processing... (Parallel agents activated)';
-            aiResponsePanel.style.display = 'block';
-
-            document.getElementById('ai-indicator').textContent = 'Quantum AI: Processing';
-            document.querySelector('.ai-dot').style.background = 'var(--warn)';
-
-            try {
-                const result = await quantumSystem.processInput(prompt, editor.value);
-
-                let responseHTML = `<div style="color: var(--quantum-primary); font-weight: bold; margin-bottom: 1rem;">Quantum Analysis Complete</div>`;
-                responseHTML += `<div style="margin-bottom: 1rem;">${result.analysis}</div>`;
-
-                if (result.suggestions && result.suggestions.length > 0) {
-                    responseHTML += `<div style="color: var(--quantum-accent); margin-bottom: 0.5rem;">Suggestions:</div>`;
-                    responseHTML += `<ul style="margin: 0; padding-left: 1.25rem;">`;
-                    result.suggestions.forEach(suggestion => {
-                        responseHTML += `<li>${suggestion}</li>`;
-                    });
-                    responseHTML += `</ul>`;
-                }
-
-                responseHTML += `<div style="margin-top: 1rem; font-size: 0.75rem; color: var(--editor-muted);">`;
-                responseHTML += `Processing time: ${result.metrics.processingTime}ms | Agents: ${result.metrics.agentsUsed.join(', ')}`;
-                responseHTML += `</div>`;
-
-                aiResponseContent.innerHTML = responseHTML;
-
-                document.getElementById('ai-indicator').textContent = 'Quantum AI: Ready';
-                document.querySelector('.ai-dot').classList.add('connected');
-
-            } catch (error) {
-                aiResponseContent.textContent = `Quantum AI Error: ${error.message}`;
-                document.getElementById('ai-indicator').textContent = 'Quantum AI: Error';
-                document.querySelector('.ai-dot').style.background = 'var(--error)';
-            }
-        }
-
-        function handlePromptKeydown(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                e.preventDefault();
-                runQuantumAI();
-            }
-        }
-
-        function closeAIPanel() {
-            aiResponsePanel.style.display = 'none';
-        }
-
-        // Dashboard
-        function showDashboard() {
-            quantumDashboard.style.display = 'flex';
-            if (quantumSystem) {
-                quantumSystem.updateDashboard();
-            }
-        }
-
-        function closeDashboard() {
-            quantumDashboard.style.display = 'none';
-        }
-
-        // Panel management
-        function toggleLeftPanel() {
-            leftPanel.classList.toggle('open');
-            panelOverlay.classList.toggle('active');
-        }
-
-        function closeLeftPanel() {
-            leftPanel.classList.remove('open');
-            panelOverlay.classList.remove('active');
-        }
-
-        function handleResize() {
-            if (window.innerWidth > 768) {
-                closeLeftPanel();
-            }
-        }
-
-        // Initialize the editor when the page loads
-        window.addEventListener('load', initEditor);
+// --- START: Inlined index.tsx ---
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error("Could not find root element to mount to");
+}
+const root = ReactDOM.createRoot(rootElement);
+root.render(
+  React.createElement(React.StrictMode, null, React.createElement(App))
+);
+// --- END: Inlined index.tsx ---
+// BUNDLED SCRIPT - END
     </script>
 </body>
 </html>
+

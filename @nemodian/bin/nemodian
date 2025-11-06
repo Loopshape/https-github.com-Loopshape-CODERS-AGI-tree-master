@@ -1,0 +1,47 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# ========================================================
+# Nemodian Autostart Script (Termux)
+# Starts Apache, PM2 Node.js bridge, and Ollama
+# Ignores missing Python venv
+# ========================================================
+
+echo "[Nemodian] Initializing environment..."
+export PATH=$PATH:/home/linuxbrew/.linuxbrew/bin:/data/data/com.termux/files/usr/bin
+
+# ----------------- Apache -----------------
+if ! pgrep -x "httpd" >/dev/null; then
+  echo "[Nemodian] Starting Apache server on :8080"
+  apachectl start
+else
+  echo "[Nemodian] Apache already running."
+fi
+
+# ----------------- PM2 Node.js Bridge -----------------
+if ! pgrep -x "node" | grep -q "server.js"; then
+  echo "[Nemodian] Starting PM2 bridge..."
+  pm2 resurrect || pm2 start ~/.nemodian/server/server.js --name nemodian-bridge
+else
+  echo "[Nemodian] PM2 bridge already running."
+fi
+
+# ----------------- Ollama -----------------
+if command -v ollama >/dev/null 2>&1; then
+  echo "[Nemodian] Ensuring Ollama is running..."
+  pgrep -x "ollama" >/dev/null || ollama serve >/dev/null 2>&1 &
+  echo "[Nemodian] Ollama active at $(which ollama)"
+else
+  echo "[Nemodian] ⚠️ Ollama not found — install via brew install ollama"
+fi
+
+# ----------------- Python venv check -----------------
+if [ ! -d ~/.nemodian/.env.local ]; then
+  echo "[Nemodian] ⚠️ Python venv not found, skipping activation."
+else
+  source ~/.nemodian/.env.local/bin/activate
+fi
+
+# ----------------- Open Nemodian web UI -----------------
+echo "[Nemodian] Opening local AI Editor..."
+termux-open-url http://localhost:8080/ || echo "[Nemodian] Open manually: http://localhost:8080/"
+
+echo "[Nemodian] ✅ All services online."

@@ -1,298 +1,1576 @@
-< !DOCTYPE html > < html lang = "en" >
-  <
-  head > < meta charset = "UTF-8" >
-  <
-  meta name = "viewport"
-content = "width=device-width, initial-scale=1.0" > < title > Nemodian 2244 - 1::AI Code Editor < /title> <
-link href = "https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"
-rel = "stylesheet" / > < script src = "https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" > < /script> <
-script src = "https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js" > < /script> <
-script src = "https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js" > < /script> <
-script src = "https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify.js" > < /script> <
-style > html, body {
-  margin: 0;height: 100 % ;font - family: 'Fira Code',
-  monospace;font - size: 12 px;overflow: hidden;
-}
-body {
-  display: flex;flex - direction: column;background: #3a3c31;color:# f0f0e0;position: absolute;top: 0;left: 0;right: 0;bottom: 0;
-}
-header {
-  background: #2e3026;color:# f0f0e0;padding: 5 px 10 px;display: flex;justify - content: space - between;align - items: center;position: fixed;top: 0;width: 100 % ;z - index: 2;border - bottom: 1 px solid #22241e;}
-# status - bar {
-    background: #22241e;color:# 4 ac94a;padding: 2 px 10 px;font - size: 11 px;position: fixed;top: 35 px;width: 100 % ;z - index: 2;border - top: 1 px solid #2e3026;transition: background-color 0.2s,color 0.2s;display:flex;justify-content:space-between;}         # status - bar.error {
-      background - color: #a03333;
-      color: #f0f0e0;
-    }
-    #status - bar.warn {
-      background - color: #f0ad4e;
-      color: #3a3c31;}                          # status - bar.success {
-        background - color: #4ac94a;color:# 3 a3c31;
-      }
-      #status - bar.editor - info {
-        color: #999966;}                                           # status - bar.file - info {
-          font - weight: 800;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nemodian 2244-1 :: Quantum AI Editor</title>
+    <style>
+        /* ----- CSS Grid 24-Column Responsive Layout ----- */
+        :root {
+            --grid-columns: 24;
+            --baseline: 1.5rem;
+            --gutter: 1rem;
+            --header-h: calc(var(--baseline) * 2);
+            --status-h: var(--baseline);
+            --footer-h: calc(var(--baseline) * 1.5);
+
+            /* Quantum Color Scheme */
+            --quantum-primary: #00FF88;
+            --quantum-secondary: #7E57C2;
+            --quantum-accent: #00B8D4;
+            --quantum-bg: #0A0A12;
+            --quantum-surface: #1A1A2E;
+            --quantum-border: #2A2A3E;
+
+            /* Status Colors */
+            --success: #4CAF50;
+            --warn: #FF9800;
+            --error: #F44336;
+            --info: #2196F3;
+
+            /* Editor Colors */
+            --editor-bg: #1E1E1E;
+            --editor-text: #F0F0F0;
+            --editor-muted: #888;
+            --editor-gutter: #2D2D2D;
+            --editor-accent: #4ac94a;
         }
+
+        /* ----- CSS Reset & Base ----- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;                                                        }
+
+        html {
+            /* FIX 1: Removed redundant/conflicting inline display/position properties */
+            font-size: 16px;
+            line-height: var(--baseline);
+        }
+
+        body {
+            font-family: 'Fira Code', 'Monaco', 'Cascadia Code', monospace;
+            background: var(--quantum-bg);
+            color: var(--editor-text);
+            min-height: 100vh;
+            display: grid;
+            /* FIX 2: Corrected grid-template-rows to ensure footer is visible and takes up space */
+            grid-template-rows: var(--header-h) var(--status-h) 1fr var(--footer-h); 
+            grid-template-columns: repeat(var(--grid-columns), 1fr);
+            overflow: hidden;
+        }
+
+        /* ----- Header Grid ----- */
+        header {
+            min-height:2em;
+            grid-row: 1;
+            grid-column: 1 / -1;
+            background: var(--quantum-surface);
+            border-bottom: 1px solid var(--quantum-border);
+            display: grid;
+            grid-template-columns: repeat(var(--grid-columns), 1fr);
+            align-items: center;
+            padding: 0 var(--gutter);
+            gap: var(--gutter);
+        }
+
+        .header-left {
+            grid-column: 1 / span 12;
+            display: flex;
+            align-items: center;
+            gap: var(--gutter);
+        }
+
+        .header-right {
+            grid-column: 13 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: calc(var(--gutter) / 2);
+        }
+
+        /* ----- Status Bar Grid ----- */
+        #status-bar {
+            grid-row: 2;
+            grid-column: 1 / -1;
+            background: var(--quantum-surface);
+            border-bottom: 1px solid var(--quantum-border);
+            display: grid;
+            grid-template-columns: repeat(var(--grid-columns), 1fr);
+            align-items: center;
+            padding: 0 var(--gutter);
+            font-size: 0.875rem;
+            gap: var(--gutter);
+            /* FIX 3: Ensure status bar background changes for status colors */
+            transition: background 0.3s ease;
+        }
+
+        #file-meta {
+            grid-column: 1 / span 12;
+        }
+
+        #editor-meta {
+            grid-column: 13 / -1;
+            text-align: right;
+        }
+
+        /* ----- Editor Stage Grid ----- */
+        #editor-stage {
+            grid-row: 3;
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(var(--grid-columns), 1fr);
+            background: var(--quantum-bg);
+            overflow: hidden;
+            position: relative;
+        }
+
+        #left-panel {
+            grid-column: 1 / span 4;
+            background: var(--quantum-surface);
+            border-right: 1px solid var(--quantum-border);
+            padding: var(--gutter);
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--gutter) / 2);
+            overflow-y: auto;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #editor-container {
+            grid-column: 5 / -1;
+            background: var(--editor-bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ----- Footer Grid ----- */
         footer {
-          background: #2e3026;color:# f0f0e0;padding: 5 px 10 px;position: fixed;bottom: 0;width: 100 % ;z - index: 2;border - top: 1 px solid #22241e;box-sizing:border-box;}
-# footer - grid {
-            display: grid;grid - template - columns: repeat(24, 1 fr);gap: 5 px;width: 100 % ;align - items: center;
-          }
-          #editor - container {
-            flex: 1;margin - top: 58 px;margin - bottom: 42 px;overflow: hidden;position: relative;display: flex;background: #3a3c31;}
-.code-editor-wrapper{display:flex;flex:1;overflow:auto;position:relative;width:100%;height:100%;}
-# line - numbers {
-              padding: 5 px 5 px 5 px 10 px;text - align: right;color: #999966;font-size:12px;line-height:1.5;user-select:none;background:# 313328;min - width: 30 px;position: sticky;left: 0;z - index: 5;height: fit - content;
-            }.highlighting - area {
-              position: absolute;top: 0;left: 0;right: 0;bottom: 0;pointer - events: none;z - index: 0;
-            }.highlighting - area pre {
-              margin: 0;padding: 5 px;background: transparent!important;white - space: pre - wrap;word - break: break -all;
-            }.highlighting - area code {
-              font - size: 12 px;
-              line - height: 1.5;
+            /* FIX 4: Reverted footer from fixed to grid layout to align with body grid */
+            grid-row: 4;
+            grid-column: 1 / -1; /* FIX 5: Footer should span all columns */
+            background: var(--quantum-surface);
+            border-top: 1px solid var(--quantum-border);
+            display: grid;
+            grid-template-columns: repeat(var(--grid-columns), 1fr);
+            align-items: center;
+            padding: 0 var(--gutter);
+            gap: var(--gutter);
+            /* Removed fixed position properties */
+        }
+
+        #prompt-input {
+            grid-column: 1 / span 22;
+            background: var(--quantum-bg);
+            border: 1px solid var(--quantum-primary);
+            color: var(--editor-text);
+            padding: calc(var(--baseline) / 3);
+            font-family: inherit;
+            border-radius: 4px;
+        }
+
+        #send-button {
+            grid-column: 23 / -1;
+        }
+
+        /* ----- Button Styles ----- */
+        button {
+            background: var(--quantum-secondary);
+            border: 1px solid var(--quantum-border);
+            color: var(--editor-text);
+            padding: calc(var(--baseline) / 3) calc(var(--baseline) / 2);
+            cursor: pointer;
+            font-size: 0.875rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: var(--quantum-primary);
+            border-color: var(--quantum-primary);
+            color: var(--quantum-bg);
+        }
+
+        button.success {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        button.info {
+            background: var(--info);
+            border-color: var(--info);
+        }
+
+        button.warn {
+            background: var(--warn);
+            border-color: var(--warn);
+            color: var(--quantum-bg);
+        }
+
+        button.quantum {
+            background: var(--quantum-primary);
+            border-color: var(--quantum-primary);
+            color: var(--quantum-bg);
+        }
+
+        button.small {
+            font-size: 0.75rem;
+            padding: calc(var(--baseline) / 4) calc(var(--baseline) / 3);
+        }
+
+        /* ----- Editor Components ----- */
+        #editor-outer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+        }
+
+        #line-gutter {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4rem;
+            background: var(--editor-gutter);
+            color: var(--editor-muted);
+            padding: var(--gutter);
+            font-family: inherit;
+            font-size: 0.875rem;
+            line-height: var(--baseline);
+            overflow: hidden;
+            text-align: right;
+            user-select: none;
+            z-index: 10;
+        }
+
+        .highlighting {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            pointer-events: none;
+            overflow: auto;
+            padding: var(--gutter);
+            padding-left: calc(4rem + var(--gutter));
+            z-index: 5;
+        }
+
+        .highlighting pre {
+            margin: 0;
+            font-family: inherit;
+            font-size: 0.875rem;
+            line-height: var(--baseline);
+            white-space: pre;
+            word-break: normal;
+        }
+
+        #editor {
+            position: absolute;
+            left: 4rem;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            padding: var(--gutter);
+            margin: 0;
+            background: transparent;
+            color: transparent;
+            caret-color: var(--editor-accent);
+            font-family: inherit;
+            font-size: 0.875rem;
+            line-height: var(--baseline);
+            border: 0;
+            outline: 0;
+            resize: none;
+            white-space: pre;
+            word-break: normal;
+            z-index: 20;
+            tab-size: 4;
+            /* FIX 6: Added overflow to editor to handle long lines */
+            overflow: auto; 
+        }
+
+        /* ----- Status Bar States ----- */
+        #status-bar.error {
+            background: var(--error);
+            color: white;
+        }
+
+        #status-bar.warn {
+            background: var(--warn);
+            color: var(--quantum-bg);
+        }
+
+        #status-bar.success {
+            background: var(--success);
+            color: var(--quantum-bg);
+        }
+
+        #status-bar.info {
+            background: var(--info);
+            color: var(--quantum-bg);
+        }
+
+        /* ----- Preview Panel ----- */
+        #preview-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80vw;
+            height: 80vh;
+            background: white;
+            border: 2px solid var(--quantum-primary);
+            border-radius: 8px;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 0 50px rgba(0, 255, 136, 0.3);
+        }
+
+        #preview-header {
+            background: var(--quantum-surface);
+            color: var(--quantum-primary);
+            padding: calc(var(--baseline) / 2) var(--gutter);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--quantum-primary);
+            font-weight: bold;
+        }
+
+        #preview-content {
+            flex: 1;
+            border: none;
+            background: white;
+        }
+
+        #close-preview {
+            background: transparent;
+            border: none;
+            color: var(--quantum-primary);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ----- AI Response Panel ----- */
+        #ai-response-panel {
+            position: fixed;
+            /* FIX 7: Corrected bottom position relative to the corrected footer height */
+            bottom: calc(var(--footer-h) + var(--gutter)); 
+            right: var(--gutter);
+            width: min(500px, 90vw);
+            max-height: 400px;
+            background: var(--quantum-surface);
+            border: 2px solid var(--quantum-primary);
+            border-radius: 8px;
+            padding: var(--gutter);
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 8px 32px rgba(0, 255, 136, 0.2);
+        }
+
+        #ai-response-content {
+            font-size: 0.875rem;
+            line-height: var(--baseline);
+        }
+
+        #close-ai-panel {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: transparent;
+            border: none;
+            color: var(--editor-muted);
+            font-size: 1.125rem;
+            cursor: pointer;
+            padding: 0;
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+
+        /* ----- Quantum Dashboard ----- */
+        #quantum-dashboard {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: min(90vw, 1200px);
+            height: min(80vh, 800px);
+            background: var(--quantum-bg);
+            border: 2px solid var(--quantum-primary);
+            border-radius: 12px;
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 0 60px rgba(0, 255, 136, 0.4);
+        }
+
+        #dashboard-header {
+            background: var(--quantum-surface);
+            color: var(--quantum-primary);
+            padding: var(--gutter);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--quantum-primary);
+            font-weight: bold;
+            font-size: 1.125rem;
+        }
+
+        #dashboard-content {
+            flex: 1;
+            padding: var(--gutter);
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--gutter);
+        }
+
+        .agent-card {
+            background: var(--quantum-surface);
+            border: 1px solid var(--quantum-secondary);
+            border-radius: 8px;
+            padding: var(--gutter);
+            color: var(--editor-text);
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: calc(var(--gutter) / 2);
+            padding-bottom: calc(var(--gutter) / 2);
+            border-bottom: 1px solid var(--quantum-secondary);
+        }
+
+        .agent-name {
+            font-weight: bold;
+            color: var(--quantum-primary);
+        }
+
+        .agent-status {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            background: var(--quantum-accent);
+            color: var(--quantum-bg);
+        }
+
+        .agent-content {
+            font-size: 0.875rem;
+            line-height: calc(var(--baseline) * 0.875);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin-top: calc(var(--gutter) / 2);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--quantum-primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        #close-dashboard {
+            background: transparent;
+            border: none;
+            color: var(--quantum-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 2rem;
+            height: 2rem;
+        }
+
+        /* ----- AI Indicator ----- */
+        .ai-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .ai-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--error);
+            animation: pulse 2s infinite;
+        }
+
+        .ai-dot.connected {
+            background: var(--quantum-primary);
+            animation: quantum-pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes quantum-pulse {
+            0%, 100% {
+                box-shadow: 0 0 5px var(--quantum-primary);
+                opacity: 1;
             }
-            #editor {
-              width: 100 % ;height: 100 % ;border: none;outline: none;resize: none;padding: 5 px;font - family: inherit;font - size: inherit;background: transparent;color: transparent;caret - color: #4ac94a;z-index:1;line-height:1.5;white-space:pre-wrap;word-break:break-all;position:absolute;top:0;left:55px;right:0;bottom:0;padding-left:5px;box-sizing:border-box;}                                                                             button{font-size:11px;padding:2px 6px;cursor:pointer;background:# a03333;color: #f0f0e0;border: 1 px solid #a03333;transition: all 0.1 s;text - transform: uppercase;
+            50% {
+                box-shadow: 0 0 15px var(--quantum-primary);
+                opacity: 0.8;
             }
-            button: hover {
-              background: #3366a0;color:# f0f0e0;border - color: #3366a0;}
-# save,
-              #delete {
-                background: #a03333;border - color: #a03333;color: #f0f0e0;
-              }
-              #save: hover,
-              #delete: hover {
-                background: #3366a0;color:# f0f0e0;
-              }
-              #prompt - input {
-                font - size: 12 px;
-                padding: 5 px 0.5 em 5 px 0.5 em;
-                font - weight: 800;
-                background: #22241e;color:# f0f0e0;
-                border: 1 px solid #4ac94a;width:100%;grid-column:1/span 20;}
-# send - button {
-                  height: 30 px;line - height: 1;width: 100 % ;grid - column: 21 / span 4;
+        }
+
+        /* ----- Syntax Highlighting ----- */
+        .token.comment {
+            color: var(--editor-muted);
+            font-style: italic;
+        }
+
+        .token.keyword {
+            color: #ff79c6;
+        }
+
+        .token.string {
+            color: #50fa7b;
+        }
+
+        .token.function {
+            color: #8be9fd;
+        }
+
+        .token.number {
+            color: #bd93f9;
+        }
+
+        .token.operator {
+            color: #ff79c6;
+        }
+
+        .token.punctuation {
+            color: #f8f8f2;
+        }
+
+        .token.tag {
+            color: #ff79c6;
+        }
+
+        .token.attr-name {
+            color: #50fa7b;
+        }
+
+        .token.attr-value {
+            color: #f1fa8c;
+        }
+
+        /* ----- Responsive Design ----- */
+        @media (max-width: 1200px) {
+            #left-panel {
+                grid-column: 1 / span 6;
+            }
+            #editor-container {
+                grid-column: 7 / -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                grid-template-rows: var(--header-h) var(--status-h) 1fr var(--footer-h);
+            }
+
+            .header-left {
+                grid-column: 1 / span 16;
+            }
+
+            .header-right {
+                grid-column: 17 / -1;
+            }
+
+            #file-meta {
+                grid-column: 1 / span 14;
+                font-size: 0.75rem;
+            }
+
+            #editor-meta {
+                grid-column: 15 / -1;
+                font-size: 0.75rem;
+            }
+
+            #left-panel {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                width: min(300px, 85vw);
+                z-index: 100;
+                transform: translateX(-100%);
+                box-shadow: 2px 0 20px rgba(0, 0, 0, 0.5);
+            }
+
+            #left-panel.open {
+                transform: translateX(0);
+            }
+
+            #editor-container {
+                grid-column: 1 / -1;
+            }
+
+            #panel-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 90;
+            }
+
+            #panel-overlay.active {
+                display: block;
+            }
+
+            #prompt-input {
+                grid-column: 1 / span 18;
+            }
+
+            #send-button {
+                grid-column: 19 / -1;
+            }
+        }
+
+        @media (max-width: 480px) {
+            :root {
+                --gutter: 0.75rem;
+                --baseline: 1.25rem;
+            }
+
+            .header-left {
+                grid-column: 1 / span 14;
+            }
+
+            .header-right {
+                grid-column: 15 / -1;
+            }
+
+            #file-meta {
+                grid-column: 1 / span 12;
+            }
+
+            #editor-meta {
+                grid-column: 13 / -1;
+            }
+
+            #prompt-input {
+                grid-column: 1 / span 16;
+            }
+
+            #send-button {
+                grid-column: 17 / -1;
+            }
+        }
+
+        /* ----- Utility Classes ----- */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-muted {
+            color: var(--editor-muted);
+        }
+
+        .text-small {
+            font-size: 0.75rem;
+        }
+
+        .mt-1 {
+            margin-top: calc(var(--baseline) / 2);
+        }
+
+        .mb-1 {
+            margin-bottom: calc(var(--baseline) / 2);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <button id="left-toggle" class="small">☰</button>
+            <div style="font-weight: 800; font-size: 1.125rem;">Nemodian 2244-1 :: Quantum AI Editor</div>
+        </div>
+        <div class="header-right">
+            <div class="ai-status">
+                <div class="ai-dot"></div>
+                <div id="ai-indicator" class="text-small">Quantum AI: Initializing...</div>
+            </div>
+            <button id="open-file" class="small">Open</button>
+            <button id="save-file" class="small">Save</button>
+            <button id="save-as" class="small">Save As</button>
+            <button id="render-html" class="small warn">Render</button>
+            <button id="run-quantum-ai" class="small quantum">AI</button>
+            <button id="show-dashboard" class="small info">Dashboard</button>
+        </div>
+    </header>
+
+    <div id="status-bar" class="info">
+        <div id="file-meta">No File Loaded</div>
+        <div id="editor-meta">Cursor: 0:0 | Lines: 0 | Chars: 0 | History: 0</div>
+    </div>
+
+    <div id="editor-stage">
+        <div id="panel-overlay"></div>
+
+        <aside id="left-panel">
+            <button id="btn-undo" class="small">UNDO</button>
+            <button id="btn-redo" class="small">REDO</button>
+            <button id="btn-beautify" class="small">Beautify</button>
+            <button id="btn-render" class="small warn">Render HTML</button>
+            <button id="btn-quantum" class="small quantum">Quantum Process</button>
+
+            <div class="mt-1">
+                <p class="text-small text-muted"><strong>Quantum AI Commands:</strong></p>
+                <ul class="text-small text-muted" style="padding-left: 1.25rem;">
+                    <li>Explain this code</li>
+                    <li>Optimize this function</li>
+                    <li>Add documentation</li>
+                    <li>Find bugs</li>
+                    <li>Refactor code</li>
+                    <li>Generate tests</li>
+                </ul>
+            </div>
+
+            <div class="mt-1">
+                <p class="text-small text-muted"><strong>HTML Render:</strong></p>
+                <p class="text-small text-muted">Click "Render HTML" to preview your HTML code in a live browser view.</p>
+            </div>
+
+            <div class="mt-1">
+                <p class="text-small" style="color: var(--quantum-primary);"><strong>Quantum Processing:</strong></p>
+                <p class="text-small" style="color: var(--quantum-primary);">Uses parallel agent processing with fractal reasoning for advanced code analysis and generation.</p>
+            </div>
+        </aside>
+
+        <div id="editor-container">
+            <div id="editor-outer">
+                <div id="line-gutter"></div>
+                <div class="highlighting">
+                    <pre><code id="highlighted" class="language-html"></code></pre>
+                </div>
+                <textarea id="editor" spellcheck="false">&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;Nemodian 2244-1 Quantum Demo&lt;/title&gt;
+  &lt;style&gt;
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      color: white;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      max-width: 600px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #4ac94a, #5bc0de);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      font-size: 1.2rem;
+      line-height: 1.6;
+    }
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .feature {
+      background: rgba(74, 201, 74, 0.2);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid #4ac94a;
+    }
+    button {
+      background: #4ac94a;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: #3aa83a;
+      transform: translateY(-2px);
+    }
+    /* FIX 10: Removed invalid CSS nesting syntax */
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class="container"&gt;
+    &lt;h1&gt;Welcome to Nemodian 2244-1 Quantum&lt;/h1&gt;
+    &lt;p&gt;This is a demonstration of the Quantum AI Editor's capabilities. You can edit this HTML and CSS, and then click "Render HTML" to see your changes.&lt;/p&gt;
+    &lt;div class="features"&gt;
+      &lt;div class="feature"&gt;HTML Editing&lt;/div&gt;
+      &lt;div class="feature"&gt;CSS Styling&lt;/div&gt;
+      &lt;div class="feature"&gt;Quantum AI&lt;/div&gt;
+      &lt;div class="feature"&gt;Parallel Processing&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;button&gt;Get Started&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</textarea>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <input id="prompt-input" placeholder="Quantum AI Prompt (Ctrl+Enter to run)">
+        <button id="send-button" class="success">SEND</button>
+    </footer>
+
+    <input type="file" id="file-input" accept=".js,.html,.css,.txt,.json,.py,.md" class="hidden">
+
+    <div id="preview-panel">
+        <div id="preview-header">
+            <span>HTML Preview</span>
+            <button id="close-preview">×</button>
+        </div>
+        <iframe id="preview-content"></iframe>
+    </div>
+
+    <div id="ai-response-panel">
+        <button id="close-ai-panel">×</button>
+        <div id="ai-response-content"></div>
+    </div>
+
+    <div id="quantum-dashboard">
+        <div id="dashboard-header">
+            <span>Quantum Agent Dashboard</span>
+            <button id="close-dashboard">×</button>
+        </div>
+        <div id="dashboard-content">
+            </div>
+    </div>
+
+    <script>
+        // ==================== QUANTUM AGENT CORE ====================
+        class QuantumAgentCore {
+            constructor() {
+                this.agents = new Map();
+                this.isProcessing = false;
+                this.performanceMetrics = {
+                    startTime: null,
+                    endTime: null,
+                    agentTimes: new Map()
+                };
+
+                this.initAgents();
+                this.setupEventListeners();
+                console.log("Quantum Agent Core initialized");
+            }
+
+            initAgents() {
+                const agents = [
+                    { id: 'nexus', name: 'Nexus', role: 'Orchestrator' },
+                    { id: 'cognito', name: 'Cognito', role: 'Analyzer' },
+                    { id: 'relay', name: 'Relay', role: 'Communicator' },
+                    { id: 'sentinel', name: 'Sentinel', role: 'Monitor' },
+                    { id: 'echo', name: 'Echo', role: 'Reporter' }
+                ];
+
+                agents.forEach(agent => {
+                    this.agents.set(agent.id, {
+                        ...agent,
+                        status: 'IDLE',
+                        progress: 0
+                    });
+                });
+
+                this.renderDashboard();
+            }
+
+            renderDashboard() {
+                const dashboardContent = document.getElementById('dashboard-content');
+                if (!dashboardContent) return;
+
+                dashboardContent.innerHTML = '';
+
+                for (const [id, agent] of this.agents) {
+                    const card = document.createElement('div');
+                    card.className = 'agent-card';
+                    card.innerHTML = `
+                        <div class="agent-header">
+                            <div class="agent-name">${agent.name}</div>
+                            <div class="agent-status" id="${id}-status">${agent.status}</div>
+                        </div>
+                        <div class="agent-content">
+                            ${agent.role}: Coordinates all agents and manages parallel processing workflow.
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="${id}-progress"></div>
+                        </div>
+                    `;
+                    dashboardContent.appendChild(card);
                 }
-                #side - menu {
-                  position: fixed;top: 36 px;left: -216 px;width: 200 px;height: calc(100 % -36 px);background: #313328;z-index:10;transition:left 0.3s ease-in-out;border-right:1px solid # 22241 e;padding: 10 px;box - shadow: 2 px 0 5 px rgba(0, 0, 0, 0.5);display: flex;flex - direction: column;gap: 8 px;overflow - y: auto;
+            }
+            
+            async processInput(prompt, context) {
+                if (this.isProcessing) {
+                    // FIX 11: Return a clean error if processing is ongoing.
+                    this.updateStatusBar('warn', 'System is already processing a request');
+                    throw new Error("System is already processing a request");
                 }
-                #side - menu.open {
-                  left: 0;
+
+                this.isProcessing = true;
+                this.performanceMetrics.startTime = Date.now();
+                this.updateDashboard();
+                this.updateStatusBar('info', 'Quantum AI: Processing...');
+
+                try {
+                    // Phase 1: Parallel Initial Processing
+                    await this.executeParallelPhase(prompt, context);
+
+                    // Phase 2: Analysis and Reasoning
+                    await this.executeAnalysisPhase(prompt, context);
+
+                    // Phase 3: Validation and Synthesis
+                    const result = await this.executeValidationPhase(prompt, context);
+
+                    this.performanceMetrics.endTime = Date.now();
+                    this.isProcessing = false;
+                    this.updateStatusBar('success', `Quantum Analysis Complete in ${result.metrics.processingTime}ms`);
+
+                    return result;
+                } catch (error) {
+                    this.performanceMetrics.endTime = Date.now();
+                    this.isProcessing = false;
+                    this.resetAgents();
+                    this.updateStatusBar('error', `Quantum AI Error: ${error.message}`);
+                    throw error;
                 }
-                #menu - toggle {
-                    cursor: pointer;font - size: 16 px;padding: 0 10 px;user - select: none;
-                  }.menu - group - title {
-                    color: #4ac94a;font-size:10px;text-transform:uppercase;margin-top:10px;border-bottom:1px solid # 4 ac94a33;padding - bottom: 2 px;
-                  }.menu - button - item {
-                    width: 100 % ;margin - top: 0;
-                  } <
-                  /style>                                                                           </head >
-                  <
-                  body > < div id = "side-menu" >
-                  <
-                  div class = "menu-group-title" > File Operations < /div>                                <button id="save" class="menu-button-item">SAVE (Ctrl+S)</button >
-                  <
-                  button id = "load"
-                class = "menu-button-item" > LOAD < /button>                           <div class="menu-group-title">Code Tools</div >
-                  <
-                  button id = "beautify"
-                class = "menu-button-item" > Beautify < /button>                   <button id="syntaxcheck" class="menu-button-item">Syntax/Repair < /button> <
-                button id = "compress"
-                class = "menu-button-item" > Compress < /button>                   <div class="menu-group-title">History</div >
-                  <
-                  button id = "undo"
-                class = "menu-button-item" > UNDO(Ctrl + Z) < /button>                  <button id="redo" class="menu-button-item">REDO (Ctrl+Y/Shift + Z) < /button> < /
-              div > < header > < span id = "menu-toggle" > ☰Nemodian Menu < /span > < span > Nemodian 2244 - 1::AI Editor < /span > < /header > < div id = "status-bar" > < span id = "file-metadata" > No File Loaded < /span > < span id = "editor-metadata" > Cursor: 0: 0 | Tokens: 0 | History: 0 | Status: READY < /span > < /div > < div id = "editor-container" > <
-                div class = "code-editor-wrapper" > < div id = "line-numbers" > < /div> <
-              div class = "highlighting-area" > < pre > < code class = "language-javascript"
-              id = "highlighted-code" > < /code></pre > < /div> <
-              textarea id = "editor"
-              spellcheck = "false"
-              autofocus > < /textarea>                   </div >
-              <
-              /div>                                                                             <footer>                                                                           <div id="footer-grid">                                                             <input type="text" id="prompt-input" placeholder="Enter AI Prompt (Ctrl+Enter to Run)">                                                                               <button id="send-button">SEND</button > < /div>                                                                             </footer > < script src = "https://code.jquery.com/jquery-3.6.0.min.js" > < /script>                <script>                                                                           / / === State ===
-              let assemblyCode = '',
-                historyStack = [],
-                redoStack = [],
-                MAX_HISTORY = 200;
-              const $editor = $('#editor'),
-                $highlightCode = $('#highlighted-code'),
-                $status = $('#status-bar'),
-                $lineNumbers = $('#line-numbers');
-              let fileMetadata = {
-                name: 'Untitled',
-                path: '(Unsaved/Local)',
-                sizeKB: '0.00',
-                timestamp: 'N/A'
-              };
-              let lastStatusMessage = 'READY';
-              let currentLanguage = 'javascript'; // === Notifications ===                                                           function showNotification(msg,type='info',dur=3000){                                   if(!$status.data('notifying')){$status.data('original-text',$status.html());$status.data('notifying',true);}                                                          $status.removeClass('error warn success').addClass(type).html(`<span class="file-info">${msg}</span><span class="editor-info"></span>`);                              clearTimeout($status.data('timer'));                                               $status.data('timer', setTimeout(()=>{                                                 $status.removeClass('error warn success');                                         $status.html($status.data('original-text') || '<span id="file-metadata">No File Loaded</span><span id="editor-metadata">Cursor: 0:0 | Tokens: 0 | History: 0 | Status: READY</span>');                                                                   $status.data('notifying', false);                                              }, dur));
-            }
-            // === History ===                                                                 function pushHistory(){const code=$editor.val(); if(historyStack.length&&historyStack[historyStack.length-1]===code) return; historyStack.push(code); if(historyStack.length>MAX_HISTORY) historyStack.shift(); redoStack=[]; updateStatus('READY');}
-            function undo() {
-              if (historyStack.length) {
-                redoStack.push($editor.val());
-                assemblyCode = historyStack.pop();
-                renderAssembly();
-                showNotification('Action: UNDO', 'info', 1500);
-              }
             }
 
-            function redo() {
-              if (redoStack.length) {
-                historyStack.push($editor.val());
-                assemblyCode = redoStack.pop();
-                renderAssembly();
-                showNotification('Action: REDO', 'info', 1500);
-              }
-            }
-            // === Rendering ===
-            function renderAssembly(code = assemblyCode) {
-              $editor.val(code);
-              highlightCode(code);
-              generateLineNumbers();
-              updateStatus();
+            async executeParallelPhase(prompt, context) {
+                const parallelTasks = [];
+
+                for (const [agentName] of this.agents) {
+                    parallelTasks.push(this.processAgent(agentName, prompt, context, 0));
+                }
+
+                await Promise.all(parallelTasks);
             }
 
-            function highlightCode(code) {
-              const g = Prism.languages[currentLanguage] || Prism.languages.javascript;
-              $highlightCode.html(Prism.highlight(code, g, currentLanguage));
+            async executeAnalysisPhase(prompt, context) {
+                await this.processAgent('cognito', prompt, context, 1);
+                await this.delay(800);
+                await this.processAgent('cognito', prompt, context, 2);
+                await this.delay(600);
+
+                await this.processAgent('relay', prompt, context, 1);
+                await this.delay(400);
             }
 
-            function generateLineNumbers() {
-              let lines = $editor.val().split('\n').length,
-                html = '';
-              for (let i = 1; i <= lines; i++) html += `<div>${i}</div>`;
-              $lineNumbers.html(html);
+            async executeValidationPhase(prompt, context) {
+                await this.processAgent('sentinel', prompt, context, 1);
+                await this.delay(500);
+                await this.processAgent('echo', prompt, context, 1);
+                await this.delay(300);
+
+                return this.generateFinalResult(prompt, context);
             }
 
-            function syncScroll() {
-              let st = $editor.scrollTop(),
-                sl = $editor.scrollLeft();
-              $('.code-editor-wrapper').scrollTop(st);
-              $('.code-editor-wrapper').scrollLeft(sl);
+            async processAgent(agentName, prompt, context, phase) {
+                const agent = this.agents.get(agentName);
+                if (!agent) return;
+
+                agent.status = 'PROCESSING';
+
+                const baseTime = 200 + (Math.random() * 300);
+                const phaseMultiplier = 1 + (phase * 0.5);
+                const processingTime = baseTime * phaseMultiplier;
+
+                const steps = 5;
+                for (let i = 1; i <= steps; i++) {
+                    agent.progress = (i / steps) * 100;
+                    this.updateDashboard();
+                    await this.delay(processingTime / steps);
+                }
+
+                agent.status = 'COMPLETE';
+                agent.progress = 100; // Ensure progress bar is full
+                this.updateDashboard();
+
+                if (!this.performanceMetrics.agentTimes.has(agentName)) {
+                    this.performanceMetrics.agentTimes.set(agentName, []);
+                }
+                this.performanceMetrics.agentTimes.get(agentName).push(processingTime);
             }
 
-            function updateStatus(statusMessage = 'EDITING') {
-              lastStatusMessage = statusMessage;
-              if ($status.data('notifying')) return;
-              const pos = $editor[0].selectionStart,
-                code = $editor.val(),
-                lines = code.substr(0, pos).split('\n'),
-                line = lines.length,
-                col = lines[lines.length - 1].length,
-                tokens = (code.match(/function|let|const|var|class|for|if|while/g) || []).length,
-                editorMetadataHTML = `<span class="editor-info">Cursor: ${line}:${col} | Tokens: ${tokens} | History: ${historyStack.length} | Status: ${statusMessage}</span>`,
-                fileInfoHTML = `<span class="file-info">${fileMetadata.name} [${fileMetadata.sizeKB} KB] - ${fileMetadata.timestamp}</span>`;
-              $status.html(fileInfoHTML + editorMetadataHTML);
-            } // === File Access (Local only via browser) ===                                    async function openFile(){                                                             try{                                                                                   [handle] = await window.showOpenFilePicker();                                      const file = await handle.getFile();                                               assemblyCode = await file.text();                                                  fileMetadata.name = file.name;                                                     fileMetadata.sizeKB = (file.size/1024).toFixed(2);
-            fileMetadata.timestamp = new Date(file.lastModified).toLocaleTimeString();renderAssembly();
-            pushHistory();showNotification(`File LOADED: ${fileMetadata.name}`, 'success');
-            updateStatus('LOADED');
-          }
-          catch (e) {
-            showNotification('File open cancelled or unsupported.', 'warn');
-            updateStatus('READY');
-          }
-        }
-        async function saveFile() {
-          try {
-            if (!window.currentFileHandle) window.currentFileHandle = await window.showSaveFilePicker();
-            const writable = await window.currentFileHandle.createWritable();
-            await writable.write($editor.val());
-            await writable.close();
-            fileMetadata.timestamp = new Date().toLocaleTimeString();
-            fileMetadata.sizeKB = (new Blob([$editor.val()]).size / 1024).toFixed(2);
-            showNotification('File SAVED successfully.', 'success');
-            updateStatus('SAVED');
-          } catch (e) {
-            showNotification('File save cancelled or unsupported.', 'warn');
-            updateStatus('READY');
-          }
-        }
-        // === AI Simulation (Offline) ===
-        async function runAgents(prompt, codeToRefine = null) {
-          $editor.prop('disabled', true);
-          showNotification('Running AI Assembly (Simulated)...', 'info', 2000);
-          await new Promise(r => setTimeout(r, 1000)); // simulate delay
-          let originalCode = codeToRefine || $editor.val(); // Very simple “AI fix”: append comment with prompt
-          assemblyCode = originalCode + `\n// [AI_SIMULATION]: ${prompt}`;
-          renderAssembly(assemblyCode);
-          pushHistory();
-          showNotification('AI Assembly Complete (Simulated).', 'success', 2000);
-          $editor.prop('disabled', false);
-          updateStatus('READY');
-        } // === Editor Event Handlers ===                                                   $('#undo').click(undo);                                                            $('#redo').click(redo);                                                            $('#beautify').click(()=>{assemblyCode=js_beautify($editor.val(),{indent_size:2});renderAssembly();pushHistory();showNotification('Code BEAUTIFIED.','success');});   $('#compress').click(()=>{assemblyCode=$editor.val().replace(/\/\/.*/g,'').replace(/\s+/g,' ').replace(/\s*([{}();,])\s*/g,'$1').trim();renderAssembly();pushHistory();showNotification('Code COMPRESSED.','success');});
-        $('#save').click(saveFile);$('#load').click(openFile);$('#syntaxcheck').click(() => {
-          try {
-            new Function($editor.val());
-            showNotification('Syntax OK.', 'success');
-          } catch (e) {
-            let line = (e.stack.match(/:(\d+):/) || [0, 1])[1];
-            alert(`Syntax ERROR on line ${line}: ${e.message}\nSimulated AI can attempt a fix.`);
-            runAgents(`Fix syntax error on line ${line}`);
-          }
-        });
-        // Editor input events                                                             $editor.on('input propertychange',()=>{assemblyCode=$editor.val();pushHistory();highlightCode(assemblyCode);generateLineNumbers();updateStatus();});                  $editor.on('scroll',syncScroll);                                                   $editor.on('keyup click',updateStatus);
-        // AI Prompt send
-        function sendPrompt() {
-          let prompt = $('#prompt-input').val().trim();
-          if (prompt) runAgents(prompt);
-          $('#prompt-input').val('');
-        }
-        $('#send-button').click(sendPrompt);
-        $('#prompt-input').keypress(e => {
-          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-            e.preventDefault();
-            sendPrompt();
-          }
-        });
+            generateFinalResult(prompt, context) {
+                const code = context || '';
+                const lines = code.split('\n').length;
+                const words = code.split(/\s+/).filter(w => w.length > 0).length;
 
-        // Side Menu toggle
-        $('#menu-toggle').click(e => {
-          $('#side-menu').toggleClass('open');
-        });
-        $(document).click(e => {
-          if (!$(e.target).closest('#side-menu,#menu-toggle').length) $('#side-menu').removeClass('open');
-        });
-        // Keyboard shortcuts                                                              $(document).keydown(e=>{
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-          e.preventDefault();
-          saveFile();
+                let analysis = '';
+                let suggestions = [];
+
+                if (prompt.toLowerCase().includes('explain')) {
+                    analysis = `This ${this.detectLanguage(code)} code contains ${lines} lines and approximately ${words} meaningful tokens. `;
+                    analysis += `The structure appears ${this.assessCodeStructure(code)}.`;
+                    suggestions = ['Add more comments for complex functions', 'Consider breaking down large functions', 'Verify variable naming consistency'];
+                }
+                else if (prompt.toLowerCase().includes('optimize')) {
+                    analysis = `Found ${this.identifyOptimizationOpportunities(code)} potential optimization opportunities. `;
+                    analysis += `Code complexity is ${this.assessComplexity(code)}.`;
+                    suggestions = ['Reduce nested loops', 'Cache DOM queries', 'Use more efficient algorithms', 'Minify CSS and JS'];
+                }
+                else if (prompt.toLowerCase().includes('bug')) {
+                    analysis = `Static analysis completed. ${this.identifyPotentialBugs(code)} potential issues detected.`;
+                    suggestions = ['Add error handling', 'Validate user inputs', 'Test edge cases', 'Check for memory leaks'];
+                }
+                else {
+                    analysis = `Quantum analysis complete. Processed ${lines} lines of ${this.detectLanguage(code)} code. `;
+                    analysis += `Overall code quality: ${this.assessCodeQuality(code)}.`;
+                    suggestions = ['Consider adding documentation', 'Implement unit tests', 'Review security practices'];
+                }
+
+                return {
+                    analysis,
+                    suggestions,
+                    metrics: {
+                        processingTime: Date.now() - this.performanceMetrics.startTime,
+                        agentsUsed: Array.from(this.agents.keys()),
+                        linesAnalyzed: lines,
+                        wordsProcessed: words
+                    },
+                    timestamp: new Date().toISOString()
+                };
+            }
+
+            detectLanguage(code) {
+                if (code.includes('<!DOCTYPE html>') || code.includes('<html')) return 'HTML';
+                if (code.includes('function') || code.includes('const ') || code.includes('let ')) return 'JavaScript';
+                if (code.includes('@media') || code.includes('{') && code.includes('}') && code.includes(':')) return 'CSS';
+                if (code.includes('{') && code.includes('}') && code.includes('"')) return 'JSON';
+                return 'text';
+            }
+
+            assessCodeStructure(code) {
+                const lines = code.split('\n');
+                const avgLineLength = lines.reduce((sum, line) => sum + line.length, 0) / lines.length;
+
+                if (avgLineLength > 80) return 'could be more concise';
+                if (lines.length > 200) return 'moderately complex';
+                return 'well-structured';
+            }
+
+            identifyOptimizationOpportunities(code) {
+                let opportunities = 0;
+                if (code.includes('for(') || code.includes('for (')) opportunities += 2;
+                if (code.includes('.innerHTML')) opportunities += 1;
+                if (code.includes('.getElementById') && code.split('.getElementById').length > 3) opportunities += 1;
+                if (code.includes('setTimeout') || code.includes('setInterval')) opportunities += 1;
+
+                return opportunities || 'several';
+            }
+
+            assessComplexity(code) {
+                const lines = code.split('\n').length;
+                if (lines < 50) return 'low';
+                if (lines < 200) return 'medium';
+                return 'high';
+            }
+
+            identifyPotentialBugs(code) {
+                let potentialBugs = 0;
+                if (code.includes('==') && !code.includes('===')) potentialBugs += 1;
+                if (code.includes('eval(')) potentialBugs += 2;
+                if (code.includes('innerHTML') && code.includes('+')) potentialBugs += 1;
+
+                return potentialBugs || 'no obvious';
+            }
+
+            assessCodeQuality(code) {
+                const lines = code.split('\n');
+                const commentLines = lines.filter(line =>
+                    line.trim().startsWith('//') ||
+                    line.trim().startsWith('/*') ||
+                    line.trim().startsWith('*')
+                ).length;
+
+                const commentRatio = commentLines / lines.length;
+
+                if (commentRatio > 0.2) return 'good';
+                if (commentRatio > 0.1) return 'adequate';
+                return 'needs improvement';
+            }
+            
+            // FIX 12: Added status bar update logic
+            updateStatusBar(type, message) {
+                const statusElement = document.getElementById('status-bar');
+                const aiIndicator = document.getElementById('ai-indicator');
+                const aiDot = document.querySelector('.ai-dot');
+                
+                statusElement.className = '';
+                statusElement.classList.add(type);
+                aiIndicator.textContent = message;
+
+                // Reset dot class and apply new color/animation
+                aiDot.classList.remove('connected');
+                aiDot.style.background = type === 'success' || type === 'info' ? 'var(--quantum-primary)' :
+                                         type === 'warn' ? 'var(--warn)' : 'var(--error)';
+                if (type === 'success' || type === 'info') {
+                    aiDot.classList.add('connected');
+                }
+            }
+
+
+            updateDashboard() {
+                for (const [agentName, agent] of this.agents) {
+                    const statusElement = document.getElementById(`${agentName}-status`);
+                    const progressElement = document.getElementById(`${agentName}-progress`);
+
+                    if (statusElement) {
+                        statusElement.textContent = agent.status;
+                        statusElement.style.background = agent.status === 'PROCESSING' ? 'var(--quantum-accent)' :
+                                                       agent.status === 'COMPLETE' ? 'var(--quantum-primary)' : 'var(--editor-muted)';
+                    }
+
+                    if (progressElement) {
+                        progressElement.style.width = `${agent.progress}%`;
+                    }
+                }
+            }
+
+            resetAgents() {
+                for (const agent of this.agents.values()) {
+                    agent.status = 'IDLE';
+                    agent.progress = 0;
+                }
+                this.updateDashboard();
+            }
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            setupEventListeners() {
+                // Global event listeners can be added here
+            }
         }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-          e.preventDefault();
-          undo();
+
+        // ==================== EDITOR LOGIC ====================
+        const editor = document.getElementById('editor');
+        const highlighted = document.getElementById('highlighted');
+        const lineGutter = document.getElementById('line-gutter');
+        const statusEditor = document.getElementById('editor-meta');
+        const statusFile = document.getElementById('file-meta');
+        const previewPanel = document.getElementById('preview-panel');
+        const previewContent = document.getElementById('preview-content');
+        const aiResponsePanel = document.getElementById('ai-response-panel');
+        const aiResponseContent = document.getElementById('ai-response-content');
+        const leftPanel = document.getElementById('left-panel');
+        const panelOverlay = document.getElementById('panel-overlay');
+        const quantumDashboard = document.getElementById('quantum-dashboard');
+        const promptInput = document.getElementById('prompt-input'); // FIX 13: Get prompt input element
+
+        let currentFileName = null,
+            currentFileType = 'html',
+            historyStack = [],
+            redoStack = [],
+            quantumSystem;
+
+        // Initialize the editor
+        function initEditor() {
+            renderEditor(editor.value);
+            pushHistory();
+            initQuantumSystem();
+
+            // Add event listeners
+            setupEventListeners();
+
+            console.log("Nemodian 2244-1 Quantum Editor initialized");
         }
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
-          e.preventDefault();
-          redo();
+
+        function setupEventListeners() {
+            // Editor events
+            editor.addEventListener('input', handleEditorInput);
+            editor.addEventListener('scroll', syncScroll);
+            editor.addEventListener('keyup', updateStatus);
+            editor.addEventListener('click', updateStatus);
+            editor.addEventListener('keydown', handleKeydown);
+
+            // File operations
+            document.getElementById('open-file').addEventListener('click', openFile);
+            document.getElementById('save-file').addEventListener('click', saveFile);
+            document.getElementById('save-as').addEventListener('click', saveAsFile);
+            document.getElementById('file-input').addEventListener('change', handleFileSelect);
+
+            // Editor actions
+            document.getElementById('btn-undo').addEventListener('click', undo);
+            document.getElementById('btn-redo').addEventListener('click', redo);
+            document.getElementById('btn-beautify').addEventListener('click', beautifyCode);
+
+            // HTML Rendering
+            document.getElementById('btn-render').addEventListener('click', renderHTML);
+            document.getElementById('render-html').addEventListener('click', renderHTML);
+            document.getElementById('close-preview').addEventListener('click', closePreview);
+
+            // Quantum AI
+            document.getElementById('send-button').addEventListener('click', runQuantumAI);
+            document.getElementById('run-quantum-ai').addEventListener('click', runQuantumAI);
+            document.getElementById('btn-quantum').addEventListener('click', runQuantumAI);
+            promptInput.addEventListener('keydown', handlePromptKeydown);
+            document.getElementById('close-ai-panel').addEventListener('click', closeAIPanel);
+
+            // Dashboard
+            document.getElementById('show-dashboard').addEventListener('click', showDashboard);
+            document.getElementById('close-dashboard').addEventListener('click', closeDashboard);
+
+            // Panel toggle
+            document.getElementById('left-toggle').addEventListener('click', toggleLeftPanel);
+            panelOverlay.addEventListener('click', closeLeftPanel);
+
+            // Window resize
+            window.addEventListener('resize', handleResize);
         }
-      });
-    // Resize layout                                                                   function resizeLayout(){
-    const windowH = window.innerHeight,
-      headerH = $('header').outerHeight(true),
-      statusH = $('#status-bar').outerHeight(true),
-      footerH = $('footer').outerHeight(true);
-    const editorContainerH = windowH - headerH - statusH - footerH;
-    $('#editor-container').css('height', editorContainerH + 'px');
-    const lnW = $('#line-numbers').outerWidth(),
-      pad = 5,
-      leftPos = lnW + pad;$editor.css({
-      'left': leftPos + 'px',
-      'width': `calc(100% - ${leftPos}px)`
-    });
-    $('.highlighting-area').css('padding-left', leftPos + 'px');
-    generateLineNumbers();syncScroll();
-  }
-  $(window).on('resize orientationchange', resizeLayout);
-  $(document).ready(() => {
-    assemblyCode = '// Nemodian 2244-1 AI Editor Ready\n// Ctrl+Enter or SEND button runs AI prompt.';
-    renderAssembly();
-    pushHistory();
-    resizeLayout();
-    updateStatus('READY');
-  }); <
-  /script> < /
-  body > <
-  /html>
-  // [AI_SIMULATION]: Fix syntax error on line 158
+
+        // Editor functions
+        function detectLanguage(filename) {
+            if (!filename) return 'html';
+            const ext = filename.split('.').pop().toLowerCase();
+            const languageMap = {
+                'js': 'javascript', 'html': 'html', 'htm': 'html', 'css': 'css',
+                'json': 'json', 'py': 'python', 'md': 'markdown'
+            };
+            return languageMap[ext] || 'html';
+        }
+
+        function highlightAndRender(code) {
+            try {
+                // Simple syntax highlighting fallback
+                highlighted.textContent = code;
+                highlighted.innerHTML = code
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/".*?"/g, '<span class="token string">$&</span>')
+                    .replace(/'.*?'/g, '<span class="token string">$&</span>')
+                    .replace(/\b(function|return|if|else|for|while|var|let|const)\b/g, '<span class="token keyword">$1</span>')
+                    .replace(/&lt;\/?[\w\s="'-]+&gt;/g, '<span class="token tag">$&</span>');
+            } catch (e) {
+                highlighted.textContent = code;
+            }
+        }
+
+        function generateLineNumbers() {
+            const lines = editor.value.split('\n');
+            lineGutter.innerHTML = lines.map((_, i) => i + 1).join('<br>');
+        }
+
+        function renderEditor(code) {
+            editor.value = code;
+            highlightAndRender(code);
+            generateLineNumbers();
+            updateStatus();
+            syncScroll(); // FIX 14: Sync scroll after rendering
+        }
+
+        function updateStatus() {
+            const pos = editor.selectionStart;
+            const textBeforeCursor = editor.value.substring(0, pos);
+            const lines = textBeforeCursor.split('\n');
+            const currentLine = lines.length;
+            const currentColumn = lines[lines.length - 1].length;
+
+            statusEditor.textContent = `Cursor: ${currentLine}:${currentColumn} | Lines: ${editor.value.split('\n').length} | Chars: ${editor.value.length} | History: ${historyStack.length}`;
+        }
+
+        function syncScroll() {
+            // FIX 15: Synced scroll values must be applied to all scrollable elements
+            const scrollTop = editor.scrollTop;
+            const scrollLeft = editor.scrollLeft;
+
+            highlighted.parentElement.scrollTop = scrollTop;
+            highlighted.parentElement.scrollLeft = scrollLeft;
+            lineGutter.scrollTop = scrollTop;
+        }
+
+        function pushHistory() {
+            const code = editor.value;
+            if (historyStack.length && historyStack[historyStack.length - 1] === code) return;
+            historyStack.push(code);
+            redoStack = [];
+            updateStatus();
+        }
+
+        function undo() {
+            if (historyStack.length > 1) {
+                redoStack.push(historyStack.pop());
+                // FIX 16: Ensure renderEditor is called after history update
+                renderEditor(historyStack[historyStack.length - 1]); 
+            }
+        }
+
+        function redo() {
+            if (redoStack.length) {
+                const nextState = redoStack.pop();
+                historyStack.push(nextState);
+                // FIX 17: Ensure renderEditor is called after history update
+                renderEditor(nextState);
+            }
+        }
+
+        function handleEditorInput() {
+            pushHistory();
+            highlightAndRender(editor.value);
+            generateLineNumbers();
+            updateStatus();
+            syncScroll(); // FIX 18: Sync scroll on input
+        }
+
+        function handleKeydown(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                // FIX 19: Use a uniform tab size (4 spaces)
+                const tab = '    '; 
+                editor.value = editor.value.substring(0, start) + tab + editor.value.substring(end);
+                editor.selectionStart = editor.selectionEnd = start + tab.length;
+                editor.dispatchEvent(new Event('input'));
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+                e.preventDefault();
+                redo();
+            }
+        }
+
+        // File operations
+        function openFile() {
+            document.getElementById('file-input').click();
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                currentFileName = file.name;
+                currentFileType = detectLanguage(file.name);
+                renderEditor(ev.target.result);
+                statusFile.textContent = currentFileName;
+                historyStack = [ev.target.result];
+                redoStack = [];
+                if (quantumSystem) quantumSystem.updateStatusBar('info', `File loaded: ${currentFileName}`);
+            };
+            reader.readAsText(file);
+        }
+
+        function saveFile() {
+            if (!currentFileName) {
+                saveAsFile();
+                return;
+            }
+            const blob = new Blob([editor.value], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = currentFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+            if (quantumSystem) quantumSystem.updateStatusBar('success', `File saved: ${currentFileName}`);
+        }
+
+        function saveAsFile() {
+            const fname = prompt('Enter file name', currentFileName || 'code.html');
+            if (fname) {
+                currentFileName = fname;
+                currentFileType = detectLanguage(fname);
+                statusFile.textContent = currentFileName;
+                saveFile();
+            }
+        }
+
+        // Code beautification
+        function beautifyCode() {
+            try {
+                // A very simple beautifier, mostly for demo purposes
+                let beautified = editor.value
+                    .replace(/\t/g, '    ')
+                    .replace(/\{\s*/g, ' {\n')
+                    .replace(/\}\s*/g, '\n}\n')
+                    .replace(/;\s*/g, ';\n')
+                    .replace(/,\s*/g, ', ')
+                    .replace(/\n\s*\n/g, '\n');
+
+                renderEditor(beautified);
+                pushHistory();
+                if (quantumSystem) quantumSystem.updateStatusBar('info', 'Code beautified');
+            } catch (e) {
+                alert('Beautify error: ' + e.message);
+                if (quantumSystem) quantumSystem.updateStatusBar('error', 'Beautify error');
+            }
+        }
+
+        // HTML Rendering
+        function renderHTML() {
+            try {
+                const blob = new Blob([editor.value], { type: 'text/html' });
+                // FIX 20: Ensure iframe loads new blob URL
+                previewContent.src = URL.createObjectURL(blob); 
+                previewPanel.style.display = 'flex';
+                if (quantumSystem) quantumSystem.updateStatusBar('info', 'HTML preview rendered');
+            } catch (e) {
+                alert('Error rendering HTML: ' + e.message);
+                if (quantumSystem) quantumSystem.updateStatusBar('error', 'Error rendering HTML');
+            }
+        }
+
+        function closePreview() {
+            previewPanel.style.display = 'none';
+            if (previewContent.src && previewContent.src.startsWith('blob:')) {
+                URL.revokeObjectURL(previewContent.src);
+            }
+            if (quantumSystem) quantumSystem.updateStatusBar('info', 'HTML preview closed');
+        }
+
+        // Quantum AI System
+        function initQuantumSystem() {
+            // FIX 21: Check if quantumSystem is already initialized to prevent re-initialization error messages
+            if (!quantumSystem) {
+                quantumSystem = new QuantumAgentCore();
+                quantumSystem.updateStatusBar('info', 'Quantum AI: Ready');
+            }
+        }
+
+        async function runQuantumAI() {
+            const prompt = promptInput.value.trim();
+            if (!prompt) {
+                alert('Please enter a prompt for the Quantum AI');
+                return;
+            }
+
+            if (!quantumSystem) {
+                initQuantumSystem();
+            }
+
+            aiResponseContent.textContent = 'Quantum AI processing... (Parallel agents activated)';
+            aiResponsePanel.style.display = 'block';
+
+            try {
+                const result = await quantumSystem.processInput(prompt, editor.value);
+
+                let responseHTML = `<div style="color: var(--quantum-primary); font-weight: bold; margin-bottom: 1rem;">Quantum Analysis Complete</div>`;
+                responseHTML += `<div style="margin-bottom: 1rem;">${result.analysis}</div>`;
+
+                if (result.suggestions && result.suggestions.length > 0) {
+                    responseHTML += `<div style="color: var(--quantum-accent); margin-bottom: 0.5rem;">Suggestions:</div>`;
+                    responseHTML += `<ul style="margin: 0; padding-left: 1.25rem;">`;
+                    result.suggestions.forEach(suggestion => {
+                        responseHTML += `<li>${suggestion}</li>`;
+                    });
+                    responseHTML += `</ul>`;
+                }
+
+                responseHTML += `<div style="margin-top: 1rem; font-size: 0.75rem; color: var(--editor-muted);">`;
+                responseHTML += `Processing time: ${result.metrics.processingTime}ms | Agents: ${result.metrics.agentsUsed.join(', ')}`;
+                responseHTML += `</div>`;
+
+                aiResponseContent.innerHTML = responseHTML;
+                promptInput.value = ''; // Clear prompt after successful processing
+
+            } catch (error) {
+                // Error handling is now primarily managed in QuantumAgentCore.processInput
+                aiResponseContent.textContent = `Quantum AI Error: ${error.message}`;
+            } finally {
+                quantumSystem.resetAgents(); // Ensure agents reset status after processing
+            }
+        }
+
+        function handlePromptKeydown(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runQuantumAI();
+            }
+        }
+
+        function closeAIPanel() {
+            aiResponsePanel.style.display = 'none';
+        }
+
+        // Dashboard
+        function showDashboard() {
+            quantumDashboard.style.display = 'flex';
+            if (quantumSystem) {
+                quantumSystem.updateDashboard();
+                if (quantumSystem) quantumSystem.updateStatusBar('info', 'Dashboard Open');
+            }
+        }
+
+        function closeDashboard() {
+            quantumDashboard.style.display = 'none';
+            if (quantumSystem) quantumSystem.updateStatusBar('info', 'Dashboard Closed');
+        }
+
+        // Panel management
+        function toggleLeftPanel() {
+            leftPanel.classList.toggle('open');
+            panelOverlay.classList.toggle('active');
+            if (quantumSystem) quantumSystem.updateStatusBar('info', leftPanel.classList.contains('open') ? 'Left Panel Open' : 'Left Panel Closed');
+        }
+
+        function closeLeftPanel() {
+            leftPanel.classList.remove('open');
+            panelOverlay.classList.remove('active');
+        }
+
+        function handleResize() {
+            if (window.innerWidth > 768) {
+                closeLeftPanel();
+            }
+        }
+
+        // Initialize the editor when the page loads
+        window.addEventListener('load', initEditor);
+    </script>
+</body>
+</html>
+
